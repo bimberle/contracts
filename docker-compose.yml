@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: contracts_db
+    environment:
+      POSTGRES_DB: contracts
+      POSTGRES_USER: contracts_user
+      POSTGRES_PASSWORD: contracts_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contracts_user -d contracts"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - contracts_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: contracts_backend
+    environment:
+      DATABASE_URL: postgresql://contracts_user:contracts_password@database:5432/contracts
+      SECRET_KEY: your-secret-key-change-in-production
+      DEBUG: "True"
+      CORS_ORIGINS: http://localhost:3000,http://localhost
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - contracts_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: contracts_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - contracts_network
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
+
+networks:
+  contracts_network:
+    driver: bridge

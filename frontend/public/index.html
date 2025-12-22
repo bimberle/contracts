@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contract Management - Lädt...</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        text-align: center;
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        max-width: 500px;
+      }
+
+      .logo {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        color: #333;
+        margin: 0 0 10px 0;
+      }
+
+      p {
+        color: #666;
+        margin: 10px 0;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 20px 0;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .status {
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      .status.loading {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      .status.error {
+        background: #ffebee;
+        color: #c62828;
+      }
+
+      .status.success {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 15px;
+      }
+
+      .button:hover {
+        background: #5568d3;
+      }
+
+      .info {
+        font-size: 12px;
+        color: #999;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">📋</div>
+      <h1>Contract Management System</h1>
+      <p>Vertragsverwaltung und Provisionsberechnung</p>
+
+      <div class="spinner"></div>
+      
+      <div id="status" class="status loading">
+        ⏳ Anwendung wird geladen...
+      </div>
+
+      <button class="button" onclick="location.reload()">
+        Nochmal versuchen
+      </button>
+
+      <div class="info">
+        <p>Frontend lädt von: <strong>http://localhost:3000</strong></p>
+        <p>Backend unter: <strong>http://localhost:8000</strong></p>
+      </div>
+    </div>
+
+    <script>
+      // Check backend health
+      function checkHealth() {
+        fetch('http://localhost:8000/health')
+          .then(response => {
+            if (response.ok) {
+              document.getElementById('status').className = 'status success';
+              document.getElementById('status').innerHTML = '✓ Backend ist bereit! React wird geladen...';
+              // Try to load the React app
+              setTimeout(() => {
+                location.reload();
+              }, 1000);
+            } else {
+              throw new Error('Backend status: ' + response.status);
+            }
+          })
+          .catch(error => {
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').innerHTML = 
+              '✗ Backend nicht erreichbar: ' + error.message + 
+              '<br/>Bitte überprüfen Sie, ob docker-compose läuft: <code>docker-compose ps</code>';
+          });
+      }
+
+      // Check every 2 seconds
+      checkHealth();
+      setInterval(checkHealth, 2000);
+
+      // Also check if React app is ready
+      setTimeout(() => {
+        if (document.getElementById('root')) {
+          // React app is mounted
+          document.getElementById('status').className = 'status success';
+          document.getElementById('status').innerHTML = '✓ React-App wurde geladen!';
+        }
+      }, 3000);
+    </script>
+  </body>
+</html>

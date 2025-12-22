@@ -1,0 +1,38 @@
+# Git Commit - Befehle zum Kopieren
+
+## Schritt 1: Alle Dateien hinzufügen
+```bash
+git add -A
+```
+
+## Schritt 2: Commit mit Nachricht
+```bash
+git commit -m "feat: Contract Management System - Vollständige Implementierung
+
+- Backend: FastAPI mit SQLAlchemy ORM
+- Frontend: React 18 mit TypeScript und Zustand
+- Provisionsberechnung mit Preiserhöhungen
+- Existenzgründer-Rabatt Support
+- 12-Monats Forecast
+- Docker Compose Setup
+- PostgreSQL Datenbank
+- 5 API Router
+- 4 Frontend Pages
+- 3 Zustand Stores
+- Tailwind CSS
+- Fehlerbehandlung
+- Dokumentation"
+```
+
+## Schritt 3: Zu GitHub pushen
+```bash
+git push origin main
+```
+
+---
+
+## Oder alles in einem:
+
+```bash
+git add -A && git commit -m "feat: Contract Management System - Vollständige Implementierung" && git push origin main
+```
