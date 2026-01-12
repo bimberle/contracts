@@ -206,7 +206,30 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-## 🐛 Troubleshooting
+## � Production Deployment
+
+### Mit Docker Hub
+
+1. **Images zu Docker Hub pushen**
+```bash
+./push-to-dockerhub.sh 1.0.0 your-username
+```
+
+2. **Production starten**
+```bash
+export DOCKERHUB_USERNAME=your-username
+export VERSION=1.0.0
+export SECRET_KEY=your-secret-key
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+Für detaillierte Anleitung siehe [DOCKER_HUB_GUIDE.md](DOCKER_HUB_GUIDE.md)
+
+### Database Migrations
+
+Die Datenbank wird automatisch initialisiert beim Startup. Weitere Details unter [MIGRATIONS.md](MIGRATIONS.md)
+
+## �🐛 Troubleshooting
 
 ### Container starten nicht
 ```bash
