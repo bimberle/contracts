@@ -11,13 +11,15 @@ def get_current_monthly_price(
     date: datetime
 ) -> float:
     """
-    Berechnet den aktuellen Preis mit allen Preiserhöhungen
+    Berechnet den aktuellen Gesamtpreis (fixed + adjustable mit Erhöhungen)
     Berücksichtigt:
-    1. Alle gültigen Preiserhöhungen
+    1. Alle gültigen Preiserhöhungen (nur auf adjustable_price)
     2. Bestandsschutz (lockInMonths)
     3. Datum der Anfrage
+    
+    Formel: total = fixed_price + (adjustable_price * (1 + sum(increases)))
     """
-    current_price = contract.price
+    adjustable_price = contract.adjustable_price
     
     for price_increase in price_increases:
         # Prüfe ob Preiserhöhung gültig ist
@@ -27,9 +29,9 @@ def get_current_monthly_price(
                 # Prüfe Bestandsschutz
                 months_running = months_between(contract.rental_start_date, date)
                 if months_running >= price_increase.lock_in_months:
-                    current_price *= (1 + price_increase.factor / 100)
+                    adjustable_price *= (1 + price_increase.factor / 100)
     
-    return current_price
+    return contract.fixed_price + adjustable_price
 
 def get_current_monthly_commission(
     contract: Contract,

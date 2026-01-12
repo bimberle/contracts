@@ -1,14 +1,22 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from datetime import datetime
 from typing import Optional
 from app.models.contract import ContractType, ContractStatus
 
 # Contract Schemas
 class ContractBase(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
+    
     customer_id: str
     title: str
     type: ContractType
-    price: float
+    fixed_price: float
+    adjustable_price: float
     currency: str = "EUR"
     start_date: datetime
     rental_start_date: datetime
@@ -21,9 +29,15 @@ class ContractCreate(ContractBase):
     pass
 
 class ContractUpdate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True
+    )
+    
     title: Optional[str] = None
     type: Optional[ContractType] = None
-    price: Optional[float] = None
+    fixed_price: Optional[float] = None
+    adjustable_price: Optional[float] = None
     currency: Optional[str] = None
     start_date: Optional[datetime] = None
     rental_start_date: Optional[datetime] = None
@@ -36,6 +50,19 @@ class Contract(ContractBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
+# Contract Metrics
+class ContractMetrics(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
     
-    class Config:
-        from_attributes = True
+    contract_id: str
+    current_monthly_price: float
+    months_running: int
+    is_in_founder_period: bool
+    current_monthly_commission: float
+    earned_commission_to_date: float
+    projected_monthly_commission: float

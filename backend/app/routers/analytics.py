@@ -8,6 +8,7 @@ from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
 from app.services.forecast import generate_forecast, calculate_forecast_kpis
 from app.services.metrics import calculate_customer_metrics
+from app.schemas.analytics import DashboardSummary, TopCustomer, Forecast, ForecastMonth
 from app.utils.date_utils import add_months
 from datetime import datetime
 
@@ -42,30 +43,32 @@ def get_dashboard(db: Session = Depends(get_db)):
         total_active_contracts += metrics["active_contracts"]
         
         if metrics["total_monthly_commission"] > 0:
-            top_customers_data.append({
-                "customer_id": customer.id,
-                "customer_name": customer.name,
-                "monthly_commission": metrics["total_monthly_commission"]
-            })
+            top_customers_data.append(TopCustomer(
+                customer_id=customer.id,
+                customer_name=customer.name,
+                monthly_commission=metrics["total_monthly_commission"]
+            ))
     
     # Top 5 Kunden nach Provision
     top_customers = sorted(
         top_customers_data,
-        key=lambda x: x["monthly_commission"],
+        key=lambda x: x.monthly_commission,
         reverse=True
     )[:5]
     
     average_commission = total_monthly_revenue / len(customers) if customers else 0.0
     
+    dashboard = DashboardSummary(
+        total_customers=total_customers,
+        total_monthly_revenue=round(total_monthly_revenue, 2),
+        total_active_contracts=total_active_contracts,
+        average_commission_per_customer=round(average_commission, 2),
+        top_customers=top_customers
+    )
+    
     return {
         "status": "success",
-        "data": {
-            "total_customers": total_customers,
-            "total_monthly_revenue": round(total_monthly_revenue, 2),
-            "total_active_contracts": total_active_contracts,
-            "average_commission_per_customer": round(average_commission, 2),
-            "top_customers": top_customers
-        }
+        "data": dashboard
     }
 
 @router.get("/forecast")
@@ -88,21 +91,19 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
         months=min(months, 36)  # Max 36 Monate
     )
     
-    # Berechne KPIs
-    kpis = calculate_forecast_kpis(forecast_data)
-    
     # Berechne Gesamtrevenue und kumulativen Wert
     cumulative = 0.0
+    forecast_months = []
     for month in forecast_data:
         cumulative += month["total_commission"]
         month["cumulative"] = round(cumulative, 2)
+        forecast_months.append(ForecastMonth(**month))
+    
+    forecast = Forecast(months=forecast_months)
     
     return {
         "status": "success",
-        "data": {
-            "months": forecast_data,
-            "kpis": kpis
-        }
+        "data": forecast
     }
 
 @router.get("/customer/{customer_id}")
@@ -143,7 +144,8 @@ def get_customer_analytics(customer_id: str, db: Session = Depends(get_db)):
             "title": contract.title,
             "type": contract.type.value,
             "status": contract.status.value,
-            "price": contract.price,
+            "fixed_price": contract.fixed_price,
+            "adjustable_price": contract.adjustable_price,
             "metrics": contract_metrics
         })
     

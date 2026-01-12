@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
 import { useContractStore } from '../stores/contractStore';
-import { Customer, Contract, CalculatedMetrics } from '../types';
+import { useSettingsStore } from '../stores/settingsStore';
+import { Customer, Contract, CalculatedMetrics, PriceIncrease } from '../types';
 import api from '../services/api';
+import ContractModal from '../components/ContractModal';
 
 function CustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -11,33 +13,82 @@ function CustomerDetail() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [metrics, setMetrics] = useState<CalculatedMetrics | null>(null);
+  const [priceIncreases, setPriceIncreases] = useState<PriceIncrease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [selectedContractForEdit, setSelectedContractForEdit] = useState<Contract | null>(null);
+  
+  const settings = useSettingsStore((state) => state.settings);
+
+  // Hilfsfunktion: Berechne Preis mit Preiserhöhungen
+  const calculateMonthlyPrice = (contract: Contract): number => {
+    let adjustablePrice = contract.adjustablePrice;
+    const rentalStartDate = new Date(contract.rentalStartDate);
+    const today = new Date();
+
+    // Wende alle gültigen Preiserhöhungen an
+    for (const increase of priceIncreases) {
+      // Versuche das Datum zu parsen - es könnte verschiedene Formate haben
+      let validFromDate: Date;
+      try {
+        validFromDate = new Date(increase.validFrom);
+        // Prüfe ob das Datum valid ist
+        if (isNaN(validFromDate.getTime())) {
+          console.warn(`Invalid date for price increase ${increase.id}: ${increase.validFrom}`);
+          continue;
+        }
+      } catch {
+        console.warn(`Error parsing date for price increase ${increase.id}: ${increase.validFrom}`);
+        continue;
+      }
+      
+      // Prüfe ob Preiserhöhung gültig ist (validFrom liegt in der Vergangenheit)
+      if (validFromDate <= today) {
+        // Prüfe ob Vertragstyp betroffen ist
+        if (increase.appliesToTypes.includes(contract.type)) {
+          // Berechne Monate seit Mietbeginn
+          const monthsRunning = Math.floor(
+            (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          );
+          
+          // Prüfe Bestandsschutz
+          if (monthsRunning >= increase.lockInMonths) {
+            adjustablePrice *= (1 + increase.factor / 100);
+          }
+        }
+      }
+    }
+
+    return contract.fixedPrice + adjustablePrice;
+  };
+
+  const loadData = async () => {
+    if (!customerId) return;
+    try {
+      setLoading(true);
+      const [customerData, contractsData, metricsData, priceIncreasesData] = await Promise.all([
+        api.getCustomer(customerId),
+        api.getContractsByCustomer(customerId),
+        api.getCustomerMetrics(customerId),
+        api.getPriceIncreases(),
+      ]);
+
+      setCustomer(customerData);
+      setContracts(contractsData);
+      setMetrics(metricsData);
+      setPriceIncreases(priceIncreasesData);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Kundendaten';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!customerId) return;
-
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [customerData, contractsData, metricsData] = await Promise.all([
-          api.getCustomer(customerId),
-          api.getContractsByCustomer(customerId),
-          api.getCustomerMetrics(customerId),
-        ]);
-
-        setCustomer(customerData);
-        setContracts(contractsData);
-        setMetrics(metricsData);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Kundendaten';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, [customerId]);
 
@@ -92,20 +143,20 @@ function CustomerDetail() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Monatliche Provision:</span>
                     <span className="font-bold text-green-600">
-                      €{metrics.total_monthly_commission.toFixed(2)}
+                      €{metrics.totalMonthlyCommission.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bisher verdient:</span>
-                    <span className="font-bold">€{metrics.total_earned.toFixed(2)}</span>
+                    <span className="font-bold">€{metrics.totalEarned.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Exit-Auszahlung:</span>
-                    <span className="font-bold">€{metrics.exit_payout_if_today.toFixed(2)}</span>
+                    <span className="font-bold">€{metrics.exitPayoutIfTodayInMonths.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Aktive Verträge:</span>
-                    <span className="font-bold">{metrics.active_contracts}</span>
+                    <span className="font-bold">{metrics.activeContracts}</span>
                   </div>
                 </>
               )}
@@ -114,12 +165,49 @@ function CustomerDetail() {
         </div>
       </div>
 
+      {/* Price Increases */}
+      {priceIncreases.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-900 mb-3">Geltende Preiserhöhungen:</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {priceIncreases.map((increase) => {
+              let validFromDate: Date;
+              let dateStr = 'Ungültiges Datum';
+              try {
+                validFromDate = new Date(increase.validFrom);
+                if (!isNaN(validFromDate.getTime())) {
+                  dateStr = validFromDate.toLocaleDateString('de-DE');
+                }
+              } catch {
+                // keep default dateStr
+              }
+              return (
+                <div key={increase.id} className="bg-white p-3 rounded border border-blue-100">
+                  <p className="text-sm font-medium text-gray-900">
+                    {increase.factor > 0 ? '+' : ''}{increase.factor}%
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Gültig ab: {dateStr}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    Bestandsschutz: {increase.lockInMonths} Monate
+                  </p>
+                  {increase.description && (
+                    <p className="text-xs text-gray-500 mt-1">{increase.description}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Contracts */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900">Verträge</h2>
           <button
-            onClick={() => navigate(`/customers/${customerId}/contracts/new`)}
+            onClick={() => setIsContractModalOpen(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
           >
             + Neuer Vertrag
@@ -158,45 +246,76 @@ function CustomerDetail() {
                   </td>
                 </tr>
               ) : (
-                contracts.map((contract) => (
-                  <tr key={contract.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {contract.title}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {contract.type === 'rental' ? 'Miete' : 'Software-Pflege'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          contract.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : contract.status === 'inactive'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
-                      €{contract.price.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
-                      —
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button className="text-blue-600 hover:text-blue-800 transition">
-                        Bearbeiten
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                contracts.map((contract) => {
+                  const monthlyPrice = calculateMonthlyPrice(contract);
+                  const commissionRate = settings?.commissionRates?.[contract.type] ?? 0;
+                  const monthlyCommission = monthlyPrice * (commissionRate / 100);
+                  
+                  return (
+                    <tr key={contract.id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {contract.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {contract.type === 'rental' ? 'Miete' : 'Software-Pflege'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            contract.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : contract.status === 'inactive'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
+                        €{monthlyPrice.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
+                        €{monthlyCommission.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button 
+                          onClick={() => {
+                            setSelectedContractForEdit(contract);
+                            setIsContractModalOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 transition"
+                        >
+                          Bearbeiten
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {customerId && (
+        <ContractModal
+          isOpen={isContractModalOpen}
+          onClose={() => {
+            setIsContractModalOpen(false);
+            setSelectedContractForEdit(null);
+          }}
+          customerId={customerId}
+          contract={selectedContractForEdit}
+          onSuccess={() => {
+            // Reload contracts
+            if (customerId) {
+              loadData();
+            }
+            setSelectedContractForEdit(null);
+          }}
+        />
+      )}
     </div>
   );
 }

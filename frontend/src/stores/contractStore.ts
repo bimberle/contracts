@@ -71,7 +71,7 @@ export const useContractStore = create<ContractStore>((set, get) => ({
     try {
       const newContract = await api.createContract(contract);
       set((state) => {
-        const customerId = contract.customer_id;
+        const customerId = contract.customerId;
         return {
           contracts: [...state.contracts, newContract],
           contractsByCustomer: {
@@ -98,8 +98,8 @@ export const useContractStore = create<ContractStore>((set, get) => ({
         contractsByCustomer: {
           ...state.contractsByCustomer,
           ...(state.selectedContract && {
-            [state.selectedContract.customer_id]: state.contractsByCustomer[
-              state.selectedContract.customer_id
+            [state.selectedContract.customerId]: state.contractsByCustomer[
+              state.selectedContract.customerId
             ].map((c) => (c.id === contractId ? updatedContract : c)),
           }),
         },

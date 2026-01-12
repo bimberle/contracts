@@ -1,9 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from datetime import datetime
 from typing import List, Optional
 
 # PriceIncrease Schemas
 class PriceIncreaseBase(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
+    
     valid_from: datetime
     factor: float
     lock_in_months: int = 24
@@ -14,6 +21,11 @@ class PriceIncreaseCreate(PriceIncreaseBase):
     pass
 
 class PriceIncreaseUpdate(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+    
     valid_from: Optional[datetime] = None
     factor: Optional[float] = None
     lock_in_months: Optional[int] = None
@@ -24,6 +36,3 @@ class PriceIncrease(PriceIncreaseBase):
     id: str
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True

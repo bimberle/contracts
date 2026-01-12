@@ -25,7 +25,8 @@ class Contract(Base):
     type = Column(Enum(ContractType), nullable=False)
     
     # Finanzielle Details
-    price = Column(Float, nullable=False)
+    fixed_price = Column(Float, nullable=False)
+    adjustable_price = Column(Float, nullable=False)
     currency = Column(String, default="EUR")
     
     # Zeitliche Details

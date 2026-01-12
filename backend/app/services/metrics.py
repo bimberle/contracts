@@ -29,7 +29,8 @@ def calculate_customer_metrics(
     for contract in contracts:
         if contract.status.value == 'active':
             active_contracts += 1
-            total_monthly_rental += contract.price
+            # Berechne Gesamtpreis = fixed + adjustable (ohne Erhöhungen für aktuelles Monat)
+            total_monthly_rental += contract.fixed_price + contract.adjustable_price
             
         monthly_commission = get_current_monthly_commission(
             contract, settings, price_increases, today
@@ -51,7 +52,7 @@ def calculate_customer_metrics(
         "total_monthly_rental": round(total_monthly_rental, 2),
         "total_monthly_commission": round(total_monthly_commission, 2),
         "total_earned": round(total_earned, 2),
-        "exit_payout_if_today": round(exit_payout, 2),
+        "exit_payout_if_today_in_months": round(exit_payout, 2),
         "active_contracts": active_contracts
     }
 

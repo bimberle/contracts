@@ -38,7 +38,8 @@ export interface Contract {
   customerId: string;
   title: string;
   type: ContractType;
-  price: number; // Monatlicher Preis in €
+  fixedPrice: number; // Fixer Betrag (€/Monat)
+  adjustablePrice: number; // Anpassungsfähiger Betrag (€/Monat)
   currency: string; // z.B. 'EUR'
   startDate: ISO8601String; // Unterzeichnungsdatum
   rentalStartDate: ISO8601String; // Tatsächlicher Mietbeginn
@@ -54,7 +55,8 @@ export interface ContractCreateRequest {
   customerId: string;
   title: string;
   type: ContractType;
-  price: number;
+  fixedPrice: number;
+  adjustablePrice: number;
   currency?: string;
   startDate: ISO8601String;
   rentalStartDate: ISO8601String;
@@ -67,7 +69,8 @@ export interface ContractCreateRequest {
 export interface ContractUpdateRequest {
   title?: string;
   type?: ContractType;
-  price?: number;
+  fixedPrice?: number;
+  adjustablePrice?: number;
   currency?: string;
   startDate?: ISO8601String;
   rentalStartDate?: ISO8601String;
@@ -171,20 +174,16 @@ export interface ListResponse<T> {
 
 // Forecast Data (12-Monats Übersicht)
 export interface ForecastMonth {
-  date: ISO8601String; // Monatsanfang
-  currentProvision: number; // Provision von aktiven Verträgen (€)
-  fallingOut: number; // Provision ausfallender Verträge (€)
-  newContracts: number; // Provision neuer Verträge (€)
-  total: number; // Summe
-  cumulative: number; // Kumulativ
+  date: string; // Format: YYYY-MM
+  monthName: string;
+  totalCommission: number;
+  activeContracts: number;
+  endingContracts: number;
+  cumulative: number;
 }
 
 export interface Forecast {
   months: ForecastMonth[];
-  averageMonthly: number;
-  highestMonth: number;
-  lowestMonth: number;
-  trend: 'up' | 'down' | 'stable';
 }
 
 // Dashboard Summary

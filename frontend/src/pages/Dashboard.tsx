@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useCustomerStore } from '../stores/customerStore';
 import { DashboardSummary, Customer, CalculatedMetrics } from '../types';
+import CustomerModal from '../components/CustomerModal';
 
 interface CustomerWithMetrics extends Customer {
   metrics: CalculatedMetrics;
@@ -16,6 +17,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -88,12 +90,12 @@ function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">Übersicht aller Kunden und Verträge</p>
         </div>
-        <Link
-          to="/customers/new"
+        <button
+          onClick={() => setIsCustomerModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
           + Neuer Kunde
-        </Link>
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -101,38 +103,38 @@ function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Kunden</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{summary.total_customers}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalCustomers}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Aktive Verträge</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{summary.total_active_contracts}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalActiveContracts}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Monatliche Provision</div>
             <div className="text-3xl font-bold text-green-600 mt-2">
-              €{summary.total_monthly_revenue.toFixed(2)}
+              €{summary.totalMonthlyRevenue.toFixed(2)}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Ø Pro Kunde</div>
             <div className="text-3xl font-bold text-gray-900 mt-2">
-              €{summary.average_commission_per_customer.toFixed(2)}
+              €{summary.averageCommissionPerCustomer.toFixed(2)}
             </div>
           </div>
         </div>
       )}
 
       {/* Top Customers */}
-      {summary && summary.top_customers.length > 0 && (
+      {summary && summary.topCustomers.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Top Kunden</h2>
           <div className="space-y-3">
-            {summary.top_customers.map((customer) => (
-              <div key={customer.customer_id} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+            {summary.topCustomers.map((customer) => (
+              <div key={customer.customerId} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
                 <div>
-                  <p className="font-medium text-gray-900">{customer.customer_name}</p>
+                  <p className="font-medium text-gray-900">{customer.customerName}</p>
                 </div>
-                <p className="text-green-600 font-semibold">€{customer.monthly_commission.toFixed(2)}</p>
+                <p className="text-green-600 font-semibold">€{customer.monthlyCommission.toFixed(2)}</p>
               </div>
             ))}
           </div>
@@ -198,10 +200,10 @@ function Dashboard() {
                         {customer.ort}, {customer.plz}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
-                        {metrics ? `€${metrics.total_monthly_commission.toFixed(2)}` : '—'}
+                        {metrics ? `€${metrics.totalMonthlyCommission.toFixed(2)}` : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
-                        {metrics ? `€${metrics.exit_payout_if_today.toFixed(2)}` : '—'}
+                        {metrics ? `€${metrics.exitPayoutIfTodayInMonths.toFixed(2)}` : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link
@@ -219,6 +221,14 @@ function Dashboard() {
           </table>
         </div>
       </div>
+
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSuccess={() => {
+          fetchCustomers();
+        }}
+      />
     </div>
   );
 }

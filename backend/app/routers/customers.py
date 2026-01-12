@@ -6,7 +6,7 @@ from app.models.customer import Customer
 from app.models.contract import Contract
 from app.models.price_increase import PriceIncrease
 from app.models.settings import Settings
-from app.schemas.customer import Customer as CustomerSchema, CustomerCreate, CustomerUpdate
+from app.schemas.customer import Customer as CustomerSchema, CustomerCreate, CustomerUpdate, CalculatedMetrics
 from app.services.metrics import calculate_customer_metrics
 from datetime import datetime
 
@@ -87,13 +87,16 @@ def get_customer_metrics(customer_id: str, db: Session = Depends(get_db)):
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
     
-    metrics = calculate_customer_metrics(
+    metrics_dict = calculate_customer_metrics(
         customer_id=customer_id,
         contracts=contracts,
         settings=settings,
         price_increases=price_increases,
         today=datetime.utcnow()
     )
+    
+    # Konvertiere zu Pydantic Model für camelCase Serialisierung
+    metrics = CalculatedMetrics(**metrics_dict)
     
     return {
         "status": "success",

@@ -6,7 +6,7 @@ from app.models.contract import Contract
 from app.models.customer import Customer
 from app.models.price_increase import PriceIncrease
 from app.models.settings import Settings
-from app.schemas.contract import Contract as ContractSchema, ContractCreate, ContractUpdate
+from app.schemas.contract import Contract as ContractSchema, ContractCreate, ContractUpdate, ContractMetrics
 from app.services.metrics import calculate_contract_metrics
 from datetime import datetime
 
@@ -91,12 +91,15 @@ def get_contract_metrics(contract_id: str, db: Session = Depends(get_db)):
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
     
-    metrics = calculate_contract_metrics(
+    metrics_dict = calculate_contract_metrics(
         contract=db_contract,
         settings=settings,
         price_increases=price_increases,
         today=datetime.utcnow()
     )
+    
+    # Konvertiere zu Pydantic Model für camelCase Serialisierung
+    metrics = ContractMetrics(**metrics_dict)
     
     return {
         "status": "success",

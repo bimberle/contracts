@@ -6,6 +6,7 @@ import api from './services/api';
 import Dashboard from './pages/Dashboard';
 import CustomerDetail from './pages/CustomerDetail';
 import Settings from './pages/Settings';
+import PriceIncreases from './pages/PriceIncreases';
 import Forecast from './pages/Forecast';
 import './App.css';
 
@@ -99,6 +100,12 @@ function App() {
                     Forecast
                   </Link>
                   <Link
+                    to="/price-increases"
+                    className="text-gray-700 hover:text-blue-600 transition"
+                  >
+                    Preiserhöhungen
+                  </Link>
+                  <Link
                     to="/settings"
                     className="text-gray-700 hover:text-blue-600 transition"
                   >
@@ -116,6 +123,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
             <Route path="/forecast" element={<Forecast />} />
+            <Route path="/price-increases" element={<PriceIncreases />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
