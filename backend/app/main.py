@@ -3,9 +3,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine
 from app import models
+import logging
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+logger = logging.getLogger(__name__)
+
+# Create database tables on startup
+def init_db():
+    """Initialize database tables if they don't exist"""
+    try:
+        logger.info("Initializing database schema...")
+        models.Base.metadata.create_all(bind=engine)
+        logger.info("Database schema initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+        raise
+
+# Initialize database when app starts
+init_db()
 
 app = FastAPI(
     title="Contract Management API",

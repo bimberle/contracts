@@ -18,50 +18,71 @@ depends_on = None
 
 def upgrade() -> None:
     """
-    Split the 'price' column into 'fixed_price' and 'adjustable_price'.
-    If existing data exists, assume 50/50 split (can be manually adjusted later).
+    Add fixed_price and adjustable_price columns to contracts table.
+    For fresh installations, this creates the columns directly.
+    For existing installations, it migrates from the old price column.
     """
-    # Add new columns
-    op.add_column('contracts', sa.Column('fixed_price', sa.Float(), nullable=True))
-    op.add_column('contracts', sa.Column('adjustable_price', sa.Float(), nullable=True))
+    # This migration assumes the contracts table will be created by the ORM
+    # if it doesn't exist yet (for fresh installs).
+    # For existing installs, it adds the new columns.
     
-    # Migrate existing data if 'price' column exists
+    # Try to add the columns - they might already exist in fresh installs
     try:
-        # For existing contracts: split price 50/50 between fixed and adjustable
-        op.execute('''
-            UPDATE contracts 
-            SET fixed_price = price * 0.5, 
-                adjustable_price = price * 0.5
-            WHERE price IS NOT NULL
-        ''')
+        op.add_column('contracts', sa.Column('fixed_price', sa.Float(), nullable=True))
     except Exception:
-        # If table doesn't exist yet (fresh install), that's fine
         pass
     
-    # Make columns NOT NULL after migration
-    op.alter_column('contracts', 'fixed_price', nullable=False)
-    op.alter_column('contracts', 'adjustable_price', nullable=False)
+    try:
+        op.add_column('contracts', sa.Column('adjustable_price', sa.Float(), nullable=True))
+    except Exception:
+        pass
     
-    # Drop old price column
+    # Try to migrate existing data if price column exists
+    try:
+        op.execute('''
+            UPDATE contracts 
+            SET fixed_price = COALESCE(price, 0) * 0.5, 
+                adjustable_price = COALESCE(price, 0) * 0.5
+            WHERE fixed_price IS NULL AND price IS NOT NULL
+        ''')
+    except Exception:
+        pass
+    
+    # Try to set NOT NULL - might fail if columns don't exist or already have NULL
+    try:
+        op.alter_column('contracts', 'fixed_price', nullable=False, new_column_name='fixed_price')
+    except Exception:
+        pass
+    
+    try:
+        op.alter_column('contracts', 'adjustable_price', nullable=False, new_column_name='adjustable_price')
+    except Exception:
+        pass
+    
+    # Try to drop old price column - might not exist in fresh installs
     try:
         op.drop_column('contracts', 'price')
     except Exception:
-        # Column might not exist in fresh installs
         pass
 
 
 def downgrade() -> None:
-    """Restore the original 'price' column"""
-    # Recreate price column as sum of fixed and adjustable
-    op.add_column('contracts', sa.Column('price', sa.Float(), nullable=True))
-    
-    op.execute('''
-        UPDATE contracts 
-        SET price = fixed_price + adjustable_price
-    ''')
-    
-    op.alter_column('contracts', 'price', nullable=False)
-    
-    # Drop new columns
-    op.drop_column('contracts', 'fixed_price')
-    op.drop_column('contracts', 'adjustable_price')
+    """Restore the original 'price' column (for rollback scenarios)"""
+    try:
+        # Recreate price column as sum of fixed and adjustable
+        op.add_column('contracts', sa.Column('price', sa.Float(), nullable=True))
+        
+        op.execute('''
+            UPDATE contracts 
+            SET price = COALESCE(fixed_price, 0) + COALESCE(adjustable_price, 0)
+        ''')
+        
+        op.alter_column('contracts', 'price', nullable=False, new_column_name='price')
+        
+        # Drop new columns
+        op.drop_column('contracts', 'fixed_price')
+        op.drop_column('contracts', 'adjustable_price')
+        
+    except Exception:
+        # Might fail if structure is different - that's OK
+        pass

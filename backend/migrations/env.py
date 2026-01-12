@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.config import settings
-from app.database import Base
+from app.database import Base, engine
 
 # this is the Alembic Config object
 config = context.config
@@ -40,6 +40,13 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+    # Create all tables first (if they don't exist) - idempotent
+    # This ensures we always have the table structure before migrations run
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Note: Could not create tables via SQLAlchemy: {e}")
+    
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = settings.DATABASE_URL
     connectable = engine_from_config(
