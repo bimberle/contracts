@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: contracts_db
+    environment:
+      POSTGRES_DB: contracts
+      POSTGRES_USER: contracts_user
+      POSTGRES_PASSWORD: contracts_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U contracts_user -d contracts"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - contracts_network
+    restart: unless-stopped
+
+  backend:
+    # Use prebuilt image from Docker Hub instead of building locally
+    image: ${DOCKERHUB_USERNAME:-bimberle}/contracts-backend:${VERSION:-latest}
+    container_name: contracts_backend
+    environment:
+      DATABASE_URL: postgresql://contracts_user:contracts_password@database:5432/contracts
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
+      DEBUG: "False"
+      CORS_ORIGINS_STR: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - contracts_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    # Use prebuilt image from Docker Hub instead of building locally
+    image: ${DOCKERHUB_USERNAME:-bimberle}/contracts-frontend:${VERSION:-latest}
+    container_name: contracts_frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - contracts_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  contracts_network:
+    driver: bridge

@@ -19,17 +19,23 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
+  const loadDashboardData = async () => {
+    try {
+      await fetchCustomers();
+      const dashboardData = await api.getDashboard();
+      setSummary(dashboardData);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Dashboard-Daten';
+      setError(errorMessage);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        await fetchCustomers();
-        const dashboardData = await api.getDashboard();
-        setSummary(dashboardData);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Dashboard-Daten';
-        setError(errorMessage);
+        await loadDashboardData();
       } finally {
         setLoading(false);
       }
@@ -37,6 +43,12 @@ function Dashboard() {
 
     loadData();
   }, [fetchCustomers]);
+
+  const handleCustomerSuccess = async () => {
+    // Reload dashboard data when a customer is created/updated
+    await loadDashboardData();
+    setIsCustomerModalOpen(false);
+  };
 
   // Load metrics for all customers
   useEffect(() => {
@@ -225,9 +237,7 @@ function Dashboard() {
       <CustomerModal
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
-        onSuccess={() => {
-          fetchCustomers();
-        }}
+        onSuccess={handleCustomerSuccess}
       />
     </div>
   );
