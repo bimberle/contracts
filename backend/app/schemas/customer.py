@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 from datetime import datetime
 from typing import Optional
@@ -11,11 +11,30 @@ class CustomerBase(BaseModel):
         from_attributes=True
     )
     
-    name: str
-    ort: str
-    plz: str
-    kundennummer: str
-    land: str = "Deutschland"
+    name: str = Field(..., min_length=1, description="Name des Kunden (Vorname)")
+    name2: str = Field(..., min_length=1, description="Name des Kunden (Nachname)")
+    ort: str = Field(..., min_length=1, description="Stadt/Ort")
+    plz: str = Field(..., description="Postleitzahl (nur numerisch)")
+    kundennummer: str = Field(..., description="Kundennummer (nur numerisch)")
+    land: str = Field(default="Deutschland", description="Land")
+    
+    @field_validator('plz')
+    @classmethod
+    def validate_plz(cls, v):
+        if not v.isdigit():
+            raise ValueError('Postleitzahl darf nur Ziffern enthalten')
+        if len(v) < 4 or len(v) > 10:
+            raise ValueError('Postleitzahl muss zwischen 4 und 10 Ziffern enthalten')
+        return v
+    
+    @field_validator('kundennummer')
+    @classmethod
+    def validate_kundennummer(cls, v):
+        if not v.isdigit():
+            raise ValueError('Kundennummer darf nur Ziffern enthalten')
+        if len(v) < 1 or len(v) > 20:
+            raise ValueError('Kundennummer muss zwischen 1 und 20 Ziffern enthalten')
+        return v
 
 class CustomerCreate(CustomerBase):
     pass
@@ -27,10 +46,31 @@ class CustomerUpdate(BaseModel):
     )
     
     name: Optional[str] = None
+    name2: Optional[str] = None
     ort: Optional[str] = None
     plz: Optional[str] = None
     kundennummer: Optional[str] = None
     land: Optional[str] = None
+    
+    @field_validator('plz')
+    @classmethod
+    def validate_plz(cls, v):
+        if v is not None:
+            if not v.isdigit():
+                raise ValueError('Postleitzahl darf nur Ziffern enthalten')
+            if len(v) < 4 or len(v) > 10:
+                raise ValueError('Postleitzahl muss zwischen 4 und 10 Ziffern enthalten')
+        return v
+    
+    @field_validator('kundennummer')
+    @classmethod
+    def validate_kundennummer(cls, v):
+        if v is not None:
+            if not v.isdigit():
+                raise ValueError('Kundennummer darf nur Ziffern enthalten')
+            if len(v) < 1 or len(v) > 20:
+                raise ValueError('Kundennummer muss zwischen 1 und 20 Ziffern enthalten')
+        return v
 
 class Customer(CustomerBase):
     id: str

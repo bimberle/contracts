@@ -72,7 +72,7 @@ function Dashboard() {
 
   const filteredCustomers = customers.filter(
     (customer) =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${customer.name} ${customer.name2}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.kundennummer.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -206,7 +206,7 @@ function Dashboard() {
                         {customer.kundennummer}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.name}
+                        {customer.name} {customer.name2}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {customer.ort}, {customer.plz}

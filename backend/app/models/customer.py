@@ -8,7 +8,8 @@ class Customer(Base):
     __tablename__ = "customers"
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    name2 = Column(String, nullable=False, index=True)
     ort = Column(String, nullable=False)
     plz = Column(String, nullable=False)
     kundennummer = Column(String, unique=True, nullable=False, index=True)

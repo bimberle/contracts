@@ -131,7 +131,7 @@ function CustomerDetail() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{customer.name}</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{customer.name} {customer.name2}</h1>
               <p className="text-gray-600 mt-2">Kundennummer: {customer.kundennummer}</p>
               <p className="text-gray-600">
                 {customer.ort}, {customer.plz}, {customer.land}
@@ -219,9 +219,6 @@ function CustomerDetail() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Beschreibung
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Typ
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -241,7 +238,7 @@ function CustomerDetail() {
             <tbody className="divide-y divide-gray-200">
               {contracts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     Keine Verträge vorhanden
                   </td>
                 </tr>
@@ -253,9 +250,6 @@ function CustomerDetail() {
                   
                   return (
                     <tr key={contract.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {contract.title}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {contract.type === 'rental' ? 'Miete' : 'Software-Pflege'}
                       </td>

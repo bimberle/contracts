@@ -20,8 +20,7 @@ class Contract(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     customer_id = Column(String, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # Beschreibung & Typ
-    title = Column(String, nullable=False)
+    # Typ
     type = Column(Enum(ContractType), nullable=False)
     
     # Finanzielle Details

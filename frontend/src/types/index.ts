@@ -5,6 +5,7 @@ export type ISO8601String = string; // Format: YYYY-MM-DDTHH:mm:ss
 export interface Customer {
   id: string; // UUID
   name: string;
+  name2: string;
   ort: string;
   plz: string;
   kundennummer: string;
@@ -15,6 +16,7 @@ export interface Customer {
 
 export interface CustomerCreateRequest {
   name: string;
+  name2: string;
   ort: string;
   plz: string;
   kundennummer: string;
@@ -23,6 +25,7 @@ export interface CustomerCreateRequest {
 
 export interface CustomerUpdateRequest {
   name?: string;
+  name2?: string;
   ort?: string;
   plz?: string;
   kundennummer?: string;
@@ -36,7 +39,6 @@ export type ContractStatus = 'active' | 'inactive' | 'completed';
 export interface Contract {
   id: string; // UUID
   customerId: string;
-  title: string;
   type: ContractType;
   fixedPrice: number; // Fixer Betrag (€/Monat)
   adjustablePrice: number; // Anpassungsfähiger Betrag (€/Monat)
@@ -53,7 +55,6 @@ export interface Contract {
 
 export interface ContractCreateRequest {
   customerId: string;
-  title: string;
   type: ContractType;
   fixedPrice: number;
   adjustablePrice: number;
@@ -67,7 +68,6 @@ export interface ContractCreateRequest {
 }
 
 export interface ContractUpdateRequest {
-  title?: string;
   type?: ContractType;
   fixedPrice?: number;
   adjustablePrice?: number;

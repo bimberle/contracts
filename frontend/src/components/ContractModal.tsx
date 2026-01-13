@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Contract, ContractCreateRequest, ContractUpdateRequest, ContractType, Settings, PriceIncrease } from '../types';
+import { Contract, ContractCreateRequest, ContractUpdateRequest, ContractType, ContractStatus, Settings, PriceIncrease } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
 
@@ -19,7 +19,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
   onSuccess,
 }) => {
   const [formData, setFormData] = useState({
-    title: '',
     type: 'rental' as ContractType,
     fixedPrice: 0,
     adjustablePrice: 0,
@@ -28,7 +27,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     rentalStartDate: new Date().toISOString().split('T')[0],
     endDate: '',
     isFounderDiscount: false,
-    status: 'active' as const,
+    status: 'active' as ContractStatus,
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +43,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
   useEffect(() => {
     if (contract) {
       setFormData({
-        title: contract.title,
         type: contract.type,
         fixedPrice: contract.fixedPrice,
         adjustablePrice: contract.adjustablePrice,
@@ -58,7 +56,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
       });
     } else {
       setFormData({
-        title: '',
         type: 'rental',
         fixedPrice: 0,
         adjustablePrice: 0,
@@ -217,24 +214,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Titel
-              </label>
-              <input
-                autoFocus
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Typ
               </label>
               <select
+                autoFocus
                 name="type"
                 value={formData.type}
                 onChange={handleChange}
@@ -418,7 +401,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
               {breakdown.increases.length > 0 ? (
                 <>
                   <div className="py-2 text-sm font-semibold text-gray-700">Preiserhöhungen:</div>
-                  {breakdown.increases.map((increase, index) => {
+                  {breakdown.increases.map((increase: any, index: number) => {
                     const increaseAmount = breakdown.baseAdjustablePrice * (increase.factor / 100);
                     const validFromDate = new Date(increase.validFrom);
                     const dateStr = validFromDate.toLocaleDateString('de-DE', {

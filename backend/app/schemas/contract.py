@@ -13,7 +13,6 @@ class ContractBase(BaseModel):
     )
     
     customer_id: str
-    title: str
     type: ContractType
     fixed_price: float
     adjustable_price: float
@@ -34,7 +33,6 @@ class ContractUpdate(BaseModel):
         populate_by_name=True
     )
     
-    title: Optional[str] = None
     type: Optional[ContractType] = None
     fixed_price: Optional[float] = None
     adjustable_price: Optional[float] = None

@@ -12,6 +12,7 @@ interface CustomerModalProps {
 const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
+    name2: '',
     ort: '',
     plz: '',
     kundennummer: '',
@@ -28,6 +29,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
     if (customer) {
       setFormData({
         name: customer.name,
+        name2: customer.name2,
         ort: customer.ort,
         plz: customer.plz,
         kundennummer: customer.kundennummer,
@@ -36,6 +38,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
     } else {
       setFormData({
         name: '',
+        name2: '',
         ort: '',
         plz: '',
         kundennummer: '',
@@ -47,6 +50,15 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Validierung für numerische Felder
+    if (name === 'plz' || name === 'kundennummer') {
+      // Nur Ziffern erlauben
+      if (value && !/^\d*$/.test(value)) {
+        return;
+      }
+    }
+    
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -106,7 +118,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Kundennummer
+              Kundennummer (nur Ziffern)
             </label>
             <input
               autoFocus
@@ -115,6 +127,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
               value={formData.kundennummer}
               onChange={handleChange}
               disabled={!!customer} // Kundennummer nicht änderbar
+              maxLength={20}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100"
               required
             />
@@ -125,9 +138,24 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
               Name
             </label>
             <input
+              autoFocus
               type="text"
               name="name"
               value={formData.name}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name 2
+            </label>
+            <input
+              type="text"
+              name="name2"
+              value={formData.name2}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               required
@@ -150,13 +178,14 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Postleitzahl
+              Postleitzahl (nur Ziffern)
             </label>
             <input
               type="text"
               name="plz"
               value={formData.plz}
               onChange={handleChange}
+              maxLength={10}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               required
             />
