@@ -6,6 +6,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { Customer, Contract, CalculatedMetrics, PriceIncrease } from '../types';
 import api from '../services/api';
 import ContractModal from '../components/ContractModal';
+import CustomerModal from '../components/CustomerModal';
 
 function CustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -18,6 +19,7 @@ function CustomerDetail() {
   const [error, setError] = useState<string | null>(null);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [selectedContractForEdit, setSelectedContractForEdit] = useState<Contract | null>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   
   const settings = useSettingsStore((state) => state.settings);
 
@@ -92,6 +94,12 @@ function CustomerDetail() {
     loadData();
   }, [customerId]);
 
+  const handleCustomerEditSuccess = () => {
+    // Reload customer data after successful edit
+    loadData();
+    setIsCustomerModalOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -131,7 +139,18 @@ function CustomerDetail() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{customer.name} {customer.name2}</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">{customer.name} {customer.name2}</h1>
+                <button
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                  title="Kundendaten bearbeiten"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              </div>
               <p className="text-gray-600 mt-2">Kundennummer: {customer.kundennummer}</p>
               <p className="text-gray-600">
                 {customer.ort}, {customer.plz}, {customer.land}
@@ -308,6 +327,15 @@ function CustomerDetail() {
             }
             setSelectedContractForEdit(null);
           }}
+        />
+      )}
+
+      {customer && (
+        <CustomerModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          customer={customer}
+          onSuccess={handleCustomerEditSuccess}
         />
       )}
     </div>
