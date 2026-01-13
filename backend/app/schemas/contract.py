@@ -14,8 +14,10 @@ class ContractBase(BaseModel):
     
     customer_id: str
     type: ContractType
-    fixed_price: float
-    adjustable_price: float
+    software_rental_amount: float = 0  # Software Miete
+    software_care_amount: float = 0    # Software Pflege
+    apps_amount: float = 0             # Apps
+    purchase_amount: float = 0         # Kauf Bestandsvertrag
     currency: str = "EUR"
     start_date: datetime
     rental_start_date: datetime
@@ -34,8 +36,10 @@ class ContractUpdate(BaseModel):
     )
     
     type: Optional[ContractType] = None
-    fixed_price: Optional[float] = None
-    adjustable_price: Optional[float] = None
+    software_rental_amount: Optional[float] = None
+    software_care_amount: Optional[float] = None
+    apps_amount: Optional[float] = None
+    purchase_amount: Optional[float] = None
     currency: Optional[str] = None
     start_date: Optional[datetime] = None
     rental_start_date: Optional[datetime] = None

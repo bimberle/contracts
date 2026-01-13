@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, Optional
 
 # PriceIncrease Schemas
 class PriceIncreaseBase(BaseModel):
@@ -12,9 +12,14 @@ class PriceIncreaseBase(BaseModel):
     )
     
     valid_from: datetime
-    factor: float
+    # Amount increases per type (in %)
+    amount_increases: Dict[str, float] = {
+        "software_rental": 0,
+        "software_care": 0,
+        "apps": 0,
+        "purchase": 0
+    }
     lock_in_months: int = 24
-    applies_to_types: List[str] = ["rental", "software-care"]
     description: str = ""
 
 class PriceIncreaseCreate(PriceIncreaseBase):
@@ -27,9 +32,8 @@ class PriceIncreaseUpdate(BaseModel):
     )
     
     valid_from: Optional[datetime] = None
-    factor: Optional[float] = None
+    amount_increases: Optional[Dict[str, float]] = None
     lock_in_months: Optional[int] = None
-    applies_to_types: Optional[List[str]] = None
     description: Optional[str] = None
 
 class PriceIncrease(PriceIncreaseBase):

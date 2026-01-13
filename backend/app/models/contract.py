@@ -23,9 +23,11 @@ class Contract(Base):
     # Typ
     type = Column(Enum(ContractType), nullable=False)
     
-    # Finanzielle Details
-    fixed_price = Column(Float, nullable=False)
-    adjustable_price = Column(Float, nullable=False)
+    # Finanzielle Details - 4 Beträge
+    software_rental_amount = Column(Float, default=0)  # Software Miete
+    software_care_amount = Column(Float, default=0)    # Software Pflege
+    apps_amount = Column(Float, default=0)             # Apps
+    purchase_amount = Column(Float, default=0)         # Kauf Bestandsvertrag
     currency = Column(String, default="EUR")
     
     # Zeitliche Details

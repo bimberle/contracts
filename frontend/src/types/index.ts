@@ -40,8 +40,10 @@ export interface Contract {
   id: string; // UUID
   customerId: string;
   type: ContractType;
-  fixedPrice: number; // Fixer Betrag (€/Monat)
-  adjustablePrice: number; // Anpassungsfähiger Betrag (€/Monat)
+  softwareRentalAmount: number; // Software Miete (€/Monat)
+  softwareCareAmount: number;   // Software Pflege (€/Monat)
+  appsAmount: number;           // Apps (€/Monat)
+  purchaseAmount: number;       // Kauf Bestandsvertrag (€/Monat)
   currency: string; // z.B. 'EUR'
   startDate: ISO8601String; // Unterzeichnungsdatum
   rentalStartDate: ISO8601String; // Tatsächlicher Mietbeginn
@@ -56,8 +58,10 @@ export interface Contract {
 export interface ContractCreateRequest {
   customerId: string;
   type: ContractType;
-  fixedPrice: number;
-  adjustablePrice: number;
+  softwareRentalAmount: number;
+  softwareCareAmount: number;
+  appsAmount: number;
+  purchaseAmount: number;
   currency?: string;
   startDate: ISO8601String;
   rentalStartDate: ISO8601String;
@@ -69,8 +73,10 @@ export interface ContractCreateRequest {
 
 export interface ContractUpdateRequest {
   type?: ContractType;
-  fixedPrice?: number;
-  adjustablePrice?: number;
+  softwareRentalAmount?: number;
+  softwareCareAmount?: number;
+  appsAmount?: number;
+  purchaseAmount?: number;
   currency?: string;
   startDate?: ISO8601String;
   rentalStartDate?: ISO8601String;
@@ -84,9 +90,13 @@ export interface ContractUpdateRequest {
 export interface PriceIncrease {
   id: string; // UUID
   validFrom: ISO8601String; // Ab wann gültig
-  factor: number; // % Erhöhung (z.B. 5 für +5%)
+  amountIncreases: {
+    softwareRental: number; // % Erhöhung für Software Miete
+    softwareCare: number;   // % Erhöhung für Software Pflege
+    apps: number;           // % Erhöhung für Apps
+    purchase: number;       // % Erhöhung für Kauf Bestandsvertrag
+  };
   lockInMonths: number; // Bestandsschutz in Monaten
-  appliesToTypes: ContractType[]; // Welche Vertragstypen betroffen
   description: string;
   createdAt: ISO8601String;
   updatedAt: ISO8601String;
@@ -94,29 +104,41 @@ export interface PriceIncrease {
 
 export interface PriceIncreaseCreateRequest {
   validFrom: ISO8601String;
-  factor: number;
+  amountIncreases: {
+    softwareRental: number;
+    softwareCare: number;
+    apps: number;
+    purchase: number;
+  };
   lockInMonths?: number;
-  appliesToTypes: ContractType[];
   description?: string;
 }
 
 export interface PriceIncreaseUpdateRequest {
   validFrom?: ISO8601String;
-  factor?: number;
+  amountIncreases?: {
+    softwareRental?: number;
+    softwareCare?: number;
+    apps?: number;
+    purchase?: number;
+  };
   lockInMonths?: number;
-  appliesToTypes?: ContractType[];
   description?: string;
 }
 
 // Settings (Allgemeine Einstellungen)
 export interface CommissionRates {
-  rental: number;
-  'software-care': number;
+  softwareRental: number;   // Software Miete: 20%
+  softwareCare: number;      // Software Pflege: 20%
+  apps: number;              // Apps: 20%
+  purchase: number;          // Kauf Bestandsvertrag: 1/12%
 }
 
 export interface PostContractMonths {
-  rental: number;
-  'software-care': number;
+  softwareRental: number;
+  softwareCare: number;
+  apps: number;
+  purchase: number;
 }
 
 export interface Settings {

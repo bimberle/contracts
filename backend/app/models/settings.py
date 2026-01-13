@@ -10,11 +10,22 @@ class Settings(Base):
     # Existenzgründer
     founder_delay_months = Column(Integer, default=12)
     
-    # Provisionen nach Vertragstyp (stored as JSON)
-    commission_rates = Column(JSON, default={"rental": 10.0, "software-care": 10.0})
+    # Provisionen nach Betrag-Typ (stored as JSON)
+    # New structure: commission_rates by amount type
+    commission_rates = Column(JSON, default={
+        "software_rental": 20.0,      # Software Miete: 20%
+        "software_care": 20.0,         # Software Pflege: 20%
+        "apps": 20.0,                  # Apps: 20%
+        "purchase": 0.083333           # Kauf Bestandsvertrag: 1/12%
+    })
     
     # Post-Contract Provisionen (stored as JSON)
-    post_contract_months = Column(JSON, default={"rental": 12, "software-care": 12})
+    post_contract_months = Column(JSON, default={
+        "software_rental": 12,
+        "software_care": 12,
+        "apps": 12,
+        "purchase": 12
+    })
     
     # Exit-Calculation
     min_contract_months_for_payout = Column(Integer, default=60)

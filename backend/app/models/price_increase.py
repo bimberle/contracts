@@ -10,13 +10,18 @@ class PriceIncrease(Base):
     
     # Gültigkeitszeitraum
     valid_from = Column(DateTime, nullable=False, index=True)
-    factor = Column(Float, nullable=False)  # Erhöhung in % (z.B. 5 für +5%)
+    
+    # Erhöhungen pro Betrag-Typ (stored as JSON with key-value pairs)
+    # Example: { "software_rental": 5.0, "software_care": 3.0, "apps": 2.0, "purchase": 1.0 }
+    amount_increases = Column(JSON, default={
+        "software_rental": 0,
+        "software_care": 0,
+        "apps": 0,
+        "purchase": 0
+    })
     
     # Bestandsschutz
     lock_in_months = Column(Integer, default=24)
-    
-    # Anwendung (stored as JSON array)
-    applies_to_types = Column(JSON, default=["rental", "software-care"])
     
     description = Column(String, default="")
     

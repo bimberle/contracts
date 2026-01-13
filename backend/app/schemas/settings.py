@@ -12,8 +12,18 @@ class SettingsBase(BaseModel):
     )
     
     founder_delay_months: int = 12
-    commission_rates: Dict[str, float] = {"rental": 10.0, "software-care": 10.0}
-    post_contract_months: Dict[str, int] = {"rental": 12, "software-care": 12}
+    commission_rates: Dict[str, float] = {
+        "software_rental": 20.0,      # Software Miete: 20%
+        "software_care": 20.0,         # Software Pflege: 20%
+        "apps": 20.0,                  # Apps: 20%
+        "purchase": 0.083333           # Kauf Bestandsvertrag: 1/12%
+    }
+    post_contract_months: Dict[str, int] = {
+        "software_rental": 12,
+        "software_care": 12,
+        "apps": 12,
+        "purchase": 12
+    }
     min_contract_months_for_payout: int = 60
 
 class SettingsUpdate(BaseModel):
