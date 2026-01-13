@@ -26,10 +26,10 @@ function CustomerDetail() {
   // Hilfsfunktion: Berechne Basisbeträge mit Preiserhöhungen
   const calculateContractAmounts = (contract: Contract) => {
     const baseAmounts = {
-      softwareRental: contract.softwareRentalAmount,
-      softwareCare: contract.softwareCareAmount,
-      apps: contract.appsAmount,
-      purchase: contract.purchaseAmount,
+      softwareRental: contract.softwareRentalAmount || 0,
+      softwareCare: contract.softwareCareAmount || 0,
+      apps: contract.appsAmount || 0,
+      purchase: contract.purchaseAmount || 0,
     };
 
     const rentalStartDate = new Date(contract.rentalStartDate);
@@ -43,37 +43,39 @@ function CustomerDetail() {
     };
 
     // Wende alle gültigen Preiserhöhungen an
-    for (const increase of priceIncreases) {
-      try {
-        const validFromDate = new Date(increase.validFrom);
-        if (isNaN(validFromDate.getTime())) {
-          console.warn(`Invalid date for price increase ${increase.id}: ${increase.validFrom}`);
-          continue;
-        }
+    if (priceIncreases && Array.isArray(priceIncreases) && priceIncreases.length > 0) {
+      for (const increase of priceIncreases) {
+        try {
+          const validFromDate = new Date(increase.validFrom);
+          if (isNaN(validFromDate.getTime())) {
+            console.warn(`Invalid date for price increase ${increase.id}: ${increase.validFrom}`);
+            continue;
+          }
 
-        if (validFromDate <= today) {
-          const monthsRunning = Math.floor(
-            (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-          );
+          if (validFromDate <= today) {
+            const monthsRunning = Math.floor(
+              (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+            );
 
-          if (monthsRunning >= increase.lockInMonths) {
-            if (increase.amountIncreases.softwareRental > 0) {
-              increases.softwareRental += increase.amountIncreases.softwareRental;
-            }
-            if (increase.amountIncreases.softwareCare > 0) {
-              increases.softwareCare += increase.amountIncreases.softwareCare;
-            }
-            if (increase.amountIncreases.apps > 0) {
-              increases.apps += increase.amountIncreases.apps;
-            }
-            if (increase.amountIncreases.purchase > 0) {
-              increases.purchase += increase.amountIncreases.purchase;
+            if (monthsRunning >= increase.lockInMonths) {
+              if (increase.amountIncreases?.softwareRental > 0) {
+                increases.softwareRental += increase.amountIncreases.softwareRental;
+              }
+              if (increase.amountIncreases?.softwareCare > 0) {
+                increases.softwareCare += increase.amountIncreases.softwareCare;
+              }
+              if (increase.amountIncreases?.apps > 0) {
+                increases.apps += increase.amountIncreases.apps;
+              }
+              if (increase.amountIncreases?.purchase > 0) {
+                increases.purchase += increase.amountIncreases.purchase;
+              }
             }
           }
+        } catch (error) {
+          console.warn(`Error processing price increase ${increase.id}:`, error);
+          continue;
         }
-      } catch {
-        console.warn(`Error processing price increase ${increase.id}`);
-        continue;
       }
     }
 
@@ -217,7 +219,7 @@ function CustomerDetail() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-3">Geltende Preiserhöhungen:</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {priceIncreases.map((increase) => {
+            {priceIncreases && priceIncreases.map((increase) => {
               let validFromDate: Date;
               let dateStr = 'Ungültiges Datum';
               try {
@@ -228,23 +230,23 @@ function CustomerDetail() {
               } catch {
                 // keep default dateStr
               }
-              const hasAnyIncrease = Object.values(increase.amountIncreases).some(v => v > 0);
+              const hasAnyIncrease = increase.amountIncreases && Object.values(increase.amountIncreases).some(v => v > 0);
               return (
                 <div key={increase.id} className="bg-white p-3 rounded border border-blue-100">
                   <p className="text-xs text-gray-600 mb-2">
                     Gültig ab: {dateStr}
                   </p>
                   <div className="text-xs space-y-1">
-                    {increase.amountIncreases.softwareRental > 0 && (
+                    {increase.amountIncreases?.softwareRental > 0 && (
                       <p><span className="text-gray-600">Software Miete:</span> +{increase.amountIncreases.softwareRental.toFixed(1)}%</p>
                     )}
-                    {increase.amountIncreases.softwareCare > 0 && (
+                    {increase.amountIncreases?.softwareCare > 0 && (
                       <p><span className="text-gray-600">Software Pflege:</span> +{increase.amountIncreases.softwareCare.toFixed(1)}%</p>
                     )}
-                    {increase.amountIncreases.apps > 0 && (
+                    {increase.amountIncreases?.apps > 0 && (
                       <p><span className="text-gray-600">Apps:</span> +{increase.amountIncreases.apps.toFixed(1)}%</p>
                     )}
-                    {increase.amountIncreases.purchase > 0 && (
+                    {increase.amountIncreases?.purchase > 0 && (
                       <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> +{increase.amountIncreases.purchase.toFixed(1)}%</p>
                     )}
                     {!hasAnyIncrease && (
@@ -306,8 +308,10 @@ function CustomerDetail() {
                 </tr>
               ) : (
                 contracts.map((contract) => {
+                  if (!contract) return null;
+                  
                   const amounts = calculateContractAmounts(contract);
-                  const commissionRates = settings?.commissionRates || {
+                  const commissionRates = (settings?.commissionRates as any) || {
                     softwareRental: 20,
                     softwareCare: 20,
                     apps: 20,
@@ -315,10 +319,10 @@ function CustomerDetail() {
                   };
                   
                   const commissions = {
-                    softwareRental: amounts.adjustedAmounts.softwareRental * (commissionRates.softwareRental / 100),
-                    softwareCare: amounts.adjustedAmounts.softwareCare * (commissionRates.softwareCare / 100),
-                    apps: amounts.adjustedAmounts.apps * (commissionRates.apps / 100),
-                    purchase: amounts.adjustedAmounts.purchase * (commissionRates.purchase / 100),
+                    softwareRental: (amounts?.adjustedAmounts?.softwareRental || 0) * ((commissionRates?.softwareRental || 20) / 100),
+                    softwareCare: (amounts?.adjustedAmounts?.softwareCare || 0) * ((commissionRates?.softwareCare || 20) / 100),
+                    apps: (amounts?.adjustedAmounts?.apps || 0) * ((commissionRates?.apps || 20) / 100),
+                    purchase: (amounts?.adjustedAmounts?.purchase || 0) * ((commissionRates?.purchase || 0.083333) / 100),
                   };
                   const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
                   
