@@ -11,27 +11,36 @@ def get_current_monthly_price(
     date: datetime
 ) -> float:
     """
-    Berechnet den aktuellen Gesamtpreis (fixed + adjustable mit Erhöhungen)
+    Berechnet den aktuellen Gesamtpreis (Summe aller 4 Beträge mit Erhöhungen)
     Berücksichtigt:
-    1. Alle gültigen Preiserhöhungen (nur auf adjustable_price)
+    1. Alle gültigen Preiserhöhungen (pro Betrag-Typ)
     2. Bestandsschutz (lockInMonths)
     3. Datum der Anfrage
     
-    Formel: total = fixed_price + (adjustable_price * (1 + sum(increases)))
+    Formel: total = sum(amount * (1 + applicable_increases))
     """
-    adjustable_price = contract.adjustable_price
+    # Basis-Beträge
+    amounts = {
+        'software_rental': contract.software_rental_amount,
+        'software_care': contract.software_care_amount,
+        'apps': contract.apps_amount,
+        'purchase': contract.purchase_amount,
+    }
     
+    # Bestandsschutz prüfen
+    months_running = months_between(contract.rental_start_date, date)
+    
+    # Preiserhöhungen anwenden pro Betrag-Typ
     for price_increase in price_increases:
-        # Prüfe ob Preiserhöhung gültig ist
         if price_increase.valid_from <= date:
-            # Prüfe ob Vertragstyp betroffen ist
-            if contract.type.value in price_increase.applies_to_types:
-                # Prüfe Bestandsschutz
-                months_running = months_between(contract.rental_start_date, date)
-                if months_running >= price_increase.lock_in_months:
-                    adjustable_price *= (1 + price_increase.factor / 100)
+            if months_running >= price_increase.lock_in_months:
+                # Preiserhöhungen pro Betrag-Typ anwenden
+                if price_increase.amount_increases:
+                    for amount_type, increase_percent in price_increase.amount_increases.items():
+                        if amount_type in amounts:
+                            amounts[amount_type] *= (1 + increase_percent / 100)
     
-    return contract.fixed_price + adjustable_price
+    return sum(amounts.values())
 
 def get_current_monthly_commission(
     contract: Contract,
@@ -40,29 +49,54 @@ def get_current_monthly_commission(
     date: datetime
 ) -> float:
     """
-    Berechnet die aktuelle monatliche Provision
+    Berechnet die aktuelle monatliche Provision (Summe aller Betrag-Typen)
     """
     if contract.status.value != 'active':
         return 0.0
     
-    current_price = get_current_monthly_price(contract, price_increases, date)
-    commission_rate = settings.commission_rates.get(contract.type.value, 0)
+    # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen
+    amounts = {
+        'software_rental': contract.software_rental_amount,
+        'software_care': contract.software_care_amount,
+        'apps': contract.apps_amount,
+        'purchase': contract.purchase_amount,
+    }
+    
     months_since_rental_start = months_between(contract.rental_start_date, date)
     
-    # Noch in Gründerphase
+    # Noch in Gründerphase - keine Provision
     if months_since_rental_start < 0:
         return 0.0
     
-    # Nach Vertragsende - prüfe postContractMonths
-    if contract.end_date and date > contract.end_date:
-        months_after_end = months_between(contract.end_date, date)
-        post_contract_limit = settings.post_contract_months.get(contract.type.value, 0)
-        if months_after_end <= post_contract_limit:
-            return current_price * (commission_rate / 100)
-        else:
-            return 0.0
+    # Bestandsschutz für Preiserhöhungen prüfen
+    months_running = months_since_rental_start
     
-    return current_price * (commission_rate / 100)
+    # Preiserhöhungen anwenden
+    for price_increase in price_increases:
+        if price_increase.valid_from <= date:
+            if months_running >= price_increase.lock_in_months:
+                if price_increase.amount_increases:
+                    for amount_type, increase_percent in price_increase.amount_increases.items():
+                        if amount_type in amounts:
+                            amounts[amount_type] *= (1 + increase_percent / 100)
+    
+    # Berechne Provisionen pro Betrag-Typ
+    total_commission = 0.0
+    
+    for amount_type, amount in amounts.items():
+        commission_rate = settings.commission_rates.get(amount_type, 0)
+        
+        # Nach Vertragsende - prüfe postContractMonths
+        if contract.end_date and date > contract.end_date:
+            months_after_end = months_between(contract.end_date, date)
+            post_contract_limit = settings.post_contract_months.get(amount_type, 0)
+            if months_after_end > post_contract_limit:
+                # Vertragsende + post-contract periode vorbei
+                continue
+        
+        total_commission += amount * (commission_rate / 100)
+    
+    return total_commission
 
 def calculate_earnings_to_date(
     contract: Contract,

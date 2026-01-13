@@ -33,13 +33,11 @@ export interface CustomerUpdateRequest {
 }
 
 // Contract (Vertrag)
-export type ContractType = 'rental' | 'software-care';
 export type ContractStatus = 'active' | 'inactive' | 'completed';
 
 export interface Contract {
   id: string; // UUID
   customerId: string;
-  type: ContractType;
   softwareRentalAmount: number; // Software Miete (€/Monat)
   softwareCareAmount: number;   // Software Pflege (€/Monat)
   appsAmount: number;           // Apps (€/Monat)
@@ -49,7 +47,7 @@ export interface Contract {
   rentalStartDate: ISO8601String; // Tatsächlicher Mietbeginn
   endDate: ISO8601String | null; // null = unbegrenzt
   isFounderDiscount: boolean;
-  status: ContractStatus;
+  status: ContractStatus; // Automatisch basierend auf endDate
   notes: string;
   createdAt: ISO8601String;
   updatedAt: ISO8601String;
@@ -57,7 +55,6 @@ export interface Contract {
 
 export interface ContractCreateRequest {
   customerId: string;
-  type: ContractType;
   softwareRentalAmount: number;
   softwareCareAmount: number;
   appsAmount: number;
@@ -67,12 +64,10 @@ export interface ContractCreateRequest {
   rentalStartDate: ISO8601String;
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
-  status?: ContractStatus;
   notes?: string;
 }
 
 export interface ContractUpdateRequest {
-  type?: ContractType;
   softwareRentalAmount?: number;
   softwareCareAmount?: number;
   appsAmount?: number;
@@ -82,7 +77,6 @@ export interface ContractUpdateRequest {
   rentalStartDate?: ISO8601String;
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
-  status?: ContractStatus;
   notes?: string;
 }
 

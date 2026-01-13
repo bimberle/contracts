@@ -141,11 +141,12 @@ def get_customer_analytics(customer_id: str, db: Session = Depends(get_db)):
         )
         contract_details.append({
             "id": contract.id,
-            "title": contract.title,
             "type": contract.type.value,
             "status": contract.status.value,
-            "fixed_price": contract.fixed_price,
-            "adjustable_price": contract.adjustable_price,
+            "softwareRentalAmount": contract.software_rental_amount,
+            "softwareCareAmount": contract.software_care_amount,
+            "appsAmount": contract.apps_amount,
+            "purchaseAmount": contract.purchase_amount,
             "metrics": contract_metrics
         })
     

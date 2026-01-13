@@ -283,9 +283,6 @@ function CustomerDetail() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Typ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -302,7 +299,7 @@ function CustomerDetail() {
             <tbody className="divide-y divide-gray-200">
               {contracts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                     Keine Verträge vorhanden
                   </td>
                 </tr>
@@ -328,9 +325,6 @@ function CustomerDetail() {
                   
                   return (
                     <tr key={contract.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {contract.type === 'rental' ? 'Mietvertrag' : 'Software-Pflege'}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${

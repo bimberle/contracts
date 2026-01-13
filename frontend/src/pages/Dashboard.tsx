@@ -97,17 +97,9 @@ function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">Übersicht aller Kunden und Verträge</p>
-        </div>
-        <button
-          onClick={() => setIsCustomerModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          + Neuer Kunde
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Übersicht aller Kunden und Verträge</p>
       </div>
 
       {/* KPI Cards */}
@@ -156,7 +148,15 @@ function Dashboard() {
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Kunden</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Kunden</h2>
+            <button
+              onClick={() => setIsCustomerModalOpen(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+            >
+              + Neuer Kunde
+            </button>
+          </div>
           <input
             type="text"
             placeholder="Nach Name oder Kundennummer suchen..."

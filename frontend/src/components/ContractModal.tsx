@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Contract, ContractType, ContractStatus } from '../types';
+import { Contract } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
 
@@ -19,7 +19,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
   onSuccess,
 }) => {
   const [formData, setFormData] = useState({
-    type: 'rental' as ContractType,
     softwareRentalAmount: 0,
     softwareCareAmount: 0,
     appsAmount: 0,
@@ -29,7 +28,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
     rentalStartDate: new Date().toISOString().split('T')[0],
     endDate: '',
     isFounderDiscount: false,
-    status: 'active' as ContractStatus,
     notes: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +43,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
   useEffect(() => {
     if (contract) {
       setFormData({
-        type: contract.type,
         softwareRentalAmount: contract.softwareRentalAmount,
         softwareCareAmount: contract.softwareCareAmount,
         appsAmount: contract.appsAmount,
@@ -55,12 +52,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         rentalStartDate: contract.rentalStartDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
         isFounderDiscount: contract.isFounderDiscount,
-        status: contract.status,
         notes: contract.notes,
       });
     } else {
       setFormData({
-        type: 'rental',
         softwareRentalAmount: 0,
         softwareCareAmount: 0,
         appsAmount: 0,
@@ -70,7 +65,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         rentalStartDate: new Date().toISOString().split('T')[0],
         endDate: '',
         isFounderDiscount: false,
-        status: 'active',
         notes: '',
       });
     }
@@ -102,14 +96,26 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setIsLoading(true);
 
     try {
-      const payload = {
-        customerId,
-        ...formData,
+      // Konvertiere Daten in das richtige Format
+      const payload: any = {
+        softwareRentalAmount: formData.softwareRentalAmount,
+        softwareCareAmount: formData.softwareCareAmount,
+        appsAmount: formData.appsAmount,
+        purchaseAmount: formData.purchaseAmount,
+        currency: formData.currency,
+        startDate: new Date(formData.startDate + 'T00:00:00').toISOString(),
+        rentalStartDate: new Date(formData.rentalStartDate + 'T00:00:00').toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate + 'T00:00:00').toISOString() : null,
+        isFounderDiscount: formData.isFounderDiscount,
+        notes: formData.notes,
       };
 
       if (contract) {
+        // Bei Update: kein customerId (ist ja schon in der Route)
         await updateContract(contract.id, payload);
       } else {
+        // Bei Create: customerId mitgeben
+        payload.customerId = customerId;
         await createContract(payload);
       }
       onSuccess?.();
@@ -253,40 +259,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                 {error}
               </div>
             )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Typ
-                </label>
-                <select
-                  autoFocus
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="rental">Mietvertrag</option>
-                  <option value="software-care">Software-Pflege</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="active">Aktiv</option>
-                  <option value="inactive">Inaktiv</option>
-                  <option value="completed">Abgeschlossen</option>
-                </select>
-              </div>
-            </div>
 
             {/* Amount Fields */}
             <div className="space-y-3 bg-blue-50 p-4 rounded-lg">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Customer, CustomerCreateRequest, CustomerUpdateRequest } from '../types';
 import { useCustomerStore } from '../stores/customerStore';
 
@@ -20,6 +20,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const kundennummerInputRef = useRef<HTMLInputElement>(null);
 
   const createCustomer = useCustomerStore((state) => state.createCustomer);
   const updateCustomer = useCustomerStore((state) => state.updateCustomer);
@@ -28,12 +29,12 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
   useEffect(() => {
     if (customer) {
       setFormData({
-        name: customer.name,
-        name2: customer.name2,
-        ort: customer.ort,
-        plz: customer.plz,
-        kundennummer: customer.kundennummer,
-        land: customer.land,
+        name: customer.name || '',
+        name2: customer.name2 || '',
+        ort: customer.ort || '',
+        plz: customer.plz || '',
+        kundennummer: customer.kundennummer || '',
+        land: customer.land || 'Deutschland',
       });
     } else {
       setFormData({
@@ -44,6 +45,10 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
         kundennummer: '',
         land: 'Deutschland',
       });
+      // Bei neuem Kunden: Focus auf kundennummer Feld
+      setTimeout(() => {
+        kundennummerInputRef.current?.focus();
+      }, 100);
     }
     setError(null);
   }, [customer, isOpen]);
@@ -121,7 +126,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
               Kundennummer (nur Ziffern)
             </label>
             <input
-              autoFocus
+              ref={kundennummerInputRef}
               type="text"
               name="kundennummer"
               value={formData.kundennummer}

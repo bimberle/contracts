@@ -5,10 +5,6 @@ from datetime import datetime
 import uuid
 import enum
 
-class ContractType(str, enum.Enum):
-    RENTAL = "rental"
-    SOFTWARE_CARE = "software-care"
-
 class ContractStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -19,9 +15,6 @@ class Contract(Base):
     
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     customer_id = Column(String, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
-    
-    # Typ
-    type = Column(Enum(ContractType), nullable=False)
     
     # Finanzielle Details - 4 Beträge
     software_rental_amount = Column(Float, default=0)  # Software Miete
@@ -38,8 +31,6 @@ class Contract(Base):
     # Existenzgründer-Flag
     is_founder_discount = Column(Boolean, default=False)
     
-    # Status
-    status = Column(Enum(ContractStatus), default=ContractStatus.ACTIVE)
     notes = Column(String, default="")
     
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -47,3 +38,12 @@ class Contract(Base):
     
     # Relationships
     customer = relationship("Customer", back_populates="contracts")
+    
+    @property
+    def status(self):
+        """Status wird automatisch basierend auf end_date berechnet"""
+        if self.end_date and datetime.utcnow() > self.end_date:
+            return ContractStatus.COMPLETED
+        return ContractStatus.ACTIVE
+
+
