@@ -23,46 +23,74 @@ function CustomerDetail() {
   
   const settings = useSettingsStore((state) => state.settings);
 
-  // Hilfsfunktion: Berechne Preis mit Preiserhöhungen
-  const calculateMonthlyPrice = (contract: Contract): number => {
-    let adjustablePrice = contract.adjustablePrice;
+  // Hilfsfunktion: Berechne Basisbeträge mit Preiserhöhungen
+  const calculateContractAmounts = (contract: Contract) => {
+    const baseAmounts = {
+      softwareRental: contract.softwareRentalAmount,
+      softwareCare: contract.softwareCareAmount,
+      apps: contract.appsAmount,
+      purchase: contract.purchaseAmount,
+    };
+
     const rentalStartDate = new Date(contract.rentalStartDate);
     const today = new Date();
 
+    const increases = {
+      softwareRental: 0,
+      softwareCare: 0,
+      apps: 0,
+      purchase: 0,
+    };
+
     // Wende alle gültigen Preiserhöhungen an
     for (const increase of priceIncreases) {
-      // Versuche das Datum zu parsen - es könnte verschiedene Formate haben
-      let validFromDate: Date;
       try {
-        validFromDate = new Date(increase.validFrom);
-        // Prüfe ob das Datum valid ist
+        const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) {
           console.warn(`Invalid date for price increase ${increase.id}: ${increase.validFrom}`);
           continue;
         }
-      } catch {
-        console.warn(`Error parsing date for price increase ${increase.id}: ${increase.validFrom}`);
-        continue;
-      }
-      
-      // Prüfe ob Preiserhöhung gültig ist (validFrom liegt in der Vergangenheit)
-      if (validFromDate <= today) {
-        // Prüfe ob Vertragstyp betroffen ist
-        if (increase.appliesToTypes.includes(contract.type)) {
-          // Berechne Monate seit Mietbeginn
+
+        if (validFromDate <= today) {
           const monthsRunning = Math.floor(
             (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
           );
-          
-          // Prüfe Bestandsschutz
+
           if (monthsRunning >= increase.lockInMonths) {
-            adjustablePrice *= (1 + increase.factor / 100);
+            if (increase.amountIncreases.softwareRental > 0) {
+              increases.softwareRental += increase.amountIncreases.softwareRental;
+            }
+            if (increase.amountIncreases.softwareCare > 0) {
+              increases.softwareCare += increase.amountIncreases.softwareCare;
+            }
+            if (increase.amountIncreases.apps > 0) {
+              increases.apps += increase.amountIncreases.apps;
+            }
+            if (increase.amountIncreases.purchase > 0) {
+              increases.purchase += increase.amountIncreases.purchase;
+            }
           }
         }
+      } catch {
+        console.warn(`Error processing price increase ${increase.id}`);
+        continue;
       }
     }
 
-    return contract.fixedPrice + adjustablePrice;
+    const adjustedAmounts = {
+      softwareRental: baseAmounts.softwareRental * (1 + increases.softwareRental / 100),
+      softwareCare: baseAmounts.softwareCare * (1 + increases.softwareCare / 100),
+      apps: baseAmounts.apps * (1 + increases.apps / 100),
+      purchase: baseAmounts.purchase * (1 + increases.purchase / 100),
+    };
+
+    const totalAmount = Object.values(adjustedAmounts).reduce((a, b) => a + b, 0);
+
+    return {
+      baseAmounts,
+      adjustedAmounts,
+      totalAmount,
+    };
   };
 
   const loadData = async () => {
@@ -200,15 +228,30 @@ function CustomerDetail() {
               } catch {
                 // keep default dateStr
               }
+              const hasAnyIncrease = Object.values(increase.amountIncreases).some(v => v > 0);
               return (
                 <div key={increase.id} className="bg-white p-3 rounded border border-blue-100">
-                  <p className="text-sm font-medium text-gray-900">
-                    {increase.factor > 0 ? '+' : ''}{increase.factor}%
-                  </p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-600 mb-2">
                     Gültig ab: {dateStr}
                   </p>
-                  <p className="text-xs text-gray-600">
+                  <div className="text-xs space-y-1">
+                    {increase.amountIncreases.softwareRental > 0 && (
+                      <p><span className="text-gray-600">Software Miete:</span> +{increase.amountIncreases.softwareRental.toFixed(1)}%</p>
+                    )}
+                    {increase.amountIncreases.softwareCare > 0 && (
+                      <p><span className="text-gray-600">Software Pflege:</span> +{increase.amountIncreases.softwareCare.toFixed(1)}%</p>
+                    )}
+                    {increase.amountIncreases.apps > 0 && (
+                      <p><span className="text-gray-600">Apps:</span> +{increase.amountIncreases.apps.toFixed(1)}%</p>
+                    )}
+                    {increase.amountIncreases.purchase > 0 && (
+                      <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> +{increase.amountIncreases.purchase.toFixed(1)}%</p>
+                    )}
+                    {!hasAnyIncrease && (
+                      <p className="text-gray-500 italic">Keine Erhöhungen</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
                     Bestandsschutz: {increase.lockInMonths} Monate
                   </p>
                   {increase.description && (
@@ -263,14 +306,26 @@ function CustomerDetail() {
                 </tr>
               ) : (
                 contracts.map((contract) => {
-                  const monthlyPrice = calculateMonthlyPrice(contract);
-                  const commissionRate = settings?.commissionRates?.[contract.type] ?? 0;
-                  const monthlyCommission = monthlyPrice * (commissionRate / 100);
+                  const amounts = calculateContractAmounts(contract);
+                  const commissionRates = settings?.commissionRates || {
+                    softwareRental: 20,
+                    softwareCare: 20,
+                    apps: 20,
+                    purchase: 0.083333,
+                  };
+                  
+                  const commissions = {
+                    softwareRental: amounts.adjustedAmounts.softwareRental * (commissionRates.softwareRental / 100),
+                    softwareCare: amounts.adjustedAmounts.softwareCare * (commissionRates.softwareCare / 100),
+                    apps: amounts.adjustedAmounts.apps * (commissionRates.apps / 100),
+                    purchase: amounts.adjustedAmounts.purchase * (commissionRates.purchase / 100),
+                  };
+                  const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
                   
                   return (
                     <tr key={contract.id} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {contract.type === 'rental' ? 'Miete' : 'Software-Pflege'}
+                        {contract.type === 'rental' ? 'Mietvertrag' : 'Software-Pflege'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span
@@ -286,10 +341,10 @@ function CustomerDetail() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
-                        €{monthlyPrice.toFixed(2)}
+                        €{amounts.totalAmount.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
-                        €{monthlyCommission.toFixed(2)}
+                        €{totalCommission.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button 
