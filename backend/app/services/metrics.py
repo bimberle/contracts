@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.contract import Contract
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
+from app.models.commission_rate import CommissionRate
 from app.services.calculations import (
     get_current_monthly_commission,
     calculate_earnings_to_date,
@@ -15,6 +16,7 @@ def calculate_customer_metrics(
     contracts: List[Contract],
     settings: Settings,
     price_increases: List[PriceIncrease],
+    commission_rates: List[CommissionRate],
     today: datetime
 ) -> Dict:
     """
@@ -38,17 +40,17 @@ def calculate_customer_metrics(
             )
             
         monthly_commission = get_current_monthly_commission(
-            contract, settings, price_increases, today
+            contract, settings, price_increases, commission_rates, today
         )
         total_monthly_commission += monthly_commission
         
         earned = calculate_earnings_to_date(
-            contract, settings, price_increases, today
+            contract, settings, price_increases, commission_rates, today
         )
         total_earned += earned
         
         contract_exit_payout = calculate_exit_payout(
-            contract, settings, price_increases, today
+            contract, settings, price_increases, commission_rates, today
         )
         exit_payout += contract_exit_payout
     
@@ -65,6 +67,7 @@ def calculate_contract_metrics(
     contract: Contract,
     settings: Settings,
     price_increases: List[PriceIncrease],
+    commission_rates: List[CommissionRate],
     today: datetime
 ) -> Dict:
     """
@@ -77,11 +80,21 @@ def calculate_contract_metrics(
     months_running = months_between(contract.rental_start_date, today)
     is_in_founder_period = months_running < 0
     current_monthly_commission = get_current_monthly_commission(
-        contract, settings, price_increases, today
+        contract, settings, price_increases, commission_rates, today
     )
     earned_commission_to_date = calculate_earnings_to_date(
-        contract, settings, price_increases, today
+        contract, settings, price_increases, commission_rates, today
     )
+    
+    return {
+        "contract_id": contract.id,
+        "current_monthly_price": round(current_monthly_price, 2),
+        "months_running": max(0, months_running),
+        "is_in_founder_period": is_in_founder_period,
+        "current_monthly_commission": round(current_monthly_commission, 2),
+        "earned_commission_to_date": round(earned_commission_to_date, 2),
+        "projected_monthly_commission": round(current_monthly_commission, 2)
+    }
     
     return {
         "contract_id": contract.id,

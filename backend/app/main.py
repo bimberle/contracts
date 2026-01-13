@@ -49,11 +49,12 @@ def health_check():
     return {"status": "healthy"}
 
 # Import routers
-from app.routers import customers, contracts, settings, price_increases, analytics
+from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics
 
 # Include routers
 app.include_router(customers.router, prefix="/api/customers")
 app.include_router(contracts.router, prefix="/api/contracts")
 app.include_router(settings.router, prefix="/api/settings")
 app.include_router(price_increases.router, prefix="/api/price-increases")
+app.include_router(commission_rates.router)
 app.include_router(analytics.router, prefix="/api/analytics")

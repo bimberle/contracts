@@ -6,6 +6,7 @@ from app.models.contract import Contract
 from app.models.customer import Customer
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
+from app.models.commission_rate import CommissionRate
 from app.services.forecast import generate_forecast, calculate_forecast_kpis
 from app.services.metrics import calculate_customer_metrics
 from app.schemas.analytics import DashboardSummary, TopCustomer, Forecast, ForecastMonth
@@ -20,6 +21,7 @@ def get_dashboard(db: Session = Depends(get_db)):
     customers = db.query(Customer).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -36,6 +38,7 @@ def get_dashboard(db: Session = Depends(get_db)):
             contracts=contracts,
             settings=settings,
             price_increases=price_increases,
+            commission_rates=commission_rates,
             today=datetime.utcnow()
         )
         
@@ -77,6 +80,7 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
     contracts = db.query(Contract).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -87,6 +91,7 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
         contracts=contracts,
         settings=settings,
         price_increases=price_increases,
+        commission_rates=commission_rates,
         start_date=start_date,
         months=min(months, 36)  # Max 36 Monate
     )
@@ -116,6 +121,7 @@ def get_customer_analytics(customer_id: str, db: Session = Depends(get_db)):
     contracts = db.query(Contract).filter(Contract.customer_id == customer_id).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -126,6 +132,7 @@ def get_customer_analytics(customer_id: str, db: Session = Depends(get_db)):
         contracts=contracts,
         settings=settings,
         price_increases=price_increases,
+        commission_rates=commission_rates,
         today=datetime.utcnow()
     )
     
@@ -137,12 +144,12 @@ def get_customer_analytics(customer_id: str, db: Session = Depends(get_db)):
             contract=contract,
             settings=settings,
             price_increases=price_increases,
+            commission_rates=commission_rates,
             today=datetime.utcnow()
         )
         contract_details.append({
             "id": contract.id,
-            "type": contract.type.value,
-            "status": contract.status.value,
+            "status": contract.status,
             "softwareRentalAmount": contract.software_rental_amount,
             "softwareCareAmount": contract.software_care_amount,
             "appsAmount": contract.apps_amount,

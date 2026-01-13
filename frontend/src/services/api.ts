@@ -4,9 +4,9 @@ import {
   Contract,
   Settings,
   PriceIncrease,
+  CommissionRate,
   CalculatedMetrics,
   ApiResponse,
-  ListResponse,
   Forecast,
   DashboardSummary,
   CustomerCreateRequest,
@@ -16,6 +16,8 @@ import {
   SettingsUpdateRequest,
   PriceIncreaseCreateRequest,
   PriceIncreaseUpdateRequest,
+  CommissionRateCreateRequest,
+  CommissionRateUpdateRequest,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -173,6 +175,36 @@ class ApiClient {
 
   async deletePriceIncrease(priceIncreaseId: string): Promise<void> {
     await this.axiosInstance.delete(`/api/price-increases/${priceIncreaseId}`);
+  }
+
+  // ==================== Commission Rates ====================
+
+  async getCommissionRates(): Promise<CommissionRate[]> {
+    const response = await this.axiosInstance.get<CommissionRate[]>('/api/commission-rates/');
+    return response.data;
+  }
+
+  async createCommissionRate(rate: CommissionRateCreateRequest): Promise<CommissionRate> {
+    const response = await this.axiosInstance.post<CommissionRate>(
+      '/api/commission-rates/',
+      rate
+    );
+    return response.data;
+  }
+
+  async updateCommissionRate(
+    rateId: string,
+    rate: CommissionRateUpdateRequest
+  ): Promise<CommissionRate> {
+    const response = await this.axiosInstance.put<CommissionRate>(
+      `/api/commission-rates/${rateId}`,
+      rate
+    );
+    return response.data;
+  }
+
+  async deleteCommissionRate(rateId: string): Promise<void> {
+    await this.axiosInstance.delete(`/api/commission-rates/${rateId}`);
   }
 
   // ==================== Analytics ====================

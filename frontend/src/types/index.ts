@@ -120,6 +120,43 @@ export interface PriceIncreaseUpdateRequest {
   description?: string;
 }
 
+// Commission Rate (Provisionsätze mit Versionierung nach Datum)
+export interface CommissionRate {
+  id: string; // UUID
+  validFrom: ISO8601String; // Ab wann gelten diese Sätze?
+  rates: {
+    softwareRental: number;  // Software Miete: z.B. 20%
+    softwareCare: number;    // Software Pflege: z.B. 20%
+    apps: number;            // Apps: z.B. 20%
+    purchase: number;        // Kauf Bestandsvertrag: z.B. 0.083333 (1/12%)
+  };
+  description: string;
+  createdAt: ISO8601String;
+  updatedAt: ISO8601String;
+}
+
+export interface CommissionRateCreateRequest {
+  validFrom: ISO8601String;
+  rates: {
+    softwareRental: number;
+    softwareCare: number;
+    apps: number;
+    purchase: number;
+  };
+  description?: string;
+}
+
+export interface CommissionRateUpdateRequest {
+  validFrom?: ISO8601String;
+  rates?: {
+    softwareRental?: number;
+    softwareCare?: number;
+    apps?: number;
+    purchase?: number;
+  };
+  description?: string;
+}
+
 // Settings (Allgemeine Einstellungen)
 export interface CommissionRates {
   softwareRental: number;   // Software Miete: 20%

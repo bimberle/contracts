@@ -3,6 +3,7 @@ from typing import List, Dict
 from app.models.contract import Contract
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
+from app.models.commission_rate import CommissionRate
 from app.services.calculations import get_current_monthly_commission
 from app.utils.date_utils import add_months
 
@@ -10,6 +11,7 @@ def generate_forecast(
     contracts: List[Contract],
     settings: Settings,
     price_increases: List[PriceIncrease],
+    commission_rates: List[CommissionRate],
     start_date: datetime,
     months: int = 12
 ) -> List[Dict]:
@@ -28,7 +30,7 @@ def generate_forecast(
         
         for contract in contracts:
             commission = get_current_monthly_commission(
-                contract, settings, price_increases, month_date
+                contract, settings, price_increases, commission_rates, month_date
             )
             
             if commission > 0:
