@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Contract, ContractCreateRequest, ContractUpdateRequest, ContractType, ContractStatus, Settings, PriceIncrease } from '../types';
+import { Contract, ContractType, ContractStatus } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
 
@@ -20,8 +20,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     type: 'rental' as ContractType,
-    fixedPrice: 0,
-    adjustablePrice: 0,
+    softwareRentalAmount: 0,
+    softwareCareAmount: 0,
+    appsAmount: 0,
+    purchaseAmount: 0,
     currency: 'EUR',
     startDate: new Date().toISOString().split('T')[0],
     rentalStartDate: new Date().toISOString().split('T')[0],
@@ -44,8 +46,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
     if (contract) {
       setFormData({
         type: contract.type,
-        fixedPrice: contract.fixedPrice,
-        adjustablePrice: contract.adjustablePrice,
+        softwareRentalAmount: contract.softwareRentalAmount,
+        softwareCareAmount: contract.softwareCareAmount,
+        appsAmount: contract.appsAmount,
+        purchaseAmount: contract.purchaseAmount,
         currency: contract.currency,
         startDate: contract.startDate.split('T')[0],
         rentalStartDate: contract.rentalStartDate.split('T')[0],
@@ -57,8 +61,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
     } else {
       setFormData({
         type: 'rental',
-        fixedPrice: 0,
-        adjustablePrice: 0,
+        softwareRentalAmount: 0,
+        softwareCareAmount: 0,
+        appsAmount: 0,
+        purchaseAmount: 0,
         currency: 'EUR',
         startDate: new Date().toISOString().split('T')[0],
         rentalStartDate: new Date().toISOString().split('T')[0],
@@ -70,7 +76,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
     }
     setError(null);
     setActiveTab('form');
-    // Fetch price increases when modal opens
     fetchPriceIncreases();
   }, [contract, isOpen, fetchPriceIncreases]);
 
@@ -85,7 +90,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       [name]:
         type === 'checkbox'
           ? checked
-          : name === 'fixedPrice' || name === 'adjustablePrice'
+          : ['softwareRentalAmount', 'softwareCareAmount', 'appsAmount', 'purchaseAmount'].includes(name)
           ? parseFloat(value) || 0
           : value,
     }));
@@ -97,20 +102,15 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setIsLoading(true);
 
     try {
-      // Use camelCase for frontend - Pydantic will handle alias mapping
       const payload = {
         customerId,
         ...formData,
-        startDate: new Date(formData.startDate).toISOString(),
-        rentalStartDate: new Date(formData.rentalStartDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
       };
 
       if (contract) {
-        const { customerId: _, ...updatePayload } = payload;
-        await updateContract(contract.id, updatePayload as any);
+        await updateContract(contract.id, payload);
       } else {
-        await createContract(payload as any);
+        await createContract(payload);
       }
       onSuccess?.();
       onClose();
@@ -122,337 +122,442 @@ const ContractModal: React.FC<ContractModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  // Calculate breakdown with price increases
+  const calculateBreakdown = () => {
+    const baseAmounts = {
+      softwareRental: formData.softwareRentalAmount,
+      softwareCare: formData.softwareCareAmount,
+      apps: formData.appsAmount,
+      purchase: formData.purchaseAmount,
+    };
 
-  const totalPrice = formData.fixedPrice + formData.adjustablePrice;
-
-  // Helper function to calculate cost breakdown
-  const calculateCostBreakdown = () => {
-    const rentalStart = new Date(formData.rentalStartDate);
+    const rentalStartDate = new Date(formData.rentalStartDate);
     const today = new Date();
-    
-    // Get applicable price increases for this contract type
-    const applicableIncreases = priceIncreases.filter((increase: any) => 
-      increase.appliesToTypes.includes(formData.type) && 
-      new Date(increase.validFrom) <= today
-    );
+    const increases = {
+      softwareRental: 0,
+      softwareCare: 0,
+      apps: 0,
+      purchase: 0,
+    };
 
-    // Calculate months running
-    const monthsRunning = Math.floor(
-      (today.getFullYear() - rentalStart.getFullYear()) * 12 +
-      (today.getMonth() - rentalStart.getMonth())
-    );
+    // Apply price increases
+    for (const increase of priceIncreases) {
+      const validFromDate = new Date(increase.validFrom);
+      if (validFromDate <= today) {
+        const monthsRunning = Math.floor(
+          (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
 
-    // Filter increases that meet lock-in requirement
-    const applicableWithLockIn = applicableIncreases.filter(
-      (increase: any) => monthsRunning >= increase.lockInMonths
-    );
-
-    // Calculate adjusted base price
-    let adjustedPrice = formData.adjustablePrice;
-    for (const increase of applicableWithLockIn) {
-      adjustedPrice *= (1 + increase.factor / 100);
+        if (monthsRunning >= increase.lockInMonths) {
+          if (increase.amountIncreases.softwareRental > 0) {
+            increases.softwareRental += increase.amountIncreases.softwareRental;
+          }
+          if (increase.amountIncreases.softwareCare > 0) {
+            increases.softwareCare += increase.amountIncreases.softwareCare;
+          }
+          if (increase.amountIncreases.apps > 0) {
+            increases.apps += increase.amountIncreases.apps;
+          }
+          if (increase.amountIncreases.purchase > 0) {
+            increases.purchase += increase.amountIncreases.purchase;
+          }
+        }
+      }
     }
 
+    const adjustedAmounts = {
+      softwareRental: baseAmounts.softwareRental * (1 + increases.softwareRental / 100),
+      softwareCare: baseAmounts.softwareCare * (1 + increases.softwareCare / 100),
+      apps: baseAmounts.apps * (1 + increases.apps / 100),
+      purchase: baseAmounts.purchase * (1 + increases.purchase / 100),
+    };
+
+    const totalAmount = Object.values(adjustedAmounts).reduce((a, b) => a + b, 0);
+
+    // Calculate commissions
+    const commissionRates = settings?.commissionRates || {
+      software_rental: 20,
+      software_care: 20,
+      apps: 20,
+      purchase: 0.083333,
+    };
+
+    const commissions = {
+      softwareRental: adjustedAmounts.softwareRental * (commissionRates.software_rental / 100),
+      softwareCare: adjustedAmounts.softwareCare * (commissionRates.software_care / 100),
+      apps: adjustedAmounts.apps * (commissionRates.apps / 100),
+      purchase: adjustedAmounts.purchase * (commissionRates.purchase / 100),
+    };
+
+    const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
+
     return {
-      fixedPrice: formData.fixedPrice,
-      baseAdjustablePrice: formData.adjustablePrice,
-      adjustedPrice,
-      increases: applicableWithLockIn,
-      monthsRunning,
-      totalMonthlyPrice: formData.fixedPrice + adjustedPrice,
+      baseAmounts,
+      increases,
+      adjustedAmounts,
+      totalAmount,
+      commissions,
+      totalCommission,
     };
   };
 
-  const breakdown = calculateCostBreakdown();
-  const commissionRate = settings?.commissionRates[formData.type] ?? 0;
-  const monthlyCommission = breakdown.totalMonthlyPrice * (commissionRate / 100);
+  const breakdown = calculateBreakdown();
+
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 my-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-2xl font-bold text-gray-900">
             {contract ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}
           </h2>
-          
-          {/* Tab Navigation */}
-          <div className="flex gap-4 mt-4">
-            <button
-              type="button"
-              onClick={() => setActiveTab('form')}
-              className={`px-4 py-2 font-medium text-sm rounded-t-lg transition ${
-                activeTab === 'form'
-                  ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Formular
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('breakdown')}
-              className={`px-4 py-2 font-medium text-sm rounded-t-lg transition ${
-                activeTab === 'breakdown'
-                  ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Kostenaufschlüsselung
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 px-6 pt-4">
+          <button
+            onClick={() => setActiveTab('form')}
+            className={`px-4 py-2 font-medium text-sm transition ${
+              activeTab === 'form'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Grunddaten
+          </button>
+          <button
+            onClick={() => setActiveTab('breakdown')}
+            className={`px-4 py-2 font-medium text-sm transition ${
+              activeTab === 'breakdown'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Kostenaufschlüsselung
+          </button>
+        </div>
+
+        {/* Content */}
         {activeTab === 'form' ? (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Typ
+                </label>
+                <select
+                  autoFocus
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                >
+                  <option value="rental">Mietvertrag</option>
+                  <option value="software-care">Software-Pflege</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                  <option value="completed">Abgeschlossen</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Amount Fields */}
+            <div className="space-y-3 bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-3">Beträge (€/Monat)</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Software Miete
+                  </label>
+                  <input
+                    type="number"
+                    name="softwareRentalAmount"
+                    value={formData.softwareRentalAmount}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Software Pflege
+                  </label>
+                  <input
+                    type="number"
+                    name="softwareCareAmount"
+                    value={formData.softwareCareAmount}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Apps
+                  </label>
+                  <input
+                    type="number"
+                    name="appsAmount"
+                    value={formData.appsAmount}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kauf Bestandsvertrag
+                  </label>
+                  <input
+                    type="number"
+                    name="purchaseAmount"
+                    value={formData.purchaseAmount}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Typ
+                Währung
               </label>
-              <select
-                autoFocus
-                name="type"
-                value={formData.type}
+              <input
+                type="text"
+                name="currency"
+                value={formData.currency}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unterzeichnungsdatum
+                </label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mietbeginn
+                </label>
+                <input
+                  type="date"
+                  name="rentalStartDate"
+                  value={formData.rentalStartDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enddatum (optional)
+                </label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="isFounderDiscount"
+                    checked={formData.isFounderDiscount}
+                    onChange={handleChange}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Existenzgründer-Rabatt</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notizen
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
               >
-                <option value="rental">Miete</option>
-                <option value="software-care">Software-Pflege</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fixer Betrag (€/Monat)
-              </label>
-              <input
-                type="number"
-                name="fixedPrice"
-                value={formData.fixedPrice}
-                onChange={handleChange}
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Anpassbarer Betrag (€/Monat)
-              </label>
-              <input
-                type="number"
-                name="adjustablePrice"
-                value={formData.adjustablePrice}
-                onChange={handleChange}
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-sm font-medium text-gray-700">
-              Gesamtbetrag: <span className="text-blue-600 font-bold">{totalPrice.toFixed(2)}€/Monat</span>
-            </p>
-            <p className="text-xs text-gray-600 mt-1">
-              Preiserhöhungen werden nur auf den anpassbaren Betrag angewendet
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Startdatum
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mietbeginn
-              </label>
-              <input
-                type="date"
-                name="rentalStartDate"
-                value={formData.rentalStartDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Enddatum (optional)
-              </label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               >
-                <option value="active">Aktiv</option>
-                <option value="inactive">Inaktiv</option>
-                <option value="completed">Abgeschlossen</option>
-              </select>
+                {isLoading ? 'Speichern...' : contract ? 'Aktualisieren' : 'Erstellen'}
+              </button>
             </div>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              name="isFounderDiscount"
-              checked={formData.isFounderDiscount}
-              onChange={handleChange}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-            />
-            <label className="ml-2 text-sm text-gray-700">Existenzgründer-Rabatt</label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notizen
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-              disabled={isLoading}
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Speichert...' : 'Speichern'}
-            </button>
-          </div>
-        </form>
+          </form>
         ) : (
-        <div className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Kostenaufschlüsselung</h3>
-            
-            <div className="space-y-3 mb-4">
-              {/* Fixed Price */}
-              <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <span className="text-gray-700">Fixer Betrag</span>
-                <span className="font-medium text-gray-900">{breakdown.fixedPrice.toFixed(2)}€/Monat</span>
-              </div>
-
-              {/* Adjustable Base Price */}
-              <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <span className="text-gray-700">Anpassbarer Betrag (Basis)</span>
-                <span className="font-medium text-gray-900">{breakdown.baseAdjustablePrice.toFixed(2)}€/Monat</span>
-              </div>
-
-              {/* Price Increases */}
-              {breakdown.increases.length > 0 ? (
-                <>
-                  <div className="py-2 text-sm font-semibold text-gray-700">Preiserhöhungen:</div>
-                  {breakdown.increases.map((increase: any, index: number) => {
-                    const increaseAmount = breakdown.baseAdjustablePrice * (increase.factor / 100);
-                    const validFromDate = new Date(increase.validFrom);
-                    const dateStr = validFromDate.toLocaleDateString('de-DE', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    });
-                    
-                    return (
-                      <div key={index} className="flex justify-between items-center py-2 pl-4 border-l-2 border-blue-300 bg-blue-50">
-                        <span className="text-gray-700 text-sm">
-                          +{increase.factor.toFixed(1)}% (gültig ab {dateStr})
-                        </span>
-                        <span className="font-medium text-gray-900">+{increaseAmount.toFixed(2)}€</span>
-                      </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <div className="py-2 text-sm text-gray-600 italic">Keine Preiserhöhungen anwendbar</div>
-              )}
-
-              {/* Total */}
-              <div className="flex justify-between items-center py-3 px-3 bg-blue-100 rounded-lg mt-4">
-                <span className="font-semibold text-gray-900">Gesamtpreis (monatlich)</span>
-                <span className="text-lg font-bold text-blue-700">{breakdown.totalMonthlyPrice.toFixed(2)}€</span>
-              </div>
-
-              {/* Commission Info */}
-              <div className="flex justify-between items-center py-2 px-3 bg-green-50 rounded-lg">
-                <span className="text-gray-700">Deine Provision ({commissionRate.toFixed(1)}%)</span>
-                <span className="font-semibold text-green-700">{monthlyCommission.toFixed(2)}€/Monat</span>
+          /* Breakdown Tab */
+          <div className="p-6 space-y-6">
+            {/* Base Amounts */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900 mb-2">Basis-Beträge:</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">Software Miete:</span>
+                  <span className="font-medium">€{breakdown.baseAmounts.softwareRental.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">Software Pflege:</span>
+                  <span className="font-medium">€{breakdown.baseAmounts.softwareCare.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">Apps:</span>
+                  <span className="font-medium">€{breakdown.baseAmounts.apps.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
+                  <span className="text-gray-700">Kauf Bestandsvertrag:</span>
+                  <span className="font-medium">€{breakdown.baseAmounts.purchase.toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
-            <div className="text-xs text-gray-600 italic mt-4 pt-4 border-t border-gray-200">
-              <p>Hinweis: Preiserhöhungen werden nur auf den anpassbaren Betrag angewendet und erfordern eine Mindestvertragslaufzeit von {breakdown.increases.length > 0 ? breakdown.increases[0].lockInMonths : 0} Monaten.</p>
-              <p className="mt-2">Laufzeit: {breakdown.monthsRunning} Monate seit Mietbeginn</p>
+            {/* Price Increases */}
+            {priceIncreases.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Geltende Preiserhöhungen:</h3>
+                {priceIncreases.map((increase: any, index: number) => (
+                  <div key={index} className="border-l-4 border-blue-300 pl-4 py-2">
+                    <div className="text-sm font-medium text-gray-900">
+                      {new Date(increase.validFrom).toLocaleDateString('de-DE')}
+                    </div>
+                    <div className="text-xs text-gray-600 space-y-1 mt-1">
+                      {increase.amountIncreases.softwareRental > 0 && (
+                        <div>Software Miete: +{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
+                      )}
+                      {increase.amountIncreases.softwareCare > 0 && (
+                        <div>Software Pflege: +{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
+                      )}
+                      {increase.amountIncreases.apps > 0 && (
+                        <div>Apps: +{increase.amountIncreases.apps.toFixed(1)}%</div>
+                      )}
+                      {increase.amountIncreases.purchase > 0 && (
+                        <div>Kauf Bestandsvertrag: +{increase.amountIncreases.purchase.toFixed(1)}%</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Adjusted Amounts */}
+            <div className="space-y-3 bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">Beträge nach Erhöhungen:</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Software Miete:</span>
+                  <span className="font-medium">€{breakdown.adjustedAmounts.softwareRental.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Software Pflege:</span>
+                  <span className="font-medium">€{breakdown.adjustedAmounts.softwareCare.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Apps:</span>
+                  <span className="font-medium">€{breakdown.adjustedAmounts.apps.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Kauf Bestandsvertrag:</span>
+                  <span className="font-medium">€{breakdown.adjustedAmounts.purchase.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="border-t border-green-200 pt-3 mt-3 flex justify-between font-bold text-lg">
+                <span>Gesamtbetrag:</span>
+                <span>€{breakdown.totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Commissions */}
+            <div className="space-y-3 bg-purple-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-900 mb-2">Provisionen:</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Software Miete (20%):</span>
+                  <span className="font-medium">€{breakdown.commissions.softwareRental.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Software Pflege (20%):</span>
+                  <span className="font-medium">€{breakdown.commissions.softwareCare.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Apps (20%):</span>
+                  <span className="font-medium">€{breakdown.commissions.apps.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Kauf Bestandsvertrag (1/12%):</span>
+                  <span className="font-medium">€{breakdown.commissions.purchase.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="border-t border-purple-200 pt-3 mt-3 flex justify-between font-bold text-lg">
+                <span>Gesamtprovision:</span>
+                <span className="text-purple-900">€{breakdown.totalCommission.toFixed(2)}</span>
+              </div>
             </div>
           </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-            >
-              Schließen
-            </button>
-          </div>
-        </div>
         )}
       </div>
     </div>
