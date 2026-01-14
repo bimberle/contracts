@@ -48,13 +48,22 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
+@app.get("/api/health")
+def api_health_check():
+    return {"status": "healthy"}
+
 @app.get("/api/version")
 def get_version():
     """Get backend version information"""
     return {
         "service": "contracts-backend",
-        "version": "1.0.0"
+        "version": "1.0.1"
     }
+
+@app.get("/api/auth/check")
+def auth_check():
+    """Check if authentication is required"""
+    return {"auth_required": False}
 
 from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth
 

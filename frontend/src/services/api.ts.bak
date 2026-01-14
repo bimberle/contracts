@@ -60,30 +60,30 @@ class ApiClient {
   }
 
   async getCustomer(customerId: string): Promise<Customer> {
-    const response = await this.axiosInstance.get<Customer>(`/customers/${customerId}`);
+    const response = await this.axiosInstance.get<Customer>(`/api/customers/${customerId}`);
     return response.data;
   }
 
   async createCustomer(customer: CustomerCreateRequest): Promise<Customer> {
-    const response = await this.axiosInstance.post<Customer>('/customers', customer);
+    const response = await this.axiosInstance.post<Customer>('/api/customers', customer);
     return response.data;
   }
 
   async updateCustomer(customerId: string, customer: CustomerUpdateRequest): Promise<Customer> {
     const response = await this.axiosInstance.put<Customer>(
-      `/customers/${customerId}`,
+      `/api/customers/${customerId}`,
       customer
     );
     return response.data;
   }
 
   async deleteCustomer(customerId: string): Promise<void> {
-    await this.axiosInstance.delete(`/customers/${customerId}`);
+    await this.axiosInstance.delete(`/api/customers/${customerId}`);
   }
 
   async getCustomerMetrics(customerId: string): Promise<CalculatedMetrics> {
     const response = await this.axiosInstance.get<ApiResponse<CalculatedMetrics>>(
-      `/customers/${customerId}/metrics`
+      `/api/customers/${customerId}/metrics`
     );
     return response.data.data!;
   }
@@ -91,7 +91,7 @@ class ApiClient {
   // ==================== Contracts ====================
 
   async getContracts(skip: number = 0, limit: number = 100): Promise<Contract[]> {
-    const response = await this.axiosInstance.get<Contract[]>('/contracts', {
+    const response = await this.axiosInstance.get<Contract[]>('/api/contracts', {
       params: { skip, limit },
     });
     return response.data;
@@ -99,36 +99,36 @@ class ApiClient {
 
   async getContractsByCustomer(customerId: string): Promise<Contract[]> {
     const response = await this.axiosInstance.get<Contract[]>(
-      `/contracts/customer/${customerId}`
+      `/api/contracts/customer/${customerId}`
     );
     return response.data;
   }
 
   async getContract(contractId: string): Promise<Contract> {
-    const response = await this.axiosInstance.get<Contract>(`/contracts/${contractId}`);
+    const response = await this.axiosInstance.get<Contract>(`/api/contracts/${contractId}`);
     return response.data;
   }
 
   async createContract(contract: ContractCreateRequest): Promise<Contract> {
-    const response = await this.axiosInstance.post<Contract>('/contracts', contract);
+    const response = await this.axiosInstance.post<Contract>('/api/contracts', contract);
     return response.data;
   }
 
   async updateContract(contractId: string, contract: ContractUpdateRequest): Promise<Contract> {
     const response = await this.axiosInstance.put<Contract>(
-      `/contracts/${contractId}`,
+      `/api/contracts/${contractId}`,
       contract
     );
     return response.data;
   }
 
   async deleteContract(contractId: string): Promise<void> {
-    await this.axiosInstance.delete(`/contracts/${contractId}`);
+    await this.axiosInstance.delete(`/api/contracts/${contractId}`);
   }
 
   async getContractMetrics(contractId: string) {
     const response = await this.axiosInstance.get<ApiResponse<any>>(
-      `/contracts/${contractId}/metrics`
+      `/api/contracts/${contractId}/metrics`
     );
     return response.data.data!;
   }
@@ -136,19 +136,19 @@ class ApiClient {
   // ==================== Settings ====================
 
   async getSettings(): Promise<Settings> {
-    const response = await this.axiosInstance.get<Settings>('/settings');
+    const response = await this.axiosInstance.get<Settings>('/api/settings');
     return response.data;
   }
 
   async updateSettings(settings: SettingsUpdateRequest): Promise<Settings> {
-    const response = await this.axiosInstance.put<Settings>('/settings', settings);
+    const response = await this.axiosInstance.put<Settings>('/api/settings', settings);
     return response.data;
   }
 
   // ==================== Price Increases ====================
 
   async getPriceIncreases(skip: number = 0, limit: number = 100): Promise<PriceIncrease[]> {
-    const response = await this.axiosInstance.get<PriceIncrease[]>('/price-increases', {
+    const response = await this.axiosInstance.get<PriceIncrease[]>('/api/price-increases', {
       params: { skip, limit },
     });
     return response.data;
@@ -156,14 +156,14 @@ class ApiClient {
 
   async getPriceIncrease(priceIncreaseId: string): Promise<PriceIncrease> {
     const response = await this.axiosInstance.get<PriceIncrease>(
-      `/price-increases/${priceIncreaseId}`
+      `/api/price-increases/${priceIncreaseId}`
     );
     return response.data;
   }
 
   async createPriceIncrease(priceIncrease: PriceIncreaseCreateRequest): Promise<PriceIncrease> {
     const response = await this.axiosInstance.post<PriceIncrease>(
-      '/price-increases',
+      '/api/price-increases',
       priceIncrease
     );
     return response.data;
@@ -174,26 +174,26 @@ class ApiClient {
     priceIncrease: PriceIncreaseUpdateRequest
   ): Promise<PriceIncrease> {
     const response = await this.axiosInstance.put<PriceIncrease>(
-      `/price-increases/${priceIncreaseId}`,
+      `/api/price-increases/${priceIncreaseId}`,
       priceIncrease
     );
     return response.data;
   }
 
   async deletePriceIncrease(priceIncreaseId: string): Promise<void> {
-    await this.axiosInstance.delete(`/price-increases/${priceIncreaseId}`);
+    await this.axiosInstance.delete(`/api/price-increases/${priceIncreaseId}`);
   }
 
   // ==================== Commission Rates ====================
 
   async getCommissionRates(): Promise<CommissionRate[]> {
-    const response = await this.axiosInstance.get<CommissionRate[]>('/commission-rates/');
+    const response = await this.axiosInstance.get<CommissionRate[]>('/api/commission-rates/');
     return response.data;
   }
 
   async createCommissionRate(rate: CommissionRateCreateRequest): Promise<CommissionRate> {
     const response = await this.axiosInstance.post<CommissionRate>(
-      '/commission-rates/',
+      '/api/commission-rates/',
       rate
     );
     return response.data;
@@ -204,28 +204,28 @@ class ApiClient {
     rate: CommissionRateUpdateRequest
   ): Promise<CommissionRate> {
     const response = await this.axiosInstance.put<CommissionRate>(
-      `/commission-rates/${rateId}`,
+      `/api/commission-rates/${rateId}`,
       rate
     );
     return response.data;
   }
 
   async deleteCommissionRate(rateId: string): Promise<void> {
-    await this.axiosInstance.delete(`/commission-rates/${rateId}`);
+    await this.axiosInstance.delete(`/api/commission-rates/${rateId}`);
   }
 
   // ==================== Analytics ====================
 
   async getDashboard(): Promise<DashboardSummary> {
     const response = await this.axiosInstance.get<ApiResponse<DashboardSummary>>(
-      '/analytics/dashboard'
+      '/api/analytics/dashboard'
     );
     return response.data.data!;
   }
 
   async getForecast(months: number = 12): Promise<Forecast> {
     const response = await this.axiosInstance.get<ApiResponse<Forecast>>(
-      '/analytics/forecast',
+      '/api/analytics/forecast',
       { params: { months } }
     );
     return response.data.data!;
@@ -233,7 +233,7 @@ class ApiClient {
 
   async getCustomerAnalytics(customerId: string) {
     const response = await this.axiosInstance.get<ApiResponse<any>>(
-      `/analytics/customer/${customerId}`
+      `/api/analytics/customer/${customerId}`
     );
     return response.data.data!;
   }
@@ -246,7 +246,7 @@ class ApiClient {
   }
 
   async checkAuth(): Promise<{ auth_required: boolean }> {
-    const response = await this.axiosInstance.get('/auth/check');
+    const response = await this.axiosInstance.get('/api/auth/check');
     return response.data;
   }
 
@@ -262,7 +262,7 @@ class ApiClient {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.axiosInstance.get('/health');
+      const response = await this.axiosInstance.get('/api/health');
       return response.status === 200;
     } catch {
       return false;
