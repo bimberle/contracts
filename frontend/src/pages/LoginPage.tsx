@@ -15,10 +15,12 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await api.get('/auth/check');
-        setAuthRequired(response.data.auth_required);
+        const authStatus = await api.checkAuth();
+        setAuthRequired(authStatus.auth_required);
       } catch (err) {
         console.error('Error checking auth:', err);
+        // Assume auth is required if we can't check
+        setAuthRequired(true);
       }
     };
     checkAuth();
@@ -30,8 +32,8 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setError(null);
 
     try {
-      const response = await api.post('/auth/login', { password });
-      onLoginSuccess(response.data.token);
+      const response = await api.login(password);
+      onLoginSuccess(response.token);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Login failed';
       setError(errorMessage);
