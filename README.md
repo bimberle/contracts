@@ -22,9 +22,11 @@ Eine moderne Webapp zur Verwaltung von Softwareverkaufs- und Mietverträgen mit 
 
 ### Installation mit Docker
 
+#### macOS / Linux
+
 1. **Repository clonen**
 ```bash
-git clone <repo-url>
+git clone https://github.com/bimberle/contracts.git
 cd contracts
 ```
 
@@ -39,9 +41,78 @@ docker-compose up -d
 ```
 
 4. **Anwendung öffnen**
-- Frontend: http://localhost:3000
+- Frontend: http://localhost
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
+
+#### Windows
+
+**Automatische Installation mit Batch-Skript:**
+
+1. **Laden Sie das Repository herunter:**
+```bash
+git clone https://github.com/bimberle/contracts.git
+cd contracts
+```
+
+2. **Führen Sie das Setup-Skript aus:**
+```bash
+setup-windows.bat
+```
+
+Das Skript kümmert sich automatisch um:
+- ✅ Prüfung von Docker und Docker Compose Installation
+- ✅ Download von `docker-compose.yml` und `.env` (falls nicht vorhanden)
+- ✅ Erstellen der `.env` Datei mit Standard-Werten
+- ✅ Pullen der neuesten Docker Images
+- ✅ Starten aller Container
+- ✅ Prüfung ob alle Services erreichbar sind
+
+3. **Anwendung öffnen:**
+- Frontend: http://localhost
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+**Manuelle Installation (falls Skript nicht funktioniert):**
+
+1. Repository klonen
+2. `.env` aus `.env.example` erstellen
+3. `docker-compose up -d` ausführen
+
+**Updates durchführen:**
+
+Einfach das Skript erneut ausführen:
+```bash
+setup-windows.bat
+```
+
+Es erkennt automatisch, ob es eine Neupinstallation oder ein Update ist.
+
+## 🔑 Environment Variablen
+
+Die `.env` Datei wird automatisch erstellt. Folgende Variablen können konfiguriert werden:
+
+```bash
+# Database Configuration
+POSTGRES_DB=contracts
+POSTGRES_USER=contracts_user
+POSTGRES_PASSWORD=contracts_password
+
+# Backend Configuration
+DATABASE_URL=postgresql://contracts_user:contracts_password@database:5432/contracts
+SECRET_KEY=your-secret-key-change-in-production
+DEBUG=True
+CORS_ORIGINS_STR=http://localhost:3000,http://localhost,http://localhost:80
+AUTH_PASSWORD=  # Optional: Authentifizierung (später)
+
+# Frontend Configuration
+VITE_API_URL=/api
+```
+
+**Wichtig für Production:**
+- `SECRET_KEY` mit sicherer Zeichenkette ersetzen
+- `DEBUG` auf `False` setzen
+- `CORS_ORIGINS_STR` auf echte Domains anpassen
 
 ### Lokale Entwicklung
 
