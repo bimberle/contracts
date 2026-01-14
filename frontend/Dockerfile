@@ -25,8 +25,8 @@ EXPOSE 80
 
 # Create startup script that logs version
 RUN echo '#!/bin/sh' > /startup.sh && \
-    echo 'echo "=== Contracts Frontend v1.0.2 starting ===" && \
-    echo "Frontend version: 1.0.2" && \
+    echo 'echo "=== Contracts Frontend v1.0.3 starting ===" && \
+    echo "Frontend version: 1.0.3" && \
     nginx -g "daemon off;"' >> /startup.sh && \
     chmod +x /startup.sh
 

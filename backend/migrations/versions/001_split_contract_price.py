@@ -7,6 +7,7 @@ Create Date: 2026-01-08 10:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -22,11 +23,15 @@ def upgrade() -> None:
     For fresh installations, this creates the columns directly.
     For existing installations, it migrates from the old price column.
     """
-    # This migration assumes the contracts table will be created by the ORM
-    # if it doesn't exist yet (for fresh installs).
-    # For existing installs, it adds the new columns.
+    # Check if contracts table exists
+    ctx = op.get_context()
+    inspector = sa.inspect(ctx.bind)
     
-    # Try to add the columns - they might already exist in fresh installs
+    # Only proceed if contracts table exists (not a fresh install via ORM)
+    if 'contracts' not in inspector.get_table_names():
+        return
+    
+    # Try to add the columns - they might already exist
     try:
         op.add_column('contracts', sa.Column('fixed_price', sa.Float(), nullable=True))
     except Exception:
