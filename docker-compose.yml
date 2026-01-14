@@ -46,7 +46,7 @@ services:
       target: development
     container_name: contracts_frontend
     environment:
-      VITE_API_URL: /api
+      VITE_API_URL: ""
     ports:
       - "80:3000"
     volumes:
