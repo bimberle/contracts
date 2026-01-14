@@ -48,7 +48,14 @@ def read_root():
 def health_check():
     return {"status": "healthy"}
 
-# Import routers
+@app.get("/api/version")
+def get_version():
+    """Get backend version information"""
+    return {
+        "service": "contracts-backend",
+        "version": "1.0.0"
+    }
+
 from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth
 
 # Include routers

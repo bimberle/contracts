@@ -43,6 +43,13 @@ class ApiClient {
     );
   }
 
+  // ==================== Version ====================
+
+  async getBackendVersion(): Promise<{ service: string; version: string }> {
+    const response = await this.axiosInstance.get<{ service: string; version: string }>('/api/version');
+    return response.data;
+  }
+
   // ==================== Customers ====================
 
   async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {

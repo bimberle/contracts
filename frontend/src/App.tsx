@@ -23,6 +23,17 @@ function App() {
     // Initialize app: check health, auth, and load data
     const init = async () => {
       try {
+        // 0. Log versions
+        const frontendVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+        console.log('📦 Frontend version:', frontendVersion);
+        
+        try {
+          const backendVersion = await api.getBackendVersion();
+          console.log('📦 Backend version:', backendVersion.version);
+        } catch (err) {
+          console.warn('Could not fetch backend version:', err);
+        }
+
         // 1. Check API health
         console.log('Checking API health...');
         const isHealthy = await api.healthCheck();
