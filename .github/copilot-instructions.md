@@ -792,6 +792,45 @@ return monthlyCommission * monthsRemaining
 
 ---
 
+## Docker Build & Deployment (WICHTIG)
+
+### Build-Prozess
+**IMMER bei Code-Änderungen die folgende Routine:**
+
+1. **Versionsanhebung** (PFLICHT):
+   - `frontend/vite.config.ts`: `VITE_APP_VERSION` erhöhen
+   - `backend/app/main.py`: Version in `GET /api/version` erhöhen
+   - Format: Semantic Versioning (z.B. 1.0.2 → 1.0.3 oder 1.1.0)
+   - Regel: Patch (+0.0.1) für Bugfixes, Minor (+0.1.0) für Features
+
+2. **Multi-Platform Docker Build** (PFLICHT):
+   ```bash
+   docker buildx build --platform linux/amd64,linux/arm64 \
+     -t bimberle/contracts-frontend:latest --push \
+     -f frontend/Dockerfile frontend/
+
+   docker buildx build --platform linux/amd64,linux/arm64 \
+     -t bimberle/contracts-backend:latest --push \
+     -f backend/Dockerfile backend/
+   ```
+   - Beide Plattformen: `linux/amd64` (Intel/AMD) + `linux/arm64` (Apple Silicon)
+   - `--push` Flag: Direkt zu Docker Hub pushen
+   - Nie `docker build` ohne `buildx` verwenden!
+
+3. **Git Commit** (nach Docker Push):
+   - Message Format: `Version X.Y.Z: Beschreibung der Änderungen`
+   - Beispiel: `Version 1.0.3: Fix API routing issue`
+
+4. **Verifikation**:
+   - Checke dass beide Architekturen erfolgreich gepusht wurden
+   - Docker Hub sollte Manifest List zeigen (nicht einzelne Images)
+
+### Deployment auf Remote PC
+- Einfach `docker-compose pull && docker-compose up -d`
+- Docker wählt automatisch richtige Architektur (AMD64 oder ARM64)
+
+---
+
 ## Wichtige Tipps für Copilot
 
 1. **Existenzgründer-Logik**: `rentalStartDate` kann sich von `startDate` unterscheiden
