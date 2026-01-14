@@ -17,9 +17,9 @@ def get_settings(db: Session = Depends(get_db)):
         settings = Settings(
             id="default",
             founder_delay_months=12,
-            commission_rates={"rental": 10.0, "software-care": 10.0},
-            post_contract_months={"rental": 12, "software-care": 12},
-            min_contract_months_for_payout=60
+            post_contract_months={"software_rental": 12, "software_care": 12, "apps": 12, "purchase": 12},
+            min_contract_months_for_payout=60,
+            personal_tax_rate=42.0
         )
         db.add(settings)
         db.commit()
@@ -37,21 +37,15 @@ def update_settings(settings_update: SettingsUpdate, db: Session = Depends(get_d
         db_settings = Settings(
             id="default",
             founder_delay_months=12,
-            commission_rates={"rental": 10.0, "software-care": 10.0},
-            post_contract_months={"rental": 12, "software-care": 12},
-            min_contract_months_for_payout=60
+            post_contract_months={"software_rental": 12, "software_care": 12, "apps": 12, "purchase": 12},
+            min_contract_months_for_payout=60,
+            personal_tax_rate=42.0
         )
         db.add(db_settings)
     
     update_data = settings_update.dict(exclude_unset=True)
     
-    # Merge dicts für commission_rates und post_contract_months
-    if "commission_rates" in update_data:
-        if db_settings.commission_rates is None:
-            db_settings.commission_rates = {}
-        db_settings.commission_rates.update(update_data["commission_rates"])
-        del update_data["commission_rates"]
-    
+    # Merge dicts für post_contract_months
     if "post_contract_months" in update_data:
         if db_settings.post_contract_months is None:
             db_settings.post_contract_months = {}
