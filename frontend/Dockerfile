@@ -22,4 +22,12 @@ FROM nginx:alpine AS production
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+
+# Create startup script that logs version
+RUN echo '#!/bin/sh' > /startup.sh && \
+    echo 'echo "=== Contracts Frontend v1.0.2 starting ===" && \
+    echo "Frontend version: 1.0.2" && \
+    nginx -g "daemon off;"' >> /startup.sh && \
+    chmod +x /startup.sh
+
+CMD ["/startup.sh"]

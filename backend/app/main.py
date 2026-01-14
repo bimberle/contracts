@@ -7,6 +7,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Log version on startup
+BACKEND_VERSION = "1.0.2"
+logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
+
 # Create database tables on startup
 def init_db():
     """Initialize database tables if they don't exist"""
@@ -57,7 +61,7 @@ def get_version():
     """Get backend version information"""
     return {
         "service": "contracts-backend",
-        "version": "1.0.1"
+        "version": BACKEND_VERSION
     }
 
 @app.get("/api/auth/check")
