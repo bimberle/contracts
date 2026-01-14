@@ -27,7 +27,8 @@ services:
       DATABASE_URL: postgresql://contracts_user:contracts_password@database:5432/contracts
       SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
       DEBUG: "False"
-      CORS_ORIGINS_STR: ${CORS_ORIGINS:-http://localhost:3000,http://localhost}
+      CORS_ORIGINS_STR: ${CORS_ORIGINS:-http://localhost:3000,http://localhost,http://localhost:80}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-}
     ports:
       - "8000:8000"
     depends_on:

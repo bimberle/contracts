@@ -231,6 +231,26 @@ class ApiClient {
     return response.data.data!;
   }
 
+  // ==================== Authentication ====================
+
+  async login(password: string): Promise<{ token: string; message: string }> {
+    const response = await this.axiosInstance.post('/auth/login', { password });
+    return response.data;
+  }
+
+  async checkAuth(): Promise<{ auth_required: boolean }> {
+    const response = await this.axiosInstance.get('/auth/check');
+    return response.data;
+  }
+
+  setAuthToken(token: string | null) {
+    if (token) {
+      this.axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete this.axiosInstance.defaults.headers.common['Authorization'];
+    }
+  }
+
   // ==================== Health ====================
 
   async healthCheck(): Promise<boolean> {

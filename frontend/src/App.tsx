@@ -9,14 +9,25 @@ import Settings from './pages/Settings';
 import PriceIncreases from './pages/PriceIncreases';
 import CommissionRates from './pages/CommissionRates';
 import Forecast from './pages/Forecast';
+import LoginPage from './pages/LoginPage';
 import './App.css';
 
 function App() {
   const [isHealthy, setIsHealthy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
+
+  useEffect(() => {
+    // Check if user is already authenticated (has token in localStorage)
+    const savedToken = localStorage.getItem('auth_token');
+    if (savedToken) {
+      api.setAuthToken(savedToken);
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Check API health and load initial data
@@ -25,7 +36,7 @@ function App() {
         const healthy = await api.healthCheck();
         setIsHealthy(healthy);
 
-        if (healthy) {
+        if (healthy && isAuthenticated) {
           // Load initial data
           await Promise.all([
             fetchCustomers(),
@@ -42,7 +53,7 @@ function App() {
     };
 
     initializeApp();
-  }, [fetchCustomers, fetchSettings, fetchPriceIncreases]);
+  }, [fetchCustomers, fetchSettings, fetchPriceIncreases, isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -75,6 +86,25 @@ function App() {
       </div>
     );
   }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onLoginSuccess={(token) => {
+          localStorage.setItem('auth_token', token);
+          api.setAuthToken(token);
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    api.setAuthToken(null);
+    setIsAuthenticated(false);
+  };
 
   return (
     <Router>
@@ -114,14 +144,23 @@ function App() {
                   </Link>
                 </div>
               </div>
-              {/* Settings Icon - Right Side */}
-              <Link
-                to="/settings"
-                className="text-gray-700 hover:text-blue-600 transition text-xl"
-                title="Einstellungen"
-              >
-                ⚙️
-              </Link>
+              {/* Settings Icon & Logout - Right Side */}
+              <div className="flex items-center space-x-4">
+                <Link
+                  to="/settings"
+                  className="text-gray-700 hover:text-blue-600 transition text-xl"
+                  title="Einstellungen"
+                >
+                  ⚙️
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-700 hover:text-red-600 transition text-sm font-medium px-3 py-2 rounded hover:bg-gray-100"
+                  title="Abmelden"
+                >
+                  🚪 Abmelden
+                </button>
+              </div>
             </div>
           </div>
         </nav>

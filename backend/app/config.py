@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 import os
 
 class Settings(BaseSettings):
@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-in-production"
     DEBUG: bool = True
     CORS_ORIGINS_STR: str = "http://localhost:3000"
+    AUTH_PASSWORD: Optional[str] = None  # Optional password for API authentication
     
     class Config:
         env_file = ".env"
