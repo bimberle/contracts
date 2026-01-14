@@ -24,8 +24,7 @@ class Contract(Base):
     currency = Column(String, default="EUR")
     
     # Zeitliche Details
-    start_date = Column(DateTime, nullable=False)
-    rental_start_date = Column(DateTime, nullable=False)
+    start_date = Column(DateTime, nullable=False)  # Mietbeginn
     end_date = Column(DateTime, nullable=True)
     
     # Existenzgründer-Flag

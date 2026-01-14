@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.contract import Contract
 from app.models.customer import Customer
 from app.models.price_increase import PriceIncrease
+from app.models.commission_rate import CommissionRate
 from app.models.settings import Settings
 from app.schemas.contract import Contract as ContractSchema, ContractCreate, ContractUpdate, ContractMetrics
 from app.services.metrics import calculate_contract_metrics
@@ -45,7 +46,20 @@ def create_contract(contract: ContractCreate, db: Session = Depends(get_db)):
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
     
-    db_contract = Contract(**contract.dict())
+    # Konvertiere CHF zu EUR wenn nötig
+    contract_data = contract.dict()
+    CHF_TO_EUR_RATE = 0.95
+    
+    if contract_data.get('currency') == 'CHF':
+        # Konvertiere alle Beträge von CHF zu EUR
+        contract_data['software_rental_amount'] = contract_data.get('software_rental_amount', 0) * CHF_TO_EUR_RATE
+        contract_data['software_care_amount'] = contract_data.get('software_care_amount', 0) * CHF_TO_EUR_RATE
+        contract_data['apps_amount'] = contract_data.get('apps_amount', 0) * CHF_TO_EUR_RATE
+        contract_data['purchase_amount'] = contract_data.get('purchase_amount', 0) * CHF_TO_EUR_RATE
+        # Speichere als EUR
+        contract_data['currency'] = 'EUR'
+    
+    db_contract = Contract(**contract_data)
     db.add(db_contract)
     db.commit()
     db.refresh(db_contract)
@@ -59,6 +73,23 @@ def update_contract(contract_id: str, contract_update: ContractUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
     
     update_data = contract_update.dict(exclude_unset=True)
+    
+    # Konvertiere CHF zu EUR wenn nötig
+    CHF_TO_EUR_RATE = 0.95
+    
+    if update_data.get('currency') == 'CHF':
+        # Konvertiere alle Beträge von CHF zu EUR
+        if 'software_rental_amount' in update_data:
+            update_data['software_rental_amount'] = update_data['software_rental_amount'] * CHF_TO_EUR_RATE
+        if 'software_care_amount' in update_data:
+            update_data['software_care_amount'] = update_data['software_care_amount'] * CHF_TO_EUR_RATE
+        if 'apps_amount' in update_data:
+            update_data['apps_amount'] = update_data['apps_amount'] * CHF_TO_EUR_RATE
+        if 'purchase_amount' in update_data:
+            update_data['purchase_amount'] = update_data['purchase_amount'] * CHF_TO_EUR_RATE
+        # Speichere als EUR
+        update_data['currency'] = 'EUR'
+    
     for field, value in update_data.items():
         setattr(db_contract, field, value)
     
@@ -87,6 +118,7 @@ def get_contract_metrics(contract_id: str, db: Session = Depends(get_db)):
     # Lade alle notwendigen Daten
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).order_by(CommissionRate.valid_from).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -95,6 +127,7 @@ def get_contract_metrics(contract_id: str, db: Session = Depends(get_db)):
         contract=db_contract,
         settings=settings,
         price_increases=price_increases,
+        commission_rates=commission_rates,
         today=datetime.utcnow()
     )
     

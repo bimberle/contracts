@@ -4,7 +4,10 @@ from app.models.contract import Contract
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
 from app.models.commission_rate import CommissionRate
-from app.services.calculations import get_current_monthly_commission
+from app.services.calculations import (
+    get_current_monthly_commission,
+    get_current_monthly_price
+)
 from app.utils.date_utils import add_months
 
 def generate_forecast(
@@ -24,11 +27,17 @@ def generate_forecast(
     for month_offset in range(months):
         month_date = add_months(current_date, month_offset)
         
+        total_revenue = 0.0
         total_commission = 0.0
+        total_net_income = 0.0
         active_count = 0
         ending_count = 0
         
         for contract in contracts:
+            # Berechne Umsatz mit Preiserhöhungen
+            monthly_price = get_current_monthly_price(contract, price_increases, month_date)
+            total_revenue += monthly_price
+            
             commission = get_current_monthly_commission(
                 contract, settings, price_increases, commission_rates, month_date
             )
@@ -43,10 +52,15 @@ def generate_forecast(
                 if end_month_start == month_date.replace(day=1):
                     ending_count += 1
         
+        # Berechne Netto-Einkommen basierend auf persönlichem Steuersatz
+        total_net_income = round(total_commission * (1 - settings.personal_tax_rate / 100), 2)
+        
         forecast.append({
             "date": month_date.strftime("%Y-%m"),
             "month_name": month_date.strftime("%B %Y"),
+            "total_revenue": round(total_revenue, 2),
             "total_commission": round(total_commission, 2),
+            "total_net_income": total_net_income,
             "active_contracts": active_count,
             "ending_contracts": ending_count
         })

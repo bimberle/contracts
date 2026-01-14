@@ -2,12 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useCustomerStore } from '../stores/customerStore';
-import { DashboardSummary, Customer, CalculatedMetrics } from '../types';
+import { DashboardSummary, CalculatedMetrics } from '../types';
+import { formatCurrency } from '../utils/formatting';
 import CustomerModal from '../components/CustomerModal';
-
-interface CustomerWithMetrics extends Customer {
-  metrics: CalculatedMetrics;
-}
 
 function Dashboard() {
   const customers = useCustomerStore((state) => state.customers);
@@ -104,7 +101,7 @@ function Dashboard() {
 
       {/* KPI Cards */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Kunden</div>
             <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalCustomers}</div>
@@ -114,15 +111,21 @@ function Dashboard() {
             <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalActiveContracts}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-gray-500 text-sm font-medium">Monatliche Provision</div>
-            <div className="text-3xl font-bold text-green-600 mt-2">
-              €{summary.totalMonthlyRevenue.toFixed(2)}
+            <div className="text-gray-500 text-sm font-medium">Mtl. Umsatz</div>
+            <div className="text-3xl font-bold text-blue-600 mt-2">
+              {formatCurrency(summary.totalMonthlyRevenue)}
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-gray-500 text-sm font-medium">Ø Pro Kunde</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">
-              €{summary.averageCommissionPerCustomer.toFixed(2)}
+            <div className="text-gray-500 text-sm font-medium">Mtl. Provision</div>
+            <div className="text-3xl font-bold text-green-600 mt-2">
+              {formatCurrency(summary.totalMonthlyCommission)}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-gray-500 text-sm font-medium">Mtl. Netto-Gehalt</div>
+            <div className="text-3xl font-bold text-purple-600 mt-2">
+              {formatCurrency(summary.totalMonthlyNetIncome)}
             </div>
           </div>
         </div>
@@ -138,7 +141,7 @@ function Dashboard() {
                 <div>
                   <p className="font-medium text-gray-900">{customer.customerName}</p>
                 </div>
-                <p className="text-green-600 font-semibold">€{customer.monthlyCommission.toFixed(2)}</p>
+                <p className="text-green-600 font-semibold">{formatCurrency(customer.monthlyCommission)}</p>
               </div>
             ))}
           </div>
@@ -183,6 +186,9 @@ function Dashboard() {
                   Monatliche Provision
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Netto-Gehalt
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Exit-Auszahlung
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -193,7 +199,7 @@ function Dashboard() {
             <tbody className="divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Keine Kunden gefunden
                   </td>
                 </tr>
@@ -212,10 +218,13 @@ function Dashboard() {
                         {customer.ort}, {customer.plz}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
-                        {metrics ? `€${metrics.totalMonthlyCommission.toFixed(2)}` : '—'}
+                        {metrics ? formatCurrency(metrics.totalMonthlyCommission) : '—'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
+                        {metrics ? formatCurrency(metrics.totalMonthlyNetIncome) : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
-                        {metrics ? `€${metrics.exitPayoutIfTodayInMonths.toFixed(2)}` : '—'}
+                        {metrics ? formatCurrency(metrics.exitPayoutIfTodayInMonths) : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link

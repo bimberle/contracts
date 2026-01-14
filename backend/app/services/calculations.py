@@ -13,6 +13,7 @@ def get_commission_rates_for_date(
     """
     Findet die geltenden Provisionsätze für ein bestimmtes Datum
     Returns the most recent commission rate that is valid on or before the given date
+    Uses snake_case keys for all rate dictionaries
     """
     # Keine Commission Rates verfügbar - Fallback zu Default
     if not commission_rates_list:
@@ -31,11 +32,43 @@ def get_commission_rates_for_date(
             break
     
     if applicable_rate:
-        return applicable_rate.rates
+        # Convert camelCase keys to snake_case if needed
+        rates_dict = applicable_rate.rates
+        normalized_rates = _normalize_rate_keys(rates_dict)
+        return normalized_rates
     else:
         # Fallback: Älteste Commission Rate (auch wenn sie in der Zukunft liegt)
         oldest_rate = min(commission_rates_list, key=lambda r: r.valid_from)
-        return oldest_rate.rates
+        normalized_rates = _normalize_rate_keys(oldest_rate.rates)
+        return normalized_rates
+
+
+def _normalize_rate_keys(rates: Dict[str, float]) -> Dict[str, float]:
+    """
+    Normalize rate keys from camelCase to snake_case
+    Handles both camelCase (from API) and snake_case (from database) keys
+    """
+    camel_to_snake = {
+        "softwareRental": "software_rental",
+        "softwareCare": "software_care",
+        "apps": "apps",
+        "purchase": "purchase"
+    }
+    
+    normalized = {}
+    for key, value in rates.items():
+        # If key is already snake_case, keep it
+        # If key is camelCase, convert it
+        if key in camel_to_snake:
+            normalized[camel_to_snake[key]] = value
+        elif key in camel_to_snake.values():
+            # Already snake_case
+            normalized[key] = value
+        else:
+            # Unknown key, try to match it
+            normalized[key] = value
+    
+    return normalized
 
 def get_current_monthly_price(
     contract: Contract,
@@ -60,7 +93,7 @@ def get_current_monthly_price(
     }
     
     # Bestandsschutz prüfen
-    months_running = months_between(contract.rental_start_date, date)
+    months_running = months_between(contract.start_date, date)
     
     # Preiserhöhungen anwenden pro Betrag-Typ
     for price_increase in price_increases:
@@ -95,7 +128,7 @@ def get_current_monthly_commission(
         'purchase': contract.purchase_amount,
     }
     
-    months_since_rental_start = months_between(contract.rental_start_date, date)
+    months_since_rental_start = months_between(contract.start_date, date)
     
     # Noch in Gründerphase - keine Provision
     if months_since_rental_start < 0:
@@ -118,6 +151,8 @@ def get_current_monthly_commission(
     commission_rates = get_commission_rates_for_date(commission_rates_list, date)
     
     for amount_type, amount in amounts.items():
+        # Get the commission rate for this amount type
+        # All keys are now normalized to snake_case
         commission_rate = commission_rates.get(amount_type, 0)
         
         # Nach Vertragsende - prüfe postContractMonths
@@ -146,7 +181,7 @@ def calculate_earnings_to_date(
     from app.utils.date_utils import add_months
     
     total = 0.0
-    current_date = contract.rental_start_date
+    current_date = contract.start_date
     
     while current_date <= to_date:
         commission = get_current_monthly_commission(
@@ -167,7 +202,7 @@ def calculate_exit_payout(
     """
     Berechnet was bei Ausscheiden heute ausbezahlt würde
     """
-    months_running = months_between(contract.rental_start_date, today)
+    months_running = months_between(contract.start_date, today)
     
     # Vertrag bereits beendet
     if contract.status.value == 'completed' or (contract.end_date and contract.end_date < today):

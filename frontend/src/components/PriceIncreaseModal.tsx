@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PriceIncreaseCreateRequest, ContractType } from '../types';
+import { PriceIncreaseCreateRequest } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
 
 interface PriceIncreaseModalProps {
@@ -11,12 +11,15 @@ interface PriceIncreaseModalProps {
 const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState<PriceIncreaseCreateRequest>({
     validFrom: new Date().toISOString().split('T')[0],
-    factor: 0,
+    amountIncreases: {
+      softwareRental: 0,
+      softwareCare: 0,
+      apps: 0,
+      purchase: 0,
+    },
     lockInMonths: 24,
-    appliesToTypes: ['rental'],
     description: '',
   });
-  const [selectedTypes, setSelectedTypes] = useState<ContractType[]>(['rental']);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,23 +30,18 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
       // Reset form when modal opens
       setFormData({
         validFrom: new Date().toISOString().split('T')[0],
-        factor: 0,
+        amountIncreases: {
+          softwareRental: 0,
+          softwareCare: 0,
+          apps: 0,
+          purchase: 0,
+        },
         lockInMonths: 24,
-        appliesToTypes: ['rental'],
         description: '',
       });
-      setSelectedTypes(['rental']);
       setError(null);
     }
   }, [isOpen]);
-
-  const toggleType = (type: ContractType) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type)
-        ? prev.filter((t) => t !== type)
-        : [...prev, type]
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,14 +49,13 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
     setIsLoading(true);
 
     try {
-      if (selectedTypes.length === 0) {
-        setError('Bitte wählen Sie mindestens einen Vertragstyp aus.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (formData.factor <= 0) {
-        setError('Die Erhöhung muss größer als 0% sein.');
+      if (
+        formData.amountIncreases.softwareRental === 0 &&
+        formData.amountIncreases.softwareCare === 0 &&
+        formData.amountIncreases.apps === 0 &&
+        formData.amountIncreases.purchase === 0
+      ) {
+        setError('Bitte geben Sie mindestens eine Preiserhöhung ein.');
         setIsLoading(false);
         return;
       }
@@ -69,9 +66,8 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
 
       await createPriceIncrease({
         validFrom: dateObj.toISOString(),
-        factor: formData.factor,
+        amountIncreases: formData.amountIncreases,
         lockInMonths: formData.lockInMonths || 24,
-        appliesToTypes: selectedTypes,
         description: formData.description,
       });
 
@@ -123,25 +119,96 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Erhöhung (%)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              min="0.1"
-              value={formData.factor}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  factor: parseFloat(e.target.value) || 0,
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">z.B. 5 für +5%</p>
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">Erhöhungen pro Typ (%)</p>
+            
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Software Miete
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.amountIncreases.softwareRental}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountIncreases: {
+                      ...formData.amountIncreases,
+                      softwareRental: parseFloat(e.target.value) || 0,
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm text-gray-700 mb-1">
+                Software Pflege
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.amountIncreases.softwareCare}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountIncreases: {
+                      ...formData.amountIncreases,
+                      softwareCare: parseFloat(e.target.value) || 0,
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm text-gray-700 mb-1">
+                Apps
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.amountIncreases.apps}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountIncreases: {
+                      ...formData.amountIncreases,
+                      apps: parseFloat(e.target.value) || 0,
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm text-gray-700 mb-1">
+                Kauf Bestandsvertrag
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.amountIncreases.purchase}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountIncreases: {
+                      ...formData.amountIncreases,
+                      purchase: parseFloat(e.target.value) || 0,
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
           </div>
 
           <div>
@@ -167,38 +234,12 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Anwendbar auf
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedTypes.includes('rental')}
-                  onChange={() => toggleType('rental')}
-                  className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                />
-                <span className="ml-2 text-sm text-gray-700">Mietverträge</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedTypes.includes('software-care')}
-                  onChange={() => toggleType('software-care')}
-                  className="w-4 h-4 rounded border-gray-300 cursor-pointer"
-                />
-                <span className="ml-2 text-sm text-gray-700">Software-Pflege</span>
-              </label>
-            </div>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Beschreibung
             </label>
             <input
               type="text"
-              placeholder="z.B. Inflation 2025"
+              placeholder="z.B. Inflation 2026"
               value={formData.description}
               onChange={(e) =>
                 setFormData({

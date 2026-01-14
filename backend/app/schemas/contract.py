@@ -17,8 +17,7 @@ class ContractBase(BaseModel):
     apps_amount: float = 0             # Apps
     purchase_amount: float = 0         # Kauf Bestandsvertrag
     currency: str = "EUR"
-    start_date: datetime
-    rental_start_date: datetime
+    start_date: datetime  # Mietbeginn
     end_date: Optional[datetime] = None
     is_founder_discount: bool = False
     notes: str = ""
@@ -38,7 +37,6 @@ class ContractUpdate(BaseModel):
     purchase_amount: Optional[float] = None
     currency: Optional[str] = None
     start_date: Optional[datetime] = None
-    rental_start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     is_founder_discount: Optional[bool] = None
     notes: Optional[str] = None

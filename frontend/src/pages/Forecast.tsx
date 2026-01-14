@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Forecast as ForecastType } from '../types';
+import { formatCurrency } from '../utils/formatting';
 import {
   LineChart,
   Line,
@@ -74,25 +75,46 @@ function Forecast() {
     ? forecast.months[currentMonthIndex + 1] 
     : null;
 
-  // Calculate KPIs from all months
+  // Get current year
+  const currentYear = today.getFullYear();
+
+  // Calculate KPIs from all months - only for current year
+  const currentYearMonths = forecast.months.filter(month => {
+    const monthYear = parseInt(month.date.split('-')[0]);
+    return monthYear === currentYear;
+  });
+
   const totals = forecast.months.reduce(
     (acc, month) => ({
-      total: acc.total + month.totalCommission,
-      highest: Math.max(acc.highest, month.totalCommission),
-      lowest: acc.lowest === Infinity ? month.totalCommission : Math.min(acc.lowest, month.totalCommission),
+      totalRevenue: acc.totalRevenue + month.totalRevenue,
+      totalCommission: acc.totalCommission + month.totalCommission,
     }),
-    { total: 0, highest: 0, lowest: Infinity }
+    { totalRevenue: 0, totalCommission: 0 }
   );
 
-  const averageMonthly = forecast.months.length > 0 ? totals.total / forecast.months.length : 0;
-  const highestMonth = totals.highest;
-  const lowestMonth = totals.lowest === Infinity ? 0 : totals.lowest;
-  const trend = averageMonthly > (lowestMonth + highestMonth) / 2 ? 'up' : 'down';
+  const yearlyTotals = currentYearMonths.reduce(
+    (acc, month) => ({
+      totalCommission: acc.totalCommission + month.totalCommission,
+      totalNetIncome: acc.totalNetIncome + month.totalNetIncome,
+    }),
+    { totalCommission: 0, totalNetIncome: 0 }
+  );
+
+  const averageMonthlyRevenue = forecast.months.length > 0 ? totals.totalRevenue / forecast.months.length : 0;
+  const averageMonthlyCommission = forecast.months.length > 0 ? totals.totalCommission / forecast.months.length : 0;
+  const averageMonthlyNetIncome = forecast.months.length > 0 
+    ? forecast.months.reduce((sum, m) => sum + m.totalNetIncome, 0) / forecast.months.length 
+    : 0;
+
+  const yearlyCommission = yearlyTotals.totalCommission;
+  const yearlyNetIncome = yearlyTotals.totalNetIncome;
 
   // Prepare chart data
   const chartData = forecast.months.map(month => ({
     name: month.monthName,
+    revenue: month.totalRevenue,
     provision: month.totalCommission,
+    netIncome: month.totalNetIncome,
     date: month.date,
   }));
 
@@ -124,10 +146,21 @@ function Forecast() {
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-gray-400">
             <div className="text-gray-500 text-sm font-medium">Vorheriger Monat</div>
             <div className="text-gray-700 text-xs mt-1">{previousMonth.monthName}</div>
-            <div className="text-3xl font-bold text-gray-600 mt-3">
-              €{previousMonth.totalCommission.toFixed(2)}
+            <div className="mt-3 space-y-2">
+              <div className="text-sm">
+                <span className="text-gray-600">Umsatz:</span>
+                <span className="font-bold text-blue-600 ml-1">{formatCurrency(previousMonth.totalRevenue)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Provision:</span>
+                <span className="font-bold text-gray-600 ml-1">{formatCurrency(previousMonth.totalCommission)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Netto:</span>
+                <span className="font-bold text-purple-600 ml-1">{formatCurrency(previousMonth.totalNetIncome)}</span>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-2">
+            <div className="text-xs text-gray-500 mt-3">
               {previousMonth.activeContracts} aktive Verträge
             </div>
           </div>
@@ -137,10 +170,21 @@ function Forecast() {
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md p-6 border-l-4 border-blue-600">
             <div className="text-blue-700 text-sm font-bold">AKTUELLER MONAT</div>
             <div className="text-blue-900 text-xs mt-1">{currentMonth.monthName}</div>
-            <div className="text-4xl font-bold text-blue-600 mt-3">
-              €{currentMonth.totalCommission.toFixed(2)}
+            <div className="mt-3 space-y-2">
+              <div className="text-sm">
+                <span className="text-blue-700">Umsatz:</span>
+                <span className="font-bold text-blue-600 ml-1">{formatCurrency(currentMonth.totalRevenue)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-blue-700">Provision:</span>
+                <span className="font-bold text-blue-600 ml-1">{formatCurrency(currentMonth.totalCommission)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-blue-700">Netto:</span>
+                <span className="font-bold text-purple-600 ml-1">{formatCurrency(currentMonth.totalNetIncome)}</span>
+              </div>
             </div>
-            <div className="text-xs text-blue-700 mt-2">
+            <div className="text-xs text-blue-700 mt-3">
               {currentMonth.activeContracts} aktive Verträge
             </div>
           </div>
@@ -155,10 +199,21 @@ function Forecast() {
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-400">
             <div className="text-gray-500 text-sm font-medium">Nächster Monat</div>
             <div className="text-gray-700 text-xs mt-1">{nextMonth.monthName}</div>
-            <div className="text-3xl font-bold text-green-600 mt-3">
-              €{nextMonth.totalCommission.toFixed(2)}
+            <div className="mt-3 space-y-2">
+              <div className="text-sm">
+                <span className="text-gray-600">Umsatz:</span>
+                <span className="font-bold text-green-600 ml-1">{formatCurrency(nextMonth.totalRevenue)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Provision:</span>
+                <span className="font-bold text-green-600 ml-1">{formatCurrency(nextMonth.totalCommission)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-gray-600">Netto:</span>
+                <span className="font-bold text-purple-600 ml-1">{formatCurrency(nextMonth.totalNetIncome)}</span>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-2">
+            <div className="text-xs text-gray-500 mt-3">
               {nextMonth.activeContracts} aktive Verträge
             </div>
           </div>
@@ -166,36 +221,42 @@ function Forecast() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Durchschnitt</div>
-          <div className="text-3xl font-bold text-gray-900 mt-2">
-            €{averageMonthly.toFixed(2)}
+          <div className="text-gray-500 text-sm font-medium">Ø Umsatz/Monat</div>
+          <div className="text-3xl font-bold text-blue-600 mt-2">
+            {formatCurrency(averageMonthlyRevenue)}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Höchster Monat</div>
+          <div className="text-gray-500 text-sm font-medium">Ø Provision/Monat</div>
           <div className="text-3xl font-bold text-green-600 mt-2">
-            €{highestMonth.toFixed(2)}
+            {formatCurrency(averageMonthlyCommission)}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Niedrigster Monat</div>
-          <div className="text-3xl font-bold text-orange-600 mt-2">
-            €{lowestMonth.toFixed(2)}
+          <div className="text-gray-500 text-sm font-medium">Ø Netto-Gehalt/Monat</div>
+          <div className="text-3xl font-bold text-purple-600 mt-2">
+            {formatCurrency(averageMonthlyNetIncome)}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Trend</div>
-          <div className="text-xl font-bold text-gray-900 mt-2 capitalize">
-            {trend === 'up' ? '📈 Steigend' : trend === 'down' ? '📉 Fallend' : '➡️ Stabil'}
+          <div className="text-gray-500 text-sm font-medium">Jahresbrutto {currentYear}</div>
+          <div className="text-3xl font-bold text-green-600 mt-2">
+            {formatCurrency(yearlyCommission)}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-gray-500 text-sm font-medium">Jahresnetto {currentYear}</div>
+          <div className="text-3xl font-bold text-purple-600 mt-2">
+            {formatCurrency(yearlyNetIncome)}
           </div>
         </div>
       </div>
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Provisions-Entwicklung</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Netto-Gehalt - 12-Monats-Prognose</h2>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -207,23 +268,23 @@ function Forecast() {
               tick={{ fontSize: 12 }}
             />
             <YAxis 
-              label={{ value: 'Provision (€)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Betrag (€)', angle: -90, position: 'insideLeft' }}
               tick={{ fontSize: 12 }}
             />
             <Tooltip 
-              formatter={(value: number | undefined) => value ? `€${value.toFixed(2)}` : '€0.00'}
+              formatter={(value: number | undefined) => value ? formatCurrency(value) : formatCurrency(0)}
               labelFormatter={(label) => `Monat: ${label}`}
               contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '4px' }}
             />
             <Legend wrapperStyle={{ paddingTop: '20px' }} />
             <Line 
               type="monotone" 
-              dataKey="provision" 
-              stroke="#2563eb" 
+              dataKey="netIncome" 
+              stroke="#a855f7" 
               strokeWidth={2}
-              dot={{ fill: '#2563eb', r: 4 }}
+              dot={{ fill: '#a855f7', r: 4 }}
               activeDot={{ r: 6 }}
-              name="Provision"
+              name="Netto-Gehalt"
             />
           </LineChart>
         </ResponsiveContainer>
@@ -243,7 +304,13 @@ function Forecast() {
                   Monat
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Umsatz (€)
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Provision (€)
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Netto-Gehalt (€)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Kumulativ (€)
@@ -263,11 +330,17 @@ function Forecast() {
                     {month.monthName}
                     {month.date === currentMonthKey && <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">JETZT</span>}
                   </td>
+                  <td className="px-6 py-4 text-sm text-right text-blue-600 font-semibold">
+                    {formatCurrency(month.totalRevenue)}
+                  </td>
                   <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">
-                    €{month.totalCommission.toFixed(2)}
+                    {formatCurrency(month.totalCommission)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-right text-purple-600 font-semibold">
+                    {formatCurrency(month.totalNetIncome)}
                   </td>
                   <td className="px-6 py-4 text-sm text-right text-gray-900 font-semibold">
-                    €{month.cumulative.toFixed(2)}
+                    {formatCurrency(month.cumulative)}
                   </td>
                   <td className="px-6 py-4 text-sm text-right text-gray-900">
                     {month.activeContracts}

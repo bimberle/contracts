@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Contract } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { formatCurrency, formatDate } from '../utils/formatting';
 
 interface ContractModalProps {
   isOpen: boolean;
@@ -25,7 +26,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
     purchaseAmount: 0,
     currency: 'EUR',
     startDate: new Date().toISOString().split('T')[0],
-    rentalStartDate: new Date().toISOString().split('T')[0],
     endDate: '',
     isFounderDiscount: false,
     notes: '',
@@ -49,7 +49,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         purchaseAmount: contract.purchaseAmount,
         currency: contract.currency,
         startDate: contract.startDate.split('T')[0],
-        rentalStartDate: contract.rentalStartDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
         isFounderDiscount: contract.isFounderDiscount,
         notes: contract.notes,
@@ -62,7 +61,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         purchaseAmount: 0,
         currency: 'EUR',
         startDate: new Date().toISOString().split('T')[0],
-        rentalStartDate: new Date().toISOString().split('T')[0],
         endDate: '',
         isFounderDiscount: false,
         notes: '',
@@ -72,6 +70,45 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setActiveTab('form');
     fetchPriceIncreases();
   }, [contract, isOpen, fetchPriceIncreases]);
+
+  // Hilfsfunktion: Finde geltende Preiserhöhungen
+  const getApplicablePriceIncreases = () => {
+    if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
+
+    const startDate = new Date(formData.startDate);
+    const today = new Date();
+
+    return priceIncreases.filter((increase: any) => {
+      try {
+        const validFromDate = new Date(increase.validFrom);
+        if (isNaN(validFromDate.getTime())) return false;
+
+        // Muss gültig sein (validFrom in der Vergangenheit)
+        if (validFromDate > today) return false;
+
+        // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
+        const monthsRunning = Math.floor(
+          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
+        if (monthsRunning < increase.lockInMonths) return false;
+
+        // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
+        if (!increase.amountIncreases) return false;
+        
+        // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        const hasApplicableIncrease = 
+          (formData.softwareRentalAmount > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (formData.softwareCareAmount > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (formData.appsAmount > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (formData.purchaseAmount > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+
+        return hasApplicableIncrease;
+      } catch (error) {
+        console.warn(`Error processing price increase:`, error);
+        return false;
+      }
+    });
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -104,7 +141,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         purchaseAmount: formData.purchaseAmount,
         currency: formData.currency,
         startDate: new Date(formData.startDate + 'T00:00:00').toISOString(),
-        rentalStartDate: new Date(formData.rentalStartDate + 'T00:00:00').toISOString(),
         endDate: formData.endDate ? new Date(formData.endDate + 'T00:00:00').toISOString() : null,
         isFounderDiscount: formData.isFounderDiscount,
         notes: formData.notes,
@@ -137,7 +173,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       purchase: formData.purchaseAmount,
     };
 
-    const rentalStartDate = new Date(formData.rentalStartDate);
+    const startDate = new Date(formData.startDate);
     const today = new Date();
     const increases = {
       softwareRental: 0,
@@ -151,7 +187,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       const validFromDate = new Date(increase.validFrom);
       if (validFromDate <= today) {
         const monthsRunning = Math.floor(
-          (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
 
         if (monthsRunning >= increase.lockInMonths) {
@@ -350,18 +386,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mietbeginn
-                </label>
-                <input
-                  type="date"
-                  name="rentalStartDate"
-                  value={formData.rentalStartDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -431,31 +455,31 @@ const ContractModal: React.FC<ContractModalProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
                   <span className="text-gray-700">Software Miete:</span>
-                  <span className="font-medium">€{breakdown.baseAmounts.softwareRental.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.softwareRental)}</span>
                 </div>
                 <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
                   <span className="text-gray-700">Software Pflege:</span>
-                  <span className="font-medium">€{breakdown.baseAmounts.softwareCare.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.softwareCare)}</span>
                 </div>
                 <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
                   <span className="text-gray-700">Apps:</span>
-                  <span className="font-medium">€{breakdown.baseAmounts.apps.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.apps)}</span>
                 </div>
                 <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
                   <span className="text-gray-700">Kauf Bestandsvertrag:</span>
-                  <span className="font-medium">€{breakdown.baseAmounts.purchase.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.purchase)}</span>
                 </div>
               </div>
             </div>
 
             {/* Price Increases */}
-            {priceIncreases.length > 0 && (
+            {getApplicablePriceIncreases().length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-gray-900">Geltende Preiserhöhungen:</h3>
-                {priceIncreases.map((increase: any, index: number) => (
+                {getApplicablePriceIncreases().map((increase: any, index: number) => (
                   <div key={index} className="border-l-4 border-blue-300 pl-4 py-2">
                     <div className="text-sm font-medium text-gray-900">
-                      {new Date(increase.validFrom).toLocaleDateString('de-DE')}
+                      {formatDate(increase.validFrom)}
                     </div>
                     <div className="text-xs text-gray-600 space-y-1 mt-1">
                       {increase.amountIncreases.softwareRental > 0 && (
@@ -482,24 +506,24 @@ const ContractModal: React.FC<ContractModalProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Software Miete:</span>
-                  <span className="font-medium">€{breakdown.adjustedAmounts.softwareRental.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.softwareRental)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Software Pflege:</span>
-                  <span className="font-medium">€{breakdown.adjustedAmounts.softwareCare.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.softwareCare)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Apps:</span>
-                  <span className="font-medium">€{breakdown.adjustedAmounts.apps.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.apps)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Kauf Bestandsvertrag:</span>
-                  <span className="font-medium">€{breakdown.adjustedAmounts.purchase.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.purchase)}</span>
                 </div>
               </div>
               <div className="border-t border-green-200 pt-3 mt-3 flex justify-between font-bold text-lg">
                 <span>Gesamtbetrag:</span>
-                <span>€{breakdown.totalAmount.toFixed(2)}</span>
+                <span>{formatCurrency(breakdown.totalAmount)}</span>
               </div>
             </div>
 
@@ -509,24 +533,24 @@ const ContractModal: React.FC<ContractModalProps> = ({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Software Miete (20%):</span>
-                  <span className="font-medium">€{breakdown.commissions.softwareRental.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.commissions.softwareRental)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Software Pflege (20%):</span>
-                  <span className="font-medium">€{breakdown.commissions.softwareCare.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.commissions.softwareCare)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Apps (20%):</span>
-                  <span className="font-medium">€{breakdown.commissions.apps.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.commissions.apps)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Kauf Bestandsvertrag (1/12%):</span>
-                  <span className="font-medium">€{breakdown.commissions.purchase.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(breakdown.commissions.purchase)}</span>
                 </div>
               </div>
               <div className="border-t border-purple-200 pt-3 mt-3 flex justify-between font-bold text-lg">
                 <span>Gesamtprovision:</span>
-                <span className="text-purple-900">€{breakdown.totalCommission.toFixed(2)}</span>
+                <span className="text-purple-900">{formatCurrency(breakdown.totalCommission)}</span>
               </div>
             </div>
           </div>

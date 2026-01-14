@@ -50,7 +50,7 @@ function App() {
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
           <p className="text-gray-600">Lade Anwendung...</p>
-          <p className="text-gray-400 text-sm mt-2">API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}</p>
+          <p className="text-gray-400 text-sm mt-2">API URL: http://localhost:8000</p>
         </div>
       </div>
     );
@@ -64,7 +64,7 @@ function App() {
           <p className="text-gray-600 mb-4">
             Die API ist nicht erreichbar. Bitte überprüfen Sie, ob der Backend-Server läuft.
           </p>
-          <p className="text-sm text-gray-500 mb-4">API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000'}</p>
+          <p className="text-sm text-gray-500 mb-4">API URL: http://localhost:8000</p>
           <button
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
@@ -112,14 +112,16 @@ function App() {
                   >
                     Provisionsätze
                   </Link>
-                  <Link
-                    to="/settings"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                  >
-                    Einstellungen
-                  </Link>
                 </div>
               </div>
+              {/* Settings Icon - Right Side */}
+              <Link
+                to="/settings"
+                className="text-gray-700 hover:text-blue-600 transition text-xl"
+                title="Einstellungen"
+              >
+                ⚙️
+              </Link>
             </div>
           </div>
         </nav>

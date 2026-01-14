@@ -5,7 +5,7 @@ export type ISO8601String = string; // Format: YYYY-MM-DDTHH:mm:ss
 export interface Customer {
   id: string; // UUID
   name: string;
-  name2: string;
+  name2?: string;
   ort: string;
   plz: string;
   kundennummer: string;
@@ -16,7 +16,7 @@ export interface Customer {
 
 export interface CustomerCreateRequest {
   name: string;
-  name2: string;
+  name2?: string;
   ort: string;
   plz: string;
   kundennummer: string;
@@ -34,17 +34,17 @@ export interface CustomerUpdateRequest {
 
 // Contract (Vertrag)
 export type ContractStatus = 'active' | 'inactive' | 'completed';
+export type Currency = 'EUR' | 'CHF';
 
 export interface Contract {
   id: string; // UUID
   customerId: string;
-  softwareRentalAmount: number; // Software Miete (€/Monat)
-  softwareCareAmount: number;   // Software Pflege (€/Monat)
-  appsAmount: number;           // Apps (€/Monat)
-  purchaseAmount: number;       // Kauf Bestandsvertrag (€/Monat)
-  currency: string; // z.B. 'EUR'
-  startDate: ISO8601String; // Unterzeichnungsdatum
-  rentalStartDate: ISO8601String; // Tatsächlicher Mietbeginn
+  softwareRentalAmount: number; // Software Miete (in der gewählten Währung)
+  softwareCareAmount: number;   // Software Pflege (in der gewählten Währung)
+  appsAmount: number;           // Apps (in der gewählten Währung)
+  purchaseAmount: number;       // Kauf Bestandsvertrag (in der gewählten Währung)
+  currency: Currency; // EUR oder CHF
+  startDate: ISO8601String; // Mietbeginn
   endDate: ISO8601String | null; // null = unbegrenzt
   isFounderDiscount: boolean;
   status: ContractStatus; // Automatisch basierend auf endDate
@@ -59,9 +59,8 @@ export interface ContractCreateRequest {
   softwareCareAmount: number;
   appsAmount: number;
   purchaseAmount: number;
-  currency?: string;
-  startDate: ISO8601String;
-  rentalStartDate: ISO8601String;
+  currency?: Currency;
+  startDate: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
   notes?: string;
@@ -72,9 +71,8 @@ export interface ContractUpdateRequest {
   softwareCareAmount?: number;
   appsAmount?: number;
   purchaseAmount?: number;
-  currency?: string;
-  startDate?: ISO8601String;
-  rentalStartDate?: ISO8601String;
+  currency?: Currency;
+  startDate?: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
   notes?: string;
@@ -158,13 +156,6 @@ export interface CommissionRateUpdateRequest {
 }
 
 // Settings (Allgemeine Einstellungen)
-export interface CommissionRates {
-  softwareRental: number;   // Software Miete: 20%
-  softwareCare: number;      // Software Pflege: 20%
-  apps: number;              // Apps: 20%
-  purchase: number;          // Kauf Bestandsvertrag: 1/12%
-}
-
 export interface PostContractMonths {
   softwareRental: number;
   softwareCare: number;
@@ -175,25 +166,26 @@ export interface PostContractMonths {
 export interface Settings {
   id: string; // Immer 'default'
   founderDelayMonths: number; // Standard: 12
-  commissionRates: CommissionRates;
   postContractMonths: PostContractMonths;
   minContractMonthsForPayout: number; // Standard: 60
-  createdAt: ISO8601String;
+  personalTaxRate: number; // Persönlicher Steuersatz in %
   updatedAt: ISO8601String;
 }
 
 export interface SettingsUpdateRequest {
   founderDelayMonths?: number;
-  commissionRates?: Partial<CommissionRates>;
   postContractMonths?: Partial<PostContractMonths>;
   minContractMonthsForPayout?: number;
+  personalTaxRate?: number;
 }
 
 // Calculated Metrics (nicht persistiert)
 export interface CalculatedMetrics {
   customerId: string;
-  totalMonthlyRental: number; // Summe aller aktiven Mietverträge (€/Monat)
+  totalMonthlyRental: number; // Summe aller Basis-Beträge (€/Monat)
+  totalMonthlyRevenue: number; // Mit Preiserhöhungen (€/Monat)
   totalMonthlyCommission: number; // Gesamtprovision aktuell (€/Monat)
+  totalMonthlyNetIncome: number; // Netto-Einkommen (Provision nach Steuern) (€/Monat)
   totalEarned: number; // Bereits verdiente Provision (kumulativ)
   exitPayoutIfTodayInMonths: number; // Provision wenn heute gekündigt
   activeContracts: number; // Anzahl aktiver Verträge
@@ -229,10 +221,13 @@ export interface ListResponse<T> {
 export interface ForecastMonth {
   date: string; // Format: YYYY-MM
   monthName: string;
+  totalRevenue: number;
   totalCommission: number;
+  totalNetIncome: number;
   activeContracts: number;
   endingContracts: number;
   cumulative: number;
+  cumulativeNetIncome: number;
 }
 
 export interface Forecast {
@@ -243,6 +238,8 @@ export interface Forecast {
 export interface DashboardSummary {
   totalCustomers: number;
   totalMonthlyRevenue: number;
+  totalMonthlyCommission: number;
+  totalMonthlyNetIncome: number;
   totalActiveContracts: number;
   averageCommissionPerCustomer: number;
   topCustomers: Array<{

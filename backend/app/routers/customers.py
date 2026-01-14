@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.customer import Customer
 from app.models.contract import Contract
 from app.models.price_increase import PriceIncrease
+from app.models.commission_rate import CommissionRate
 from app.models.settings import Settings
 from app.schemas.customer import Customer as CustomerSchema, CustomerCreate, CustomerUpdate, CalculatedMetrics
 from app.services.metrics import calculate_customer_metrics
@@ -83,6 +84,7 @@ def get_customer_metrics(customer_id: str, db: Session = Depends(get_db)):
     contracts = db.query(Contract).filter(Contract.customer_id == customer_id).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).order_by(CommissionRate.valid_from).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -92,6 +94,7 @@ def get_customer_metrics(customer_id: str, db: Session = Depends(get_db)):
         contracts=contracts,
         settings=settings,
         price_increases=price_increases,
+        commission_rates=commission_rates,
         today=datetime.utcnow()
     )
     

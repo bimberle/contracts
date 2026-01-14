@@ -20,7 +20,7 @@ function Settings() {
   const handleSettingsChange = (field: string, value: any) => {
     if (!formData) return;
 
-    if (field.includes('commission_rates.') || field.includes('post_contract_months.')) {
+    if (field.includes('post_contract_months.')) {
       const [section, key] = field.split('.');
       setFormData({
         ...formData,
@@ -44,9 +44,9 @@ function Settings() {
       setSaveStatus('saving');
       const updateData: SettingsUpdateRequest = {
         founderDelayMonths: formData.founderDelayMonths,
-        commissionRates: formData.commissionRates,
         postContractMonths: formData.postContractMonths,
         minContractMonthsForPayout: formData.minContractMonthsForPayout,
+        personalTaxRate: formData.personalTaxRate,
       };
       await updateSettings(updateData);
       setSaveStatus('success');
@@ -116,67 +116,58 @@ function Settings() {
               </p>
             </div>
 
-            {/* Commission Rates */}
-            <div className="border-t pt-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Provisionssätze (%)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Miete
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.commissionRates.rental}
-                    onChange={(e) =>
-                      handleSettingsChange('commissionRates.rental', parseFloat(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Software-Pflege
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.commissionRates['software-care']}
-                    onChange={(e) =>
-                      handleSettingsChange('commissionRates.software-care', parseFloat(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Post-Contract Months */}
             <div className="border-t pt-6">
               <h3 className="font-semibold text-gray-900 mb-4">Post-Vertrag Monate</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Miete
+                    Software Rental (Miete)
                   </label>
                   <input
                     type="number"
-                    value={formData.postContractMonths.rental}
+                    value={formData.postContractMonths.softwareRental}
                     onChange={(e) =>
-                      handleSettingsChange('postContractMonths.rental', parseInt(e.target.value))
+                      handleSettingsChange('postContractMonths.softwareRental', parseInt(e.target.value))
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Software-Pflege
+                    Software Care (Pflege)
                   </label>
                   <input
                     type="number"
-                    value={formData.postContractMonths['software-care']}
+                    value={formData.postContractMonths.softwareCare}
                     onChange={(e) =>
-                      handleSettingsChange('postContractMonths.software-care', parseInt(e.target.value))
+                      handleSettingsChange('postContractMonths.softwareCare', parseInt(e.target.value))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Apps
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.apps}
+                    onChange={(e) =>
+                      handleSettingsChange('postContractMonths.apps', parseInt(e.target.value))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kauf
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.purchase}
+                    onChange={(e) =>
+                      handleSettingsChange('postContractMonths.purchase', parseInt(e.target.value))
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
@@ -199,6 +190,27 @@ function Settings() {
               />
               <p className="text-sm text-gray-500 mt-2">
                 Verträge unter dieser Dauer werden bei Ausscheiden mit Restprovision ausgezahlt
+              </p>
+            </div>
+
+            {/* Personal Tax Rate */}
+            <div className="border-t pt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Persönlicher Steuersatz (%)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                value={formData.personalTaxRate}
+                onChange={(e) =>
+                  handleSettingsChange('personalTaxRate', parseFloat(e.target.value))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Ihr persönlicher Einkommensteuersatz für die Netto-Gehalt-Berechnung (z.B. 42)
               </p>
             </div>
 

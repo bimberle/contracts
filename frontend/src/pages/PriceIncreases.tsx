@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
+import { formatDate } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
 
 function PriceIncreases() {
@@ -9,19 +10,6 @@ function PriceIncreases() {
   useEffect(() => {
     fetchPriceIncreases();
   }, [fetchPriceIncreases]);
-
-  // Hilfsfunktion zur sicheren Datumformatierung
-  const formatDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Ungültiges Datum';
-      }
-      return date.toLocaleDateString('de-DE');
-    } catch {
-      return 'Ungültiges Datum';
-    }
-  };
 
   if (loading && priceIncreases.length === 0) {
     return (
@@ -65,13 +53,19 @@ function PriceIncreases() {
                     Gültig ab
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Erhöhung (%)
+                    Software Miete (%)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                    Software Pflege (%)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                    Apps (%)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                    Kauf (%)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                     Bestandsschutz (Monate)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Anwendbar auf
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                     Beschreibung
@@ -84,21 +78,23 @@ function PriceIncreases() {
               <tbody className="divide-y divide-gray-200">
                 {priceIncreases.map((pi) => (
                   <tr key={pi.id}>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                       {formatDate(pi.validFrom)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 font-semibold">
-                      {pi.factor > 0 ? '+' : ''}{pi.factor}%
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {pi.amountIncreases?.softwareRental ?? 0}%
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {pi.amountIncreases?.softwareCare ?? 0}%
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {pi.amountIncreases?.apps ?? 0}%
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {pi.amountIncreases?.purchase ?? 0}%
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{pi.lockInMonths}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {pi.appliesToTypes.map((type) => (
-                        <span key={type} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 text-xs">
-                          {type === 'rental' ? 'Miete' : 'Software-Pflege'}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{pi.description}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{pi.description || '—'}</td>
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => deletePriceIncrease(pi.id)}

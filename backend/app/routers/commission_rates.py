@@ -7,7 +7,7 @@ from app.schemas.commission_rate import CommissionRate, CommissionRateCreate, Co
 
 router = APIRouter(prefix="/api/commission-rates", tags=["commission-rates"])
 
-@router.get("/")
+@router.get("/", response_model=list[CommissionRate])
 async def get_commission_rates(db: Session = Depends(get_db)):
     """Get all commission rates, ordered by valid_from (newest first)"""
     rates = db.query(CommissionRateModel).order_by(
@@ -15,7 +15,7 @@ async def get_commission_rates(db: Session = Depends(get_db)):
     ).all()
     return rates
 
-@router.get("/{rate_id}")
+@router.get("/{rate_id}", response_model=CommissionRate)
 async def get_commission_rate(rate_id: str, db: Session = Depends(get_db)):
     """Get a specific commission rate"""
     rate = db.query(CommissionRateModel).filter(CommissionRateModel.id == rate_id).first()
@@ -23,7 +23,7 @@ async def get_commission_rate(rate_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Commission rate not found")
     return rate
 
-@router.post("/")
+@router.post("/", response_model=CommissionRate)
 async def create_commission_rate(rate: CommissionRateCreate, db: Session = Depends(get_db)):
     """Create a new commission rate"""
     # Check if a rate already exists for this date (or later)
@@ -42,7 +42,7 @@ async def create_commission_rate(rate: CommissionRateCreate, db: Session = Depen
     db.refresh(db_rate)
     return db_rate
 
-@router.put("/{rate_id}")
+@router.put("/{rate_id}", response_model=CommissionRate)
 async def update_commission_rate(
     rate_id: str, 
     rate: CommissionRateUpdate, 
@@ -77,7 +77,7 @@ async def delete_commission_rate(rate_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Commission rate deleted"}
 
-@router.get("/effective/{date_str}")
+@router.get("/effective/{date_str}", response_model=CommissionRate)
 async def get_effective_commission_rate(date_str: str, db: Session = Depends(get_db)):
     """Get the commission rate that is effective on a given date (ISO format: YYYY-MM-DD)"""
     try:

@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCustomerStore } from '../stores/customerStore';
-import { useContractStore } from '../stores/contractStore';
-import { useSettingsStore } from '../stores/settingsStore';
 import { Customer, Contract, CalculatedMetrics, PriceIncrease } from '../types';
 import api from '../services/api';
+import { formatCurrency, formatDate } from '../utils/formatting';
 import ContractModal from '../components/ContractModal';
 import CustomerModal from '../components/CustomerModal';
 
@@ -20,8 +18,56 @@ function CustomerDetail() {
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [selectedContractForEdit, setSelectedContractForEdit] = useState<Contract | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  
-  const settings = useSettingsStore((state) => state.settings);
+  const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
+
+  // Hilfsfunktion: Finde geltende Preiserhöhungen für einen Vertrag
+  const getApplicablePriceIncreases = (contract: Contract): PriceIncrease[] => {
+    if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
+
+    const startDate = new Date(contract.startDate);
+    const today = new Date();
+
+    return priceIncreases.filter((increase) => {
+      try {
+        const validFromDate = new Date(increase.validFrom);
+        if (isNaN(validFromDate.getTime())) return false;
+
+        // Muss gültig sein (validFrom in der Vergangenheit)
+        if (validFromDate > today) return false;
+
+        // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
+        const monthsRunning = Math.floor(
+          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
+        if (monthsRunning < increase.lockInMonths) return false;
+
+        // Prüfe: Hat diese Preiserhöhung überhaupt positive Werte?
+        if (!increase.amountIncreases) return false;
+        
+        const hasSoftwareRentalIncrease = (increase.amountIncreases.softwareRental ?? 0) > 0;
+        const hasSoftwareCareIncrease = (increase.amountIncreases.softwareCare ?? 0) > 0;
+        const hasAppsIncrease = (increase.amountIncreases.apps ?? 0) > 0;
+        const hasPurchaseIncrease = (increase.amountIncreases.purchase ?? 0) > 0;
+        
+        // Keine Erhöhungen haben? Dann ist die Preiserhöhung ungültig
+        if (!hasSoftwareRentalIncrease && !hasSoftwareCareIncrease && !hasAppsIncrease && !hasPurchaseIncrease) {
+          return false;
+        }
+
+        // Jetzt: Schaue, ob für DIESEN Vertrag eine gültige Erhöhung existiert
+        const hasApplicableIncrease = 
+          (contract.softwareRentalAmount && contract.softwareRentalAmount > 0 && hasSoftwareRentalIncrease) ||
+          (contract.softwareCareAmount && contract.softwareCareAmount > 0 && hasSoftwareCareIncrease) ||
+          (contract.appsAmount && contract.appsAmount > 0 && hasAppsIncrease) ||
+          (contract.purchaseAmount && contract.purchaseAmount > 0 && hasPurchaseIncrease);
+
+        return hasApplicableIncrease;
+      } catch (error) {
+        console.warn(`Error processing price increase ${increase.id}:`, error);
+        return false;
+      }
+    });
+  };
 
   // Hilfsfunktion: Berechne Basisbeträge mit Preiserhöhungen
   const calculateContractAmounts = (contract: Contract) => {
@@ -32,9 +78,6 @@ function CustomerDetail() {
       purchase: contract.purchaseAmount || 0,
     };
 
-    const rentalStartDate = new Date(contract.rentalStartDate);
-    const today = new Date();
-
     const increases = {
       softwareRental: 0,
       softwareCare: 0,
@@ -43,39 +86,24 @@ function CustomerDetail() {
     };
 
     // Wende alle gültigen Preiserhöhungen an
-    if (priceIncreases && Array.isArray(priceIncreases) && priceIncreases.length > 0) {
-      for (const increase of priceIncreases) {
-        try {
-          const validFromDate = new Date(increase.validFrom);
-          if (isNaN(validFromDate.getTime())) {
-            console.warn(`Invalid date for price increase ${increase.id}: ${increase.validFrom}`);
-            continue;
-          }
-
-          if (validFromDate <= today) {
-            const monthsRunning = Math.floor(
-              (today.getTime() - rentalStartDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-            );
-
-            if (monthsRunning >= increase.lockInMonths) {
-              if (increase.amountIncreases?.softwareRental > 0) {
-                increases.softwareRental += increase.amountIncreases.softwareRental;
-              }
-              if (increase.amountIncreases?.softwareCare > 0) {
-                increases.softwareCare += increase.amountIncreases.softwareCare;
-              }
-              if (increase.amountIncreases?.apps > 0) {
-                increases.apps += increase.amountIncreases.apps;
-              }
-              if (increase.amountIncreases?.purchase > 0) {
-                increases.purchase += increase.amountIncreases.purchase;
-              }
-            }
-          }
-        } catch (error) {
-          console.warn(`Error processing price increase ${increase.id}:`, error);
-          continue;
+    const applicableIncreases = getApplicablePriceIncreases(contract);
+    for (const increase of applicableIncreases) {
+      try {
+        if (increase.amountIncreases?.softwareRental > 0) {
+          increases.softwareRental += increase.amountIncreases.softwareRental;
         }
+        if (increase.amountIncreases?.softwareCare > 0) {
+          increases.softwareCare += increase.amountIncreases.softwareCare;
+        }
+        if (increase.amountIncreases?.apps > 0) {
+          increases.apps += increase.amountIncreases.apps;
+        }
+        if (increase.amountIncreases?.purchase > 0) {
+          increases.purchase += increase.amountIncreases.purchase;
+        }
+      } catch (error) {
+        console.warn(`Error processing price increase:`, error);
+        continue;
       }
     }
 
@@ -99,17 +127,23 @@ function CustomerDetail() {
     if (!customerId) return;
     try {
       setLoading(true);
-      const [customerData, contractsData, metricsData, priceIncreasesData] = await Promise.all([
+      const [customerData, contractsData, metricsData] = await Promise.all([
         api.getCustomer(customerId),
         api.getContractsByCustomer(customerId),
         api.getCustomerMetrics(customerId),
-        api.getPriceIncreases(),
       ]);
 
       setCustomer(customerData);
       setContracts(contractsData);
       setMetrics(metricsData);
-      setPriceIncreases(priceIncreasesData);
+      
+      // Lade Preiserhöhungen nur wenn der Kunde Verträge hat
+      if (contractsData.length > 0) {
+        const priceIncreasesData = await api.getPriceIncreases();
+        setPriceIncreases(priceIncreasesData);
+      } else {
+        setPriceIncreases([]);
+      }
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Kundendaten';
@@ -125,7 +159,6 @@ function CustomerDetail() {
   }, [customerId]);
 
   const handleCustomerEditSuccess = () => {
-    // Reload customer data after successful edit
     loadData();
     setIsCustomerModalOpen(false);
   };
@@ -192,16 +225,16 @@ function CustomerDetail() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Monatliche Provision:</span>
                     <span className="font-bold text-green-600">
-                      €{metrics.totalMonthlyCommission.toFixed(2)}
+                      {formatCurrency(metrics.totalMonthlyCommission)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Bisher verdient:</span>
-                    <span className="font-bold">€{metrics.totalEarned.toFixed(2)}</span>
+                    <span className="font-bold">{formatCurrency(metrics.totalEarned)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Exit-Auszahlung:</span>
-                    <span className="font-bold">€{metrics.exitPayoutIfTodayInMonths.toFixed(2)}</span>
+                    <span className="font-bold">{formatCurrency(metrics.exitPayoutIfTodayInMonths)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Aktive Verträge:</span>
@@ -213,58 +246,6 @@ function CustomerDetail() {
           </div>
         </div>
       </div>
-
-      {/* Price Increases */}
-      {priceIncreases.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-3">Geltende Preiserhöhungen:</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {priceIncreases && priceIncreases.map((increase) => {
-              let validFromDate: Date;
-              let dateStr = 'Ungültiges Datum';
-              try {
-                validFromDate = new Date(increase.validFrom);
-                if (!isNaN(validFromDate.getTime())) {
-                  dateStr = validFromDate.toLocaleDateString('de-DE');
-                }
-              } catch {
-                // keep default dateStr
-              }
-              const hasAnyIncrease = increase.amountIncreases && Object.values(increase.amountIncreases).some(v => v > 0);
-              return (
-                <div key={increase.id} className="bg-white p-3 rounded border border-blue-100">
-                  <p className="text-xs text-gray-600 mb-2">
-                    Gültig ab: {dateStr}
-                  </p>
-                  <div className="text-xs space-y-1">
-                    {increase.amountIncreases?.softwareRental > 0 && (
-                      <p><span className="text-gray-600">Software Miete:</span> +{increase.amountIncreases.softwareRental.toFixed(1)}%</p>
-                    )}
-                    {increase.amountIncreases?.softwareCare > 0 && (
-                      <p><span className="text-gray-600">Software Pflege:</span> +{increase.amountIncreases.softwareCare.toFixed(1)}%</p>
-                    )}
-                    {increase.amountIncreases?.apps > 0 && (
-                      <p><span className="text-gray-600">Apps:</span> +{increase.amountIncreases.apps.toFixed(1)}%</p>
-                    )}
-                    {increase.amountIncreases?.purchase > 0 && (
-                      <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> +{increase.amountIncreases.purchase.toFixed(1)}%</p>
-                    )}
-                    {!hasAnyIncrease && (
-                      <p className="text-gray-500 italic">Keine Erhöhungen</p>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 mt-2">
-                    Bestandsschutz: {increase.lockInMonths} Monate
-                  </p>
-                  {increase.description && (
-                    <p className="text-xs text-gray-500 mt-1">{increase.description}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Contracts */}
       <div className="bg-white rounded-lg shadow">
@@ -278,89 +259,118 @@ function CustomerDetail() {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Monatspreis
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Provision
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Aktionen
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {contracts.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                    Keine Verträge vorhanden
-                  </td>
-                </tr>
-              ) : (
-                contracts.map((contract) => {
-                  if (!contract) return null;
-                  
-                  const amounts = calculateContractAmounts(contract);
-                  const commissionRates = (settings?.commissionRates as any) || {
-                    softwareRental: 20,
-                    softwareCare: 20,
-                    apps: 20,
-                    purchase: 0.083333,
-                  };
-                  
-                  const commissions = {
-                    softwareRental: (amounts?.adjustedAmounts?.softwareRental || 0) * ((commissionRates?.softwareRental || 20) / 100),
-                    softwareCare: (amounts?.adjustedAmounts?.softwareCare || 0) * ((commissionRates?.softwareCare || 20) / 100),
-                    apps: (amounts?.adjustedAmounts?.apps || 0) * ((commissionRates?.apps || 20) / 100),
-                    purchase: (amounts?.adjustedAmounts?.purchase || 0) * ((commissionRates?.purchase || 0.083333) / 100),
-                  };
-                  const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
-                  
-                  return (
-                    <tr key={contract.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            contract.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : contract.status === 'inactive'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
-                        €{amounts.totalAmount.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
-                        €{totalCommission.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button 
+        <div className="divide-y divide-gray-200">
+          {contracts.length === 0 ? (
+            <div className="px-6 py-8 text-center text-gray-500">
+              Keine Verträge vorhanden
+            </div>
+          ) : (
+            contracts.map((contract) => {
+              if (!contract) return null;
+              
+              const amounts = calculateContractAmounts(contract);
+              const commissions = {
+                softwareRental: (amounts?.adjustedAmounts?.softwareRental || 0) * 0.20,
+                softwareCare: (amounts?.adjustedAmounts?.softwareCare || 0) * 0.20,
+                apps: (amounts?.adjustedAmounts?.apps || 0) * 0.20,
+                purchase: (amounts?.adjustedAmounts?.purchase || 0) * 0.00083333,
+              };
+              const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
+              
+              const applicableIncreases = getApplicablePriceIncreases(contract);
+              const isExpanded = expandedContractId === contract.id;
+
+              return (
+                <div key={contract.id}>
+                  <div className="p-6 hover:bg-gray-50 transition">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {contract.softwareRentalAmount ? '🖥️ Software Miete' : ''}
+                          {contract.softwareCareAmount ? (contract.softwareRentalAmount ? ' + ' : '') + '🛠️ Software Pflege' : ''}
+                          {contract.appsAmount ? (contract.softwareRentalAmount || contract.softwareCareAmount ? ' + ' : '') + '📱 Apps' : ''}
+                          {contract.purchaseAmount ? (contract.softwareRentalAmount || contract.softwareCareAmount || contract.appsAmount ? ' + ' : '') + '💳 Kauf' : ''}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">Startdatum: {formatDate(contract.startDate)}</p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          contract.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : contract.status === 'inactive'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-6 mb-3">
+                      <div>
+                        <p className="text-sm text-gray-600">Monatspreis</p>
+                        <p className="text-lg font-bold text-gray-900">{formatCurrency(amounts.totalAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Meine Provision</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(totalCommission)}</p>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <button
                           onClick={() => {
                             setSelectedContractForEdit(contract);
                             setIsContractModalOpen(true);
                           }}
-                          className="text-blue-600 hover:text-blue-800 transition"
+                          className="text-blue-600 hover:text-blue-800 transition text-sm"
                         >
                           Bearbeiten
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        {applicableIncreases.length > 0 && (
+                          <button 
+                            onClick={() => setExpandedContractId(isExpanded ? null : contract.id)}
+                            className="text-blue-600 hover:text-blue-800 transition text-sm"
+                          >
+                            {isExpanded ? '▼' : '▶'} {applicableIncreases.length}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isExpanded && applicableIncreases.length > 0 && (
+                    <div className="px-6 py-4 bg-blue-50 border-t border-blue-200">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">Geltende Preiserhöhungen:</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {applicableIncreases.map((increase) => (
+                          <div key={increase.id} className="bg-white p-3 rounded border border-blue-100 text-sm">
+                            <p className="text-xs text-gray-600 mb-2">Gültig ab: {formatDate(increase.validFrom)}</p>
+                            <div className="text-xs space-y-1">
+                              {increase.amountIncreases?.softwareRental > 0 && (
+                                <p><span className="text-gray-600">Software Miete:</span> <span className="font-semibold">+{increase.amountIncreases.softwareRental.toFixed(1)}%</span></p>
+                              )}
+                              {increase.amountIncreases?.softwareCare > 0 && (
+                                <p><span className="text-gray-600">Software Pflege:</span> <span className="font-semibold">+{increase.amountIncreases.softwareCare.toFixed(1)}%</span></p>
+                              )}
+                              {increase.amountIncreases?.apps > 0 && (
+                                <p><span className="text-gray-600">Apps:</span> <span className="font-semibold">+{increase.amountIncreases.apps.toFixed(1)}%</span></p>
+                              )}
+                              {increase.amountIncreases?.purchase > 0 && (
+                                <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> <span className="font-semibold">+{increase.amountIncreases.purchase.toFixed(1)}%</span></p>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-2">Bestandsschutz: {increase.lockInMonths} Monate</p>
+                            {increase.description && (
+                              <p className="text-xs text-gray-500 mt-1">{increase.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -374,7 +384,6 @@ function CustomerDetail() {
           customerId={customerId}
           contract={selectedContractForEdit}
           onSuccess={() => {
-            // Reload contracts
             if (customerId) {
               loadData();
             }

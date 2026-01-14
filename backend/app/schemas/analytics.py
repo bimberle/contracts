@@ -23,6 +23,8 @@ class DashboardSummary(BaseModel):
     
     total_customers: int
     total_monthly_revenue: float
+    total_monthly_commission: float
+    total_monthly_net_income: float
     total_active_contracts: int
     average_commission_per_customer: float
     top_customers: List[TopCustomer]
@@ -37,10 +39,13 @@ class ForecastMonth(BaseModel):
     
     date: str  # Format: YYYY-MM
     month_name: str
+    total_revenue: float
     total_commission: float
+    total_net_income: float
     active_contracts: int
     ending_contracts: int
     cumulative: float
+    cumulative_net_income: float
 
 class Forecast(BaseModel):
     model_config = ConfigDict(

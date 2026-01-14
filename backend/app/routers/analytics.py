@@ -15,7 +15,7 @@ from datetime import datetime
 
 router = APIRouter(tags=["analytics"])
 
-@router.get("/dashboard")
+@router.get("/dashboard", response_model=dict)
 def get_dashboard(db: Session = Depends(get_db)):
     """Ruft die Dashboard-Übersicht auf"""
     customers = db.query(Customer).all()
@@ -27,6 +27,7 @@ def get_dashboard(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
     
     total_monthly_revenue = 0.0
+    total_monthly_commission = 0.0
     total_customers = len(customers)
     total_active_contracts = 0
     top_customers_data = []
@@ -42,7 +43,8 @@ def get_dashboard(db: Session = Depends(get_db)):
             today=datetime.utcnow()
         )
         
-        total_monthly_revenue += metrics["total_monthly_commission"]
+        total_monthly_revenue += metrics["total_monthly_revenue"]
+        total_monthly_commission += metrics["total_monthly_commission"]
         total_active_contracts += metrics["active_contracts"]
         
         if metrics["total_monthly_commission"] > 0:
@@ -52,18 +54,20 @@ def get_dashboard(db: Session = Depends(get_db)):
                 monthly_commission=metrics["total_monthly_commission"]
             ))
     
-    # Top 5 Kunden nach Provision
+    # Top 3 Kunden nach Provision
     top_customers = sorted(
         top_customers_data,
         key=lambda x: x.monthly_commission,
         reverse=True
-    )[:5]
+    )[:3]
     
-    average_commission = total_monthly_revenue / len(customers) if customers else 0.0
+    average_commission = total_monthly_commission / len(customers) if customers else 0.0
     
     dashboard = DashboardSummary(
         total_customers=total_customers,
         total_monthly_revenue=round(total_monthly_revenue, 2),
+        total_monthly_commission=round(total_monthly_commission, 2),
+        total_monthly_net_income=round(total_monthly_commission * (1 - settings.personal_tax_rate / 100), 2),
         total_active_contracts=total_active_contracts,
         average_commission_per_customer=round(average_commission, 2),
         top_customers=top_customers
@@ -80,7 +84,7 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
     contracts = db.query(Contract).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
-    commission_rates = db.query(CommissionRate).all()
+    commission_rates = db.query(CommissionRate).order_by(CommissionRate.valid_from).all()
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
@@ -96,12 +100,15 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
         months=min(months, 36)  # Max 36 Monate
     )
     
-    # Berechne Gesamtrevenue und kumulativen Wert
-    cumulative = 0.0
+    # Berechne kumulativen Wert für Commission und Net Income
+    cumulative_commission = 0.0
+    cumulative_net_income = 0.0
     forecast_months = []
     for month in forecast_data:
-        cumulative += month["total_commission"]
-        month["cumulative"] = round(cumulative, 2)
+        cumulative_commission += month["total_commission"]
+        cumulative_net_income += month["total_net_income"]
+        month["cumulative"] = round(cumulative_commission, 2)
+        month["cumulative_net_income"] = round(cumulative_net_income, 2)
         forecast_months.append(ForecastMonth(**month))
     
     forecast = Forecast(months=forecast_months)

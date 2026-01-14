@@ -12,7 +12,7 @@ class CustomerBase(BaseModel):
     )
     
     name: str = Field(..., min_length=1, description="Name des Kunden (Vorname)")
-    name2: str = Field(..., min_length=1, description="Name des Kunden (Nachname)")
+    name2: Optional[str] = Field(None, description="Name des Kunden (Nachname)")
     ort: str = Field(..., min_length=1, description="Stadt/Ort")
     plz: str = Field(..., description="Postleitzahl (nur numerisch)")
     kundennummer: str = Field(..., description="Kundennummer (nur numerisch)")
@@ -87,7 +87,9 @@ class CalculatedMetrics(BaseModel):
     
     customer_id: str
     total_monthly_rental: float
+    total_monthly_revenue: float
     total_monthly_commission: float
+    total_monthly_net_income: float
     total_earned: float
     exit_payout_if_today_in_months: float
     active_contracts: int

@@ -91,7 +91,13 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
       if (customer) {
         await updateCustomer(customer.id, formData as CustomerUpdateRequest);
       } else {
-        await createCustomer(formData as CustomerCreateRequest);
+        // Bei Neukunden: name2 entfernen, wenn leer
+        const { name2, ...submitData } = formData;
+        const finalData = {
+          ...submitData,
+          ...(name2 ? { name2 } : {}),
+        };
+        await createCustomer(finalData as CustomerCreateRequest);
       }
       onSuccess?.();
       onClose();
@@ -163,7 +169,6 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
               value={formData.name2}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              required
             />
           </div>
 
