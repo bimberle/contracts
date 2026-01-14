@@ -17,6 +17,13 @@ echo ===========================================================================
 echo Contract Management Webapp - Windows Setup
 echo ============================================================================
 echo.
+echo Dieses Skript kann für:
+echo - Neue Installation: Herunterloaden und Setup von docker-compose + Images
+echo - Updates: Pullen neuer Images von Docker Hub und Neustart der Container
+echo.
+echo Drücke Enter um fortzufahren...
+pause >nul
+echo.
 
 REM Prüfe ob Docker installiert ist
 docker --version >nul 2>&1
@@ -151,7 +158,14 @@ if not exist ".env" (
 
 echo [OK] .env konfiguriert
 echo.
-echo [SCHRITT 3] Starte Docker Container...
+echo [SCHRITT 3] Pulfe neueste Docker Images...
+docker-compose pull
+if errorlevel 1 (
+    echo [WARNING] Docker pull fehlgeschlagen - starte mit lokalen Images
+)
+echo [OK] Images aktualisiert
+echo.
+echo [SCHRITT 4] Starte Docker Container...
 call :start_containers
 
 goto :eof
@@ -185,22 +199,23 @@ REM Funktion: Update existierende Installation
 REM ============================================================================
 :update_existing
 echo.
-echo [SCHRITT 1] Ziehe neueste Docker Images
+echo [SCHRITT 1] Ziehe neueste Docker Images von Docker Hub...
 docker-compose pull
 if errorlevel 1 (
-    echo [ERROR] Docker pull fehlgeschlagen
-    pause
-    exit /b 1
+    echo [WARNING] Docker pull fehlgeschlagen - nutze lokale Images
 )
 
 echo [OK] Images aktualisiert
 echo.
-echo [SCHRITT 2] Stoppe und starte Container neu
+echo [SCHRITT 2] Stoppe alte Container...
 docker-compose down
 if errorlevel 1 (
     echo [WARNING] Fehler beim Stoppen der Container
 )
 
+echo [OK] Container gestoppt
+echo.
+echo [SCHRITT 3] Starte Docker Container mit neuen Images...
 call :start_containers
 
 goto :eof
