@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.config import settings
 
-router = APIRouter(tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 class LoginRequest(BaseModel):
     password: str
@@ -15,7 +15,7 @@ class LoginResponse(BaseModel):
     token: str
     message: str
 
-@router.post("/auth/login", response_model=LoginResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     """
     Simple password-based login.
@@ -40,7 +40,7 @@ async def login(request: LoginRequest):
         message="Login successful"
     )
 
-@router.get("/auth/check")
+@router.get("/check")
 async def check_auth():
     """
     Check if authentication is enabled.
