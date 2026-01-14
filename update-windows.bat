@@ -88,7 +88,9 @@ echo.
 set /p deletedata="Delete data? (Y/N) [Default: N]: "
 if /i "%deletedata%"=="" set "deletedata=N"
 
+setlocal
 if /i "%deletedata%"=="Y" (
+    setlocal disabledelayedexpansion
     echo.
     echo [INFO] Deleting all containers and database...
     
@@ -100,12 +102,15 @@ if /i "%deletedata%"=="Y" (
     docker volume rm contracts_postgres_data >nul 2>&1
     echo [OK] Volumes deleted
     echo.
+    set "DELETEDATA=1"
+    endlocal
 ) else (
     echo.
     echo [INFO] Stopping containers only (keeping data)...
     docker-compose down >nul 2>&1
     echo [OK] Containers stopped
     echo.
+    set "DELETEDATA=0"
 )
 
 REM ============================================================================
@@ -149,9 +154,9 @@ echo [INFO] Waiting 60 seconds for database to fully initialize...
 timeout /t 60 /nobreak
 
 REM ============================================================================
-REM 5. Optional: Migrationen bei Fresh-Start
+REM 5. Optional: Run migrations on fresh start
 REM ============================================================================
-if /i "%deletedata%"=="Y" (
+if "%DELETEDATA%"=="1" (
     echo.
     echo ============================================================================
     echo STEP 5: Running database migrations...
@@ -184,7 +189,8 @@ echo View logs:
 echo   docker-compose logs
 echo.
 echo Restart containers:
-echo   docker-compose down ^&^& docker-compose up -d
+echo   docker-compose down
+echo   docker-compose up -d
 echo.
 echo.
 pause
