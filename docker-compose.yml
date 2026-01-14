@@ -43,20 +43,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
+      target: production
     container_name: contracts_frontend
-    environment:
-      VITE_API_URL: ""
     ports:
-      - "80:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "80:80"
     depends_on:
       - backend
     networks:
       - contracts_network
-    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres_data:

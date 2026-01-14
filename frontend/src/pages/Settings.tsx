@@ -22,13 +22,16 @@ function Settings() {
 
     if (field.includes('post_contract_months.')) {
       const [section, key] = field.split('.');
-      setFormData({
-        ...formData,
-        [section]: {
-          ...formData[section as keyof typeof formData],
-          [key]: value,
-        },
-      });
+      const sectionData = formData[section as keyof typeof formData];
+      if (typeof sectionData === 'object' && sectionData !== null) {
+        setFormData({
+          ...formData,
+          [section]: {
+            ...(sectionData as Record<string, any>),
+            [key]: value,
+          },
+        });
+      }
     } else {
       setFormData({
         ...formData,
