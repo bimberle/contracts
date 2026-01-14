@@ -797,11 +797,14 @@ return monthlyCommission * monthsRemaining
 ### Build-Prozess
 **IMMER bei Code-Änderungen die folgende Routine:**
 
-1. **Versionsanhebung** (PFLICHT):
+1. **Versionsanhebung** (PFLICHT) - AN 4 STELLEN!:
    - `frontend/vite.config.ts`: `VITE_APP_VERSION` erhöhen
-   - `backend/app/main.py`: Version in `GET /api/version` erhöhen
+   - `backend/app/main.py`: Konstante `BACKEND_VERSION` erhöhen
+   - `backend/app/main.py`: Version in `GET /api/version` Response erhöhen
+   - `frontend/Dockerfile`: Version im Startup-Script (`v1.0.X`) erhöhen
    - Format: Semantic Versioning (z.B. 1.0.2 → 1.0.3 oder 1.1.0)
    - Regel: Patch (+0.0.1) für Bugfixes, Minor (+0.1.0) für Features
+   - **WICHTIG**: Alle 4 Stellen müssen die GLEICHE Version haben!
 
 2. **Multi-Platform Docker Build** (PFLICHT):
    ```bash
@@ -824,6 +827,12 @@ return monthlyCommission * monthsRemaining
 4. **Verifikation**:
    - Checke dass beide Architekturen erfolgreich gepusht wurden
    - Docker Hub sollte Manifest List zeigen (nicht einzelne Images)
+   - **WICHTIG**: Container Logs sollten beim Start zeigen:
+     ```
+     contracts_frontend  | === Contracts Frontend vX.Y.Z starting ===
+     contracts_backend   | === Contracts Backend vX.Y.Z starting ===
+     ```
+   - Diese Logs beweisen dass die neue Version läuft!
 
 ### Deployment auf Remote PC
 - Einfach `docker-compose pull && docker-compose up -d`
