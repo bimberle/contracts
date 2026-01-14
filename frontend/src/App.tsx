@@ -9,6 +9,7 @@ import Settings from './pages/Settings';
 import PriceIncreases from './pages/PriceIncreases';
 import CommissionRates from './pages/CommissionRates';
 import Forecast from './pages/Forecast';
+import AllContracts from './pages/AllContracts';
 import LoginPage from './pages/LoginPage';
 import './App.css';
 
@@ -138,6 +139,12 @@ function App() {
                     Dashboard
                   </Link>
                   <Link
+                    to="/contracts"
+                    className="text-gray-700 hover:text-blue-600 transition"
+                  >
+                    Alle Verträge
+                  </Link>
+                  <Link
                     to="/forecast"
                     className="text-gray-700 hover:text-blue-600 transition"
                   >
@@ -183,6 +190,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
+            <Route path="/contracts" element={<AllContracts />} />
             <Route path="/forecast" element={<Forecast />} />
             <Route path="/price-increases" element={<PriceIncreases />} />
             <Route path="/commission-rates" element={<CommissionRates />} />
