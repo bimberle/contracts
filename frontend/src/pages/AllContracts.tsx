@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import api from '../services/api';
 import { Contract, Customer } from '../types';
 
@@ -7,6 +9,7 @@ interface ContractWithCustomerInfo extends Contract {
   customerName2?: string;
   plz: string;
   ort: string;
+  customerId: string;
 }
 
 export default function AllContracts() {
@@ -17,6 +20,8 @@ export default function AllContracts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'completed'>('all');
   const [sortBy, setSortBy] = useState<'customer' | 'cost' | 'commission'>('customer');
+  const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadAllContracts();
@@ -114,6 +119,78 @@ export default function AllContracts() {
     }).format(value);
   };
 
+  const handleEditContract = (contract: ContractWithCustomerInfo) => {
+    setSelectedContract(contract);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedContract(null);
+  };
+
+  const handleExportToExcel = () => {
+    // Prepare data for export
+    const exportData: Array<Record<string, unknown>> = filteredContracts.map((contract) => ({
+      'Kundenname': contract.customerName,
+      'Name 2': contract.customerName2 || '',
+      'PLZ': contract.plz,
+      'Ort': contract.ort,
+      'Status': contract.status,
+      'Software Miete': contract.softwareRentalAmount || 0,
+      'Software Pflege': contract.softwareCareAmount || 0,
+      'Apps': contract.appsAmount || 0,
+      'Bestand': contract.purchaseAmount || 0,
+      'Gesamtbetrag': getTotalAmount(contract),
+      'Provision': getCommission(contract),
+      'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
+    }));
+
+    // Add summary row
+    exportData.push({
+      'Kundenname': 'GESAMT',
+      'Name 2': '',
+      'PLZ': '',
+      'Ort': '',
+      'Status': '',
+      'Software Miete': 0,
+      'Software Pflege': 0,
+      'Apps': 0,
+      'Bestand': 0,
+      'Gesamtbetrag': totalRevenue,
+      'Provision': totalCommission,
+      'Startdatum': '',
+    });
+
+    // Create workbook and worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Verträge');
+
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 8 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 12 },
+    ];
+
+    // Generate filename with current date
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `Verträge_${today}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(workbook, filename);
+  };
+
   const totalRevenue = filteredContracts.reduce((sum, c) => sum + getTotalAmount(c), 0);
   const totalCommission = filteredContracts.reduce((sum, c) => sum + getCommission(c), 0);
 
@@ -128,9 +205,18 @@ export default function AllContracts() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Alle Verträge</h1>
-        <p className="text-gray-600 mt-2">Übersicht aller Kundenverträge mit Kosten und Provisionen</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Alle Verträge</h1>
+          <p className="text-gray-600 mt-2">Übersicht aller Kundenverträge mit Kosten und Provisionen</p>
+        </div>
+        <button
+          onClick={handleExportToExcel}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+          title="Als Excel exportieren"
+        >
+          📊 Excel
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,15 +294,25 @@ export default function AllContracts() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Kundenname</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">PLZ / Ort</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Monatl. Kosten</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Meine Provision</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Software Miete</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Software Pflege</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Apps</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Bestand</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Gesamt</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Provision</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredContracts.map((contract) => (
                   <tr key={contract.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 text-sm">
-                      <div className="font-medium text-gray-900">{contract.customerName}</div>
+                      <Link
+                        to={`/customers/${contract.customerId}`}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {contract.customerName}
+                      </Link>
                       {contract.customerName2 && <div className="text-gray-500 text-xs">{contract.customerName2}</div>}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -224,11 +320,39 @@ export default function AllContracts() {
                       <div className="text-xs text-gray-500">{contract.ort}</div>
                     </td>
                     <td className="px-6 py-4 text-sm">{getStatusBadge(contract.status)}</td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {formatCurrency(contract.softwareRentalAmount || 0)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {formatCurrency(contract.softwareCareAmount || 0)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {formatCurrency(contract.appsAmount || 0)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {formatCurrency(contract.purchaseAmount || 0)}
+                    </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900">
                       {formatCurrency(getTotalAmount(contract))}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
                       {formatCurrency(getCommission(contract))}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-center">
+                      <Link
+                        to={`/customers/${contract.customerId}`}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-100 text-blue-600 hover:text-blue-800 transition"
+                        title="Zum Kunden"
+                      >
+                        👤
+                      </Link>
+                      <button
+                        onClick={() => handleEditContract(contract)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-gray-300 text-gray-600 hover:text-gray-800 transition ml-2"
+                        title="Vertrag anschauen"
+                      >
+                        🔍
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -247,6 +371,138 @@ export default function AllContracts() {
           Aktualisieren
         </button>
       </div>
+
+      {/* Contract Details Modal */}
+      {showModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Vertrag anschauen</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Customer Info */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-2">Kunde</h3>
+                <p className="text-gray-700">
+                  {selectedContract.customerName}
+                  {selectedContract.customerName2 && ` ${selectedContract.customerName2}`}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {selectedContract.plz} {selectedContract.ort}
+                </p>
+              </div>
+
+              {/* Contract Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Software Miete (€/Monat)</label>
+                  <input
+                    type="number"
+                    defaultValue={selectedContract.softwareRentalAmount || 0}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Software Pflege (€/Monat)</label>
+                  <input
+                    type="number"
+                    defaultValue={selectedContract.softwareCareAmount || 0}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Apps (€/Monat)</label>
+                  <input
+                    type="number"
+                    defaultValue={selectedContract.appsAmount || 0}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bestand (€/Monat)</label>
+                  <input
+                    type="number"
+                    defaultValue={selectedContract.purchaseAmount || 0}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedContract.status}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Startdatum</label>
+                  <input
+                    type="date"
+                    defaultValue={selectedContract.startDate?.split('T')[0] || ''}
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-xs text-blue-600 font-medium mb-1">Gesamtbetrag</p>
+                    <p className="text-xl font-bold text-blue-900">{formatCurrency(getTotalAmount(selectedContract))}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <p className="text-xs text-green-600 font-medium mb-1">Geschätzte Provision</p>
+                    <p className="text-xl font-bold text-green-900">{formatCurrency(getCommission(selectedContract))}</p>
+                  </div>
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                    <p className="text-xs text-gray-600 font-medium mb-1">Währung</p>
+                    <p className="text-xl font-bold text-gray-900">{selectedContract.currency}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Text */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  ℹ️ Die Vertragsdaten sind aktuell schreibgeschützt. Die Bearbeitung erfolgt in der Kundendetailseite.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-between">
+              <Link
+                to={`/customers/${selectedContract.customerId}`}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                Zum Kunden
+              </Link>
+              <button
+                onClick={handleCloseModal}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-medium"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
