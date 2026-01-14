@@ -42,6 +42,7 @@ REM Prüfe ob docker-compose.yml existiert
 if not exist "docker-compose.yml" (
     echo [INFO] docker-compose.yml nicht gefunden - lade von Git herunter
     call :download_from_git
+    call :ask_for_password
 ) else (
     echo [OK] docker-compose.yml existiert - starte Update
     call :update_existing
@@ -56,6 +57,54 @@ echo Öffne http://localhost im Browser um die Webapp zu nutzen
 echo.
 pause
 exit /b 0
+
+REM ============================================================================
+REM Funktion: Frage nach Passwort bei erster Installation
+REM ============================================================================
+:ask_for_password
+echo.
+echo [SCHRITT 4] Sicherheitskonfiguration
+echo ============================================================================
+echo.
+echo Bitte geben Sie ein sicheres SECRET_KEY für die Anwendung ein.
+echo Dieses wird für die Verschlüsselung verwendet.
+echo.
+echo Hinweis: Das Passwort wird nicht angezeigt während Sie eingeben.
+echo.
+
+REM Generiere zufälliges Secret Key wenn User einfach Enter drückt
+set "SECRET_KEY="
+set /p SECRET_KEY="SECRET_KEY (oder Enter für Auto-Generierung): "
+
+REM Falls leer, generiere Zufallswert
+if "!SECRET_KEY!"=="" (
+    REM Generiere Zufallswert aus Timestamp und Random
+    for /f "tokens=1-4 delims=/-" %%a in ('date /t') do (set mydate=%%c%%a%%b)
+    for /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
+    set SECRET_KEY=prod-!mydate!-!mytime!-%RANDOM%%RANDOM%
+    echo [INFO] Auto-generiertes SECRET_KEY: !SECRET_KEY!
+)
+
+REM Aktualisiere .env Datei mit neuem SECRET_KEY
+echo [INFO] Aktualisiere .env Datei...
+setlocal disableDelayedExpansion
+for /f "delims=" %%a in (.env) do (
+    set "line=%%a"
+    setlocal enableDelayedExpansion
+    if "!line:~0,10!"=="SECRET_KEY" (
+        echo SECRET_KEY=!SECRET_KEY!
+    ) else (
+        echo !line!
+    )
+    endlocal
+) > .env.tmp
+move /y .env.tmp .env >nul
+endlocal enableDelayedExpansion
+
+echo [OK] SECRET_KEY konfiguriert
+echo.
+
+goto :eof
 
 REM ============================================================================
 REM Funktion: Von Git herunterladen
@@ -215,7 +264,3 @@ echo [INFO] Erstelle .env mit Standard-Werten...
 
 echo [OK] .env erstellt
 goto :eof
-
-REM ============================================================================
-REM Ende des Scripts
-REM ============================================================================
