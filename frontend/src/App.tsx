@@ -13,7 +13,6 @@ import LoginPage from './pages/LoginPage';
 import './App.css';
 
 function App() {
-  const [isHealthy, setIsHealthy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
@@ -21,39 +20,60 @@ function App() {
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
 
   useEffect(() => {
-    // Check if user is already authenticated (has token in localStorage)
-    const savedToken = localStorage.getItem('auth_token');
-    if (savedToken) {
-      api.setAuthToken(savedToken);
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Check API health and load initial data
-    const initializeApp = async () => {
+    // Initialize app: check health, auth, and load data
+    const init = async () => {
       try {
-        const healthy = await api.healthCheck();
-        setIsHealthy(healthy);
+        // 1. Check API health
+        console.log('Checking API health...');
+        const isHealthy = await api.healthCheck();
+        if (!isHealthy) {
+          throw new Error('API is not healthy');
+        }
+        console.log('API is healthy');
 
-        if (healthy && isAuthenticated) {
-          // Load initial data
+        // 2. Check if authentication is required
+        console.log('Checking auth requirement...');
+        const authStatus = await api.checkAuth();
+        console.log('Auth status:', authStatus);
+
+        // 3. Handle authentication
+        const savedToken = localStorage.getItem('auth_token');
+        const authRequired = authStatus.auth_required;
+
+        if (authRequired && !savedToken) {
+          console.log('Auth required but no token - showing login');
+          setIsAuthenticated(false);
+        } else {
+          // Either auth not required, or user has a token
+          if (savedToken) {
+            console.log('Using saved token');
+            api.setAuthToken(savedToken);
+          } else if (!authRequired) {
+            console.log('Auth not required - proceeding without token');
+          }
+          setIsAuthenticated(true);
+        }
+
+        // 4. Load initial data (only if authenticated)
+        if (!authRequired || savedToken) {
+          console.log('Loading initial data...');
           await Promise.all([
             fetchCustomers(),
             fetchSettings(),
             fetchPriceIncreases(),
           ]);
+          console.log('Initial data loaded');
         }
-      } catch (error) {
-        console.error('Initialization error:', error);
-        setIsHealthy(false);
-      } finally {
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Initialization error:', err);
         setIsLoading(false);
       }
     };
 
-    initializeApp();
-  }, [fetchCustomers, fetchSettings, fetchPriceIncreases, isAuthenticated]);
+    init();
+  }, [fetchCustomers, fetchSettings, fetchPriceIncreases]);
 
   if (isLoading) {
     return (
@@ -62,26 +82,6 @@ function App() {
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
           <p className="text-gray-600">Lade Anwendung...</p>
           <p className="text-gray-400 text-sm mt-2">API URL: http://localhost:8000</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isHealthy) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center max-w-md">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Verbindungsfehler</h1>
-          <p className="text-gray-600 mb-4">
-            Die API ist nicht erreichbar. Bitte überprüfen Sie, ob der Backend-Server läuft.
-          </p>
-          <p className="text-sm text-gray-500 mb-4">API URL: http://localhost:8000</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Nochmal versuchen
-          </button>
         </div>
       </div>
     );
@@ -155,10 +155,10 @@ function App() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 hover:text-red-600 transition text-sm font-medium px-3 py-2 rounded hover:bg-gray-100"
+                  className="text-gray-700 hover:text-red-600 transition text-lg"
                   title="Abmelden"
                 >
-                  🚪 Abmelden
+                  ⏻
                 </button>
               </div>
             </div>

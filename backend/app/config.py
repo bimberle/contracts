@@ -13,6 +13,12 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
     
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Convert empty string to None for AUTH_PASSWORD
+        if self.AUTH_PASSWORD == "":
+            self.AUTH_PASSWORD = None
+    
     @property
     def CORS_ORIGINS(self) -> List[str]:
         """Parse CORS_ORIGINS from comma-separated string"""

@@ -101,7 +101,7 @@ function Dashboard() {
 
       {/* KPI Cards */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Kunden</div>
             <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalCustomers}</div>
@@ -122,7 +122,7 @@ function Dashboard() {
               {formatCurrency(summary.totalMonthlyCommission)}
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-6 md:col-span-2">
             <div className="text-gray-500 text-sm font-medium">Mtl. Netto-Gehalt</div>
             <div className="text-3xl font-bold text-purple-600 mt-2">
               {formatCurrency(summary.totalMonthlyNetIncome)}

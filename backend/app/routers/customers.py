@@ -35,7 +35,7 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Kundennummer existiert bereits")
     
-    db_customer = Customer(**customer.dict())
+    db_customer = Customer(**customer.model_dump(by_alias=False))
     db.add(db_customer)
     db.commit()
     db.refresh(db_customer)
