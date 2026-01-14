@@ -2,51 +2,51 @@
 REM ============================================================================
 REM Contract Management Webapp - Windows Update Script
 REM ============================================================================
-REM Dieses Script:
-REM 1. Aktualisiert die lokale Git Repository (git pull)
-REM 2. Fragt ob Datenbank gelöscht werden soll
-REM 3. Zieht neue Docker Images
-REM 4. Startet Container neu
+REM This script:
+REM 1. Updates the local Git repository (git pull)
+REM 2. Asks if database should be deleted
+REM 3. Pulls new Docker images
+REM 4. Restarts containers
 REM ============================================================================
 
 setlocal enabledelayedexpansion
 
 echo.
 echo ============================================================================
-echo Contract Management Webapp - Update auf neueste Version
+echo Contract Management Webapp - Update to latest version
 echo ============================================================================
 echo.
 
-REM Prüfe ob Docker installiert ist
+REM Check if Docker is installed
 docker --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Docker ist nicht installiert oder nicht im PATH
-    echo Bitte Docker Desktop installieren: https://www.docker.com/products/docker-desktop
+    echo [ERROR] Docker is not installed or not in PATH
+    echo Please install Docker Desktop: https://www.docker.com/products/docker-desktop
     pause
     exit /b 1
 )
 
 docker-compose --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Docker Compose ist nicht installiert
-    echo Bitte Docker Desktop mit Compose installieren
+    echo [ERROR] Docker Compose is not installed
+    echo Please install Docker Desktop with Compose
     pause
     exit /b 1
 )
 
-echo [OK] Docker und Docker Compose gefunden
+echo [OK] Docker and Docker Compose found
 echo.
 
-REM Prüfe ob git installiert ist
+REM Check if git is installed
 git --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Git ist nicht installiert
-    echo Bitte Git installieren: https://git-scm.com/download/win
+    echo [ERROR] Git is not installed
+    echo Please install Git: https://git-scm.com/download/win
     pause
     exit /b 1
 )
 
-echo [OK] Git gefunden
+echo [OK] Git found
 echo.
 
 REM ============================================================================
@@ -54,18 +54,18 @@ REM 1. Git Pull - neueste Änderungen laden
 REM ============================================================================
 echo.
 echo ============================================================================
-echo SCHRITT 1: Git Repository aktualisieren...
+echo STEP 1: Update Git repository...
 echo ============================================================================
 echo.
 
 git pull origin main
 if errorlevel 1 (
-    echo [ERROR] Git Pull fehlgeschlagen
+    echo [ERROR] Git pull failed
     pause
     exit /b 1
 )
 
-echo [OK] Git Repository aktualisiert
+echo [OK] Git repository updated
 echo.
 
 REM ============================================================================
@@ -73,38 +73,38 @@ REM 2. Frage nach Datenbank-Löschung
 REM ============================================================================
 echo.
 echo ============================================================================
-echo SCHRITT 2: Datenbank-Management
+echo STEP 2: Database Management
 echo ============================================================================
 echo.
-echo WARNUNG: Sollen alle Daten aus der Datenbank gelöscht werden?
+echo WARNING: Should all database data be deleted?
 echo.
-echo Option 1: [J]a  - Alle Daten LÖSCHEN (sauberer Fresh-Start)
-echo           Nutze dies wenn es Migrations- oder Schema-Probleme gibt
+echo Option 1: [Y]es   - DELETE all data (clean fresh start)
+echo           Use this if there are migration or schema issues
 echo.
-echo Option 2: [N]ein - Daten BEHALTEN (nur Images aktualisieren)
-echo           Nutze dies für normale Updates
+echo Option 2: [N]o    - KEEP data (only update images)
+echo           Use this for normal updates
 echo.
 
-set /p deletedata="Daten löschen? (J/N) [Standard: N]: "
+set /p deletedata="Delete data? (Y/N) [Default: N]: "
 if /i "%deletedata%"=="" set "deletedata=N"
 
-if /i "%deletedata%"=="J" (
+if /i "%deletedata%"=="Y" (
     echo.
-    echo [INFO] Lösche alle Container und Datenbank-Daten...
+    echo [INFO] Deleting all containers and database...
     
     docker-compose down -v >nul 2>&1
     
-    echo [OK] Container und Datenbank gelöscht
+    echo [OK] Containers and database deleted
     echo.
-    echo [INFO] Lösche auch lokale Docker Volumes...
+    echo [INFO] Also deleting local Docker volumes...
     docker volume rm contracts_postgres_data >nul 2>&1
-    echo [OK] Volumes gelöscht
+    echo [OK] Volumes deleted
     echo.
 ) else (
     echo.
-    echo [INFO] Stoppe nur die Container (Daten bleiben erhalten)...
+    echo [INFO] Stopping containers only (keeping data)...
     docker-compose down >nul 2>&1
-    echo [OK] Container gestoppt
+    echo [OK] Containers stopped
     echo.
 )
 
@@ -113,18 +113,18 @@ REM 3. Neue Images pullen
 REM ============================================================================
 echo.
 echo ============================================================================
-echo SCHRITT 3: Neue Docker Images laden...
+echo STEP 3: Loading new Docker images...
 echo ============================================================================
 echo.
 
 docker-compose pull
 if errorlevel 1 (
-    echo [ERROR] Docker Compose Pull fehlgeschlagen
+    echo [ERROR] Docker compose pull failed
     pause
     exit /b 1
 )
 
-echo [OK] Neue Images geladen
+echo [OK] New images loaded
 echo.
 
 REM ============================================================================
@@ -132,37 +132,37 @@ REM 4. Container neu starten
 REM ============================================================================
 echo.
 echo ============================================================================
-echo SCHRITT 4: Container neu starten...
+echo STEP 4: Restarting containers...
 echo ============================================================================
 echo.
 
 docker-compose up -d
 if errorlevel 1 (
-    echo [ERROR] Docker Compose Up fehlgeschlagen
+    echo [ERROR] Docker compose up failed
     pause
     exit /b 1
 )
 
-echo [OK] Container starten...
+echo [OK] Containers starting...
 echo.
-echo [INFO] Warte 60 Sekunden bis Database vollständig initialisiert ist...
+echo [INFO] Waiting 60 seconds for database to fully initialize...
 timeout /t 60 /nobreak
 
 REM ============================================================================
 REM 5. Optional: Migrationen bei Fresh-Start
 REM ============================================================================
-if /i "%deletedata%"=="J" (
+if /i "%deletedata%"=="Y" (
     echo.
     echo ============================================================================
-    echo SCHRITT 5: Datenbank-Migrationen ausführen...
+    echo STEP 5: Running database migrations...
     echo ============================================================================
     echo.
     
     docker-compose exec -T backend alembic upgrade head
     if errorlevel 1 (
-        echo [WARNING] Migrations möglicherweise fehlgeschlagen, aber nicht kritisch
+        echo [WARNING] Migrations may have failed, but not critical
     ) else (
-        echo [OK] Migrationen erfolgreich ausgeführt
+        echo [OK] Migrations executed successfully
     )
     echo.
 )
@@ -172,19 +172,19 @@ REM Fertig!
 REM ============================================================================
 echo.
 echo ============================================================================
-echo [SUCCESS] Update abgeschlossen!
+echo [SUCCESS] Update completed!
 echo ============================================================================
 echo.
-echo Die Webapp ist nun unter folgende Adressen erreichbar:
+echo The webapp is now available at:
 echo - Frontend: http://localhost
 echo - Backend API: http://localhost/api/
 echo - API Docs: http://localhost/api/docs
 echo.
-echo Logs anschauen:
+echo View logs:
 echo   docker-compose logs
 echo.
-echo Container neu starten:
-echo   docker-compose down && docker-compose up -d
+echo Restart containers:
+echo   docker-compose down ^&^& docker-compose up -d
 echo.
 echo.
 pause
