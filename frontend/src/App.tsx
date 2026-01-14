@@ -15,6 +15,7 @@ import './App.css';
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [frontendVersion, setFrontendVersion] = useState('1.0.0');
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
@@ -24,8 +25,9 @@ function App() {
     const init = async () => {
       try {
         // 0. Log versions
-        const frontendVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
-        console.log('📦 Frontend version:', frontendVersion);
+        const version = import.meta.env.VITE_APP_VERSION || '1.0.0';
+        setFrontendVersion(version);
+        console.log('📦 Frontend version:', version);
         
         try {
           const backendVersion = await api.getBackendVersion();
@@ -192,7 +194,7 @@ function App() {
         <footer className="bg-white border-t border-gray-200 mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <p className="text-center text-gray-500 text-sm">
-              © 2025 Contract Management System - Version 1.0.0
+              © 2025 Contract Management System - Version {frontendVersion}
             </p>
           </div>
         </footer>
