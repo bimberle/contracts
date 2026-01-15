@@ -7,7 +7,7 @@ import api from './services/api';
 import Dashboard from './pages/Dashboard';
 import CustomerDetail from './pages/CustomerDetail';
 import Settings from './pages/Settings';
-import Forecast from './pages/Forecast';
+import Statistics from './pages/Statistics';
 import AllContracts from './pages/AllContracts';
 import LoginPage from './pages/LoginPage';
 import './App.css';
@@ -144,10 +144,10 @@ function App() {
                     Alle Verträge
                   </Link>
                   <Link
-                    to="/forecast"
+                    to="/statistik"
                     className="text-gray-700 hover:text-blue-600 transition"
                   >
-                    Forecast
+                    Statistik
                   </Link>
                 </div>
               </div>
@@ -178,7 +178,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
             <Route path="/contracts" element={<AllContracts />} />
-            <Route path="/forecast" element={<Forecast />} />
+            <Route path="/statistik" element={<Statistics />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
