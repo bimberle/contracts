@@ -397,31 +397,73 @@ function CustomerDetail() {
 
                   {isExpanded && applicableIncreases.length > 0 && (
                     <div className="px-6 py-4 bg-blue-50 border-t border-blue-200">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-3">Geltende Preiserhöhungen:</h4>
+                      <h4 className="text-sm font-semibold text-blue-900 mb-3">Preiserhöhungen:</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {applicableIncreases.map((increase) => (
-                          <div key={increase.id} className="bg-white p-3 rounded border border-blue-100 text-sm">
-                            <p className="text-xs text-gray-600 mb-2">Gültig ab: {formatDate(increase.validFrom)}</p>
-                            <div className="text-xs space-y-1">
-                              {increase.amountIncreases?.softwareRental > 0 && (
-                                <p><span className="text-gray-600">Software Miete:</span> <span className="font-semibold">+{increase.amountIncreases.softwareRental.toFixed(1)}%</span></p>
-                              )}
-                              {increase.amountIncreases?.softwareCare > 0 && (
-                                <p><span className="text-gray-600">Software Pflege:</span> <span className="font-semibold">+{increase.amountIncreases.softwareCare.toFixed(1)}%</span></p>
-                              )}
-                              {increase.amountIncreases?.apps > 0 && (
-                                <p><span className="text-gray-600">Apps:</span> <span className="font-semibold">+{increase.amountIncreases.apps.toFixed(1)}%</span></p>
-                              )}
-                              {increase.amountIncreases?.purchase > 0 && (
-                                <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> <span className="font-semibold">+{increase.amountIncreases.purchase.toFixed(1)}%</span></p>
+                        {applicableIncreases.map((increase) => {
+                          const isExcluded = (contract.excludedPriceIncreaseIds || []).includes(increase.id);
+                          return (
+                            <div 
+                              key={increase.id} 
+                              className={`p-3 rounded border text-sm transition ${
+                                isExcluded
+                                  ? 'bg-gray-100 border-gray-200 opacity-50'
+                                  : 'bg-white border-blue-100'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2 mb-2">
+                                <input
+                                  type="checkbox"
+                                  checked={!isExcluded}
+                                  onChange={() => {
+                                    const excluded = contract.excludedPriceIncreaseIds || [];
+                                    let updated: string[];
+                                    if (isExcluded) {
+                                      updated = excluded.filter(id => id !== increase.id);
+                                    } else {
+                                      updated = [...excluded, increase.id];
+                                    }
+                                    setSelectedContractForEdit({
+                                      ...contract,
+                                      excludedPriceIncreaseIds: updated
+                                    });
+                                  }}
+                                  className="mt-1 cursor-pointer w-4 h-4"
+                                  title={isExcluded ? 'Klicken zum Aktivieren' : 'Klicken zum Deaktivieren'}
+                                />
+                                <div className="flex-1">
+                                  <p className={`text-xs mb-1 ${isExcluded ? 'text-gray-500' : 'text-gray-600'}`}>
+                                    Gültig ab: {formatDate(increase.validFrom)}
+                                  </p>
+                                  {isExcluded && (
+                                    <p className="text-xs text-gray-500 font-medium">⊗ Deaktiviert</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className={`text-xs space-y-1 ${isExcluded ? 'text-gray-500' : ''}`}>
+                                {increase.amountIncreases?.softwareRental > 0 && (
+                                  <p><span className="text-gray-600">Software Miete:</span> <span className="font-semibold">+{increase.amountIncreases.softwareRental.toFixed(1)}%</span></p>
+                                )}
+                                {increase.amountIncreases?.softwareCare > 0 && (
+                                  <p><span className="text-gray-600">Software Pflege:</span> <span className="font-semibold">+{increase.amountIncreases.softwareCare.toFixed(1)}%</span></p>
+                                )}
+                                {increase.amountIncreases?.apps > 0 && (
+                                  <p><span className="text-gray-600">Apps:</span> <span className="font-semibold">+{increase.amountIncreases.apps.toFixed(1)}%</span></p>
+                                )}
+                                {increase.amountIncreases?.purchase > 0 && (
+                                  <p><span className="text-gray-600">Kauf Bestandsvertrag:</span> <span className="font-semibold">+{increase.amountIncreases.purchase.toFixed(1)}%</span></p>
+                                )}
+                              </div>
+                              <p className={`text-xs mt-2 ${isExcluded ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Bestandsschutz: {increase.lockInMonths} Monate
+                              </p>
+                              {increase.description && (
+                                <p className={`text-xs mt-2 italic ${isExcluded ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {increase.description}
+                                </p>
                               )}
                             </div>
-                            <p className="text-xs text-gray-600 mt-2">Bestandsschutz: {increase.lockInMonths} Monate</p>
-                            {increase.description && (
-                              <p className="text-xs text-gray-500 mt-1">{increase.description}</p>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
