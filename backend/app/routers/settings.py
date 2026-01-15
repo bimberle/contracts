@@ -49,7 +49,9 @@ def update_settings(settings_update: SettingsUpdate, db: Session = Depends(get_d
     if "post_contract_months" in update_data:
         if db_settings.post_contract_months is None:
             db_settings.post_contract_months = {}
-        db_settings.post_contract_months.update(update_data["post_contract_months"])
+        # Create a new dict so SQLAlchemy detects the change
+        updated_post_contract = {**db_settings.post_contract_months, **update_data["post_contract_months"]}
+        db_settings.post_contract_months = updated_post_contract
         del update_data["post_contract_months"]
     
     # Update andere Felder
