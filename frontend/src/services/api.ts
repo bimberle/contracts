@@ -148,7 +148,7 @@ class ApiClient {
   // ==================== Price Increases ====================
 
   async getPriceIncreases(skip: number = 0, limit: number = 100): Promise<PriceIncrease[]> {
-    const response = await this.axiosInstance.get<PriceIncrease[]>('/price-increases', {
+    const response = await this.axiosInstance.get<PriceIncrease[]>('/price-increases/', {
       params: { skip, limit },
     });
     return response.data;
@@ -163,7 +163,7 @@ class ApiClient {
 
   async createPriceIncrease(priceIncrease: PriceIncreaseCreateRequest): Promise<PriceIncrease> {
     const response = await this.axiosInstance.post<PriceIncrease>(
-      '/price-increases',
+      '/price-increases/',
       priceIncrease
     );
     return response.data;

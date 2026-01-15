@@ -6,8 +6,6 @@ import api from './services/api';
 import Dashboard from './pages/Dashboard';
 import CustomerDetail from './pages/CustomerDetail';
 import Settings from './pages/Settings';
-import PriceIncreases from './pages/PriceIncreases';
-import CommissionRates from './pages/CommissionRates';
 import Forecast from './pages/Forecast';
 import AllContracts from './pages/AllContracts';
 import LoginPage from './pages/LoginPage';
@@ -150,18 +148,6 @@ function App() {
                   >
                     Forecast
                   </Link>
-                  <Link
-                    to="/price-increases"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                  >
-                    Preiserhöhungen
-                  </Link>
-                  <Link
-                    to="/commission-rates"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                  >
-                    Provisionsätze
-                  </Link>
                 </div>
               </div>
               {/* Settings Icon & Logout - Right Side */}
@@ -171,7 +157,7 @@ function App() {
                   className="text-gray-700 hover:text-blue-600 transition text-xl"
                   title="Einstellungen"
                 >
-                  ⚙️
+                  {String.fromCharCode(0xeb20)}
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -192,8 +178,6 @@ function App() {
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
             <Route path="/contracts" element={<AllContracts />} />
             <Route path="/forecast" element={<Forecast />} />
-            <Route path="/price-increases" element={<PriceIncreases />} />
-            <Route path="/commission-rates" element={<CommissionRates />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
-import { Settings as SettingsType, SettingsUpdateRequest, PriceIncrease } from '../types';
+import { Settings as SettingsType, SettingsUpdateRequest, PriceIncrease, CommissionRate } from '../types';
 import { formatDate } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
 
@@ -10,11 +10,33 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates'>('general');
+  const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
+  const [commissionLoading, setCommissionLoading] = useState(false);
 
   useEffect(() => {
     fetchSettings();
     fetchPriceIncreases();
   }, [fetchSettings, fetchPriceIncreases]);
+
+  useEffect(() => {
+    if (activeTab === 'commission-rates') {
+      loadCommissionRates();
+    }
+  }, [activeTab]);
+
+  const loadCommissionRates = async () => {
+    try {
+      setCommissionLoading(true);
+      const response = await fetch('/api/commission-rates/');
+      const data = await response.json();
+      setCommissionRates(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fehler beim Laden der Provisionsätze:', err);
+    } finally {
+      setCommissionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -76,6 +98,17 @@ function Settings() {
     }
   };
 
+  const handleDeleteCommissionRate = async (id: string) => {
+    if (confirm('Möchtest du diesen Provisionsatz wirklich löschen?')) {
+      try {
+        await fetch(`/api/commission-rates/${id}`, { method: 'DELETE' });
+        await loadCommissionRates();
+      } catch (err) {
+        alert('Fehler beim Löschen des Provisionsatzes');
+      }
+    }
+  };
+
   if (loading && !formData) {
     return (
       <div className="text-center py-12">
@@ -95,12 +128,12 @@ function Settings() {
 
       {/* Status Messages */}
       {saveStatus === 'success' && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 font-medium">
           ✓ Erfolgreich gespeichert!
         </div>
       )}
       {saveStatus === 'error' && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 font-medium">
           ✗ Fehler beim Speichern
         </div>
       )}
@@ -110,12 +143,49 @@ function Settings() {
         </div>
       )}
 
-      {/* General Settings */}
-      {formData && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Allgemeine Einstellungen</h2>
+      {/* Tabs Navigation */}
+      <div className="bg-white rounded-t-lg border border-gray-200 border-b-0">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'general'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Allgemeine Einstellungen
+          </button>
+          <button
+            onClick={() => setActiveTab('price-increases')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'price-increases'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Preiserhöhungen
+          </button>
+          <button
+            onClick={() => setActiveTab('commission-rates')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'commission-rates'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Provisionsätze
+          </button>
+        </div>
+      </div>
 
+      {/* Tab Content Container */}
+      <div className="bg-white rounded-b-lg border border-t-0 border-gray-200 p-6">
+        {/* Tab 1: General Settings */}
+        {activeTab === 'general' && formData && (
           <div className="space-y-6">
+            <h2 className="text-xl font-bold text-gray-900">Allgemeine Einstellungen</h2>
+
             {/* Founder Delay */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -238,88 +308,147 @@ function Settings() {
               </p>
             </div>
 
-            <button
-              onClick={handleSaveSettings}
-              disabled={saveStatus === 'saving'}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {saveStatus === 'saving' ? 'Speichern...' : 'Speichern'}
-            </button>
+            <div className="border-t pt-6">
+              <button
+                onClick={handleSaveSettings}
+                disabled={saveStatus === 'saving'}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
+              >
+                {saveStatus === 'saving' ? 'Speichern...' : 'Speichern'}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Price Increases Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Preiserhöhungen</h2>
-          <button
-            onClick={() => {
-              setSelectedPriceIncreaseForEdit(null);
-              setIsPriceIncreaseModalOpen(true);
-            }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium"
-          >
-            + Neue Preiserhöhung
-          </button>
-        </div>
+        {/* Tab 2: Price Increases */}
+        {activeTab === 'price-increases' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Preiserhöhungen</h2>
+              <button
+                onClick={() => {
+                  setSelectedPriceIncreaseForEdit(null);
+                  setIsPriceIncreaseModalOpen(true);
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium"
+              >
+                + Neue Preiserhöhung
+              </button>
+            </div>
 
-        {!priceIncreases || priceIncreases.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Keine Preiserhöhungen vorhanden</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Gültig ab</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Software Miete</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Software Pflege</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Apps</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Bestandsvertrag</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Bestandsschutz</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Beschreibung</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase">Aktionen</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {priceIncreases.map((increase) => (
-                  <tr key={increase.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatDate(increase.validFrom)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {increase.amountIncreases.softwareRental > 0 ? `+${increase.amountIncreases.softwareRental.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {increase.amountIncreases.softwareCare > 0 ? `+${increase.amountIncreases.softwareCare.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {increase.amountIncreases.apps > 0 ? `+${increase.amountIncreases.apps.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {increase.amountIncreases.purchase > 0 ? `+${increase.amountIncreases.purchase.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{increase.lockInMonths} Monate</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{increase.description || '—'}</td>
-                    <td className="px-6 py-4 text-center text-sm space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedPriceIncreaseForEdit(increase);
-                          setIsPriceIncreaseModalOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 transition font-medium"
-                      >
-                        Bearbeiten
-                      </button>
-                      <button
-                        onClick={() => handleDeletePriceIncrease(increase.id)}
-                        className="text-red-600 hover:text-red-800 transition font-medium"
-                      >
-                        Löschen
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {!priceIncreases || priceIncreases.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Keine Preiserhöhungen vorhanden</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Gültig ab</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Software Miete</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Software Pflege</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Apps</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Bestandsvertrag</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Bestandsschutz</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Beschreibung</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {priceIncreases.map((increase) => (
+                      <tr key={increase.id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatDate(increase.validFrom)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {increase.amountIncreases.softwareRental > 0 ? `+${increase.amountIncreases.softwareRental.toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {increase.amountIncreases.softwareCare > 0 ? `+${increase.amountIncreases.softwareCare.toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {increase.amountIncreases.apps > 0 ? `+${increase.amountIncreases.apps.toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {increase.amountIncreases.purchase > 0 ? `+${increase.amountIncreases.purchase.toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{increase.lockInMonths} Monate</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{increase.description || '—'}</td>
+                        <td className="px-6 py-4 text-center text-sm space-x-2">
+                          <button
+                            onClick={() => {
+                              setSelectedPriceIncreaseForEdit(increase);
+                              setIsPriceIncreaseModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-100 text-blue-600 hover:text-blue-800 transition"
+                            title="Bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeletePriceIncrease(increase.id)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-red-100 text-red-600 hover:text-red-800 transition"
+                            title="Löschen"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Commission Rates */}
+        {activeTab === 'commission-rates' && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-gray-900">Provisionsätze</h2>
+
+            {commissionLoading ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="text-gray-600 mt-4">Laden...</p>
+              </div>
+            ) : !commissionRates || commissionRates.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Keine Provisionsätze vorhanden</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Gültig ab</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Software Miete</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Software Pflege</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Apps</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Kauf</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Beschreibung</th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {commissionRates.map((rate) => (
+                      <tr key={rate.id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatDate(rate.validFrom)}</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareRental.toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareCare.toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.apps.toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.purchase.toFixed(6)}%</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{rate.description || '—'}</td>
+                        <td className="px-6 py-4 text-center text-sm space-x-2">
+                          <button
+                            onClick={() => handleDeleteCommissionRate(rate.id)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-red-100 text-red-600 hover:text-red-800 transition"
+                            title="Löschen"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
