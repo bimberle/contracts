@@ -33,7 +33,10 @@ function CustomerDetail() {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Muss gültig sein (validFrom in der Vergangenheit)
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if (validFromDate < startDate) return false;
+
+        // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
         // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
