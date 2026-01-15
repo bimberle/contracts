@@ -11,7 +11,7 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
@@ -179,6 +179,16 @@ function Settings() {
           >
             Provisionsätze
           </button>
+          <button
+            onClick={() => setActiveTab('exit-payouts')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'exit-payouts'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Exit-Zahlungen
+          </button>
         </div>
       </div>
 
@@ -205,71 +215,6 @@ function Settings() {
               <p className="text-sm text-gray-500 mt-2">
                 Neue Mietverträge starten dieser Anzahl Monate später
               </p>
-            </div>
-
-            {/* Post Contract Months */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Post-Contract Monate</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Provision wird noch X Monate nach Vertragsende gezahlt
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Software Miete
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.postContractMonths.softwareRental}
-                    onChange={(e) =>
-                      handleSettingsChange(
-                        'postContractMonths.softwareRental',
-                        parseInt(e.target.value)
-                      )
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Software Pflege
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.postContractMonths.softwareCare}
-                    onChange={(e) =>
-                      handleSettingsChange('postContractMonths.softwareCare', parseInt(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Apps
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.postContractMonths.apps}
-                    onChange={(e) =>
-                      handleSettingsChange('postContractMonths.apps', parseInt(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Kauf
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.postContractMonths.purchase}
-                    onChange={(e) =>
-                      handleSettingsChange('postContractMonths.purchase', parseInt(e.target.value))
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Min Contract Months */}
@@ -473,6 +418,106 @@ function Settings() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+        
+        {/* Tab 4: Exit Payouts */}
+        {activeTab === 'exit-payouts' && formData && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-gray-900">Exit-Zahlungen</h2>
+            
+            {/* Exit Payout Months */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Zahlungsmonate nach Vertragsende</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Nach Vertragsende wird noch X Monate lang Provision gezahlt
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Software Miete (Monate)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.softwareRental}
+                    onChange={(e) =>
+                      handleSettingsChange(
+                        'postContractMonths.softwareRental',
+                        parseInt(e.target.value)
+                      )
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Software Pflege (Monate)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.softwareCare}
+                    onChange={(e) =>
+                      handleSettingsChange('postContractMonths.softwareCare', parseInt(e.target.value))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Apps (Monate)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.apps}
+                    onChange={(e) =>
+                      handleSettingsChange('postContractMonths.apps', parseInt(e.target.value))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kauf Bestandsvertrag (Monate)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.postContractMonths.purchase}
+                    onChange={(e) =>
+                      handleSettingsChange('postContractMonths.purchase', parseInt(e.target.value))
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Min Contract Months for Payout */}
+            <div className="border-t pt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Minimale Vertragslaufzeit für volle Auszahlung (Monate)
+              </label>
+              <input
+                type="number"
+                value={formData.minContractMonthsForPayout}
+                onChange={(e) =>
+                  handleSettingsChange('minContractMonthsForPayout', parseInt(e.target.value))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Verträge unter dieser Dauer werden bei Ausscheiden mit Restprovision ausgezahlt
+              </p>
+            </div>
+
+            <div className="border-t pt-6">
+              <button
+                onClick={handleSaveSettings}
+                disabled={saveStatus === 'saving'}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium"
+              >
+                {saveStatus === 'saving' ? 'Speichern...' : 'Speichern'}
+              </button>
+            </div>
           </div>
         )}
       </div>
