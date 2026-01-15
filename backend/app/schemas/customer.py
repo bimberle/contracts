@@ -32,9 +32,10 @@ class CustomerBase(BaseModel):
     def validate_kundennummer(cls, v):
         if not v.isdigit():
             raise ValueError('Kundennummer darf nur Ziffern enthalten')
-        if len(v) < 1 or len(v) > 20:
-            raise ValueError('Kundennummer muss zwischen 1 und 20 Ziffern enthalten')
-        return v
+        # Pad to 8 digits if shorter
+        if len(v) > 8:
+            raise ValueError('Kundennummer darf maximal 8 Ziffern enthalten')
+        return v.zfill(8)
 
 class CustomerCreate(CustomerBase):
     pass
@@ -68,8 +69,9 @@ class CustomerUpdate(BaseModel):
         if v is not None:
             if not v.isdigit():
                 raise ValueError('Kundennummer darf nur Ziffern enthalten')
-            if len(v) < 1 or len(v) > 20:
-                raise ValueError('Kundennummer muss zwischen 1 und 20 Ziffern enthalten')
+            if len(v) > 8:
+                raise ValueError('Kundennummer darf maximal 8 Ziffern enthalten')
+            return v.zfill(8)
         return v
 
 class Customer(CustomerBase):

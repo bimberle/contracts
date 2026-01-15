@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, String, Float, DateTime, Boolean, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
@@ -30,7 +30,13 @@ class Contract(Base):
     # Existenzgründer-Flag
     is_founder_discount = Column(Boolean, default=False)
     
+    # Preiserhöhungen die für diesen Vertrag nicht gelten (list of price_increase IDs)
+    excluded_price_increase_ids = Column(JSON, default=[])
+    
     notes = Column(String, default="")
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 # Contract Schemas
 class ContractBase(BaseModel):
@@ -15,11 +15,12 @@ class ContractBase(BaseModel):
     software_rental_amount: float = 0  # Software Miete
     software_care_amount: float = 0    # Software Pflege
     apps_amount: float = 0             # Apps
-    purchase_amount: float = 0         # Kauf Bestandsvertrag
+    purchase_amount: float = 0         # Kauf Bestandsvertrag (Monatliche Softwarepflege Kauf)
     currency: str = "EUR"
     start_date: datetime  # Mietbeginn
     end_date: Optional[datetime] = None
     is_founder_discount: bool = False
+    excluded_price_increase_ids: List[str] = []  # Price increase IDs that don't apply to this contract
     notes: str = ""
 
 class ContractCreate(ContractBase):
@@ -39,6 +40,7 @@ class ContractUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     is_founder_discount: Optional[bool] = None
+    excluded_price_increase_ids: Optional[List[str]] = None
     notes: Optional[str] = None
 
 class Contract(ContractBase):

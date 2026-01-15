@@ -95,8 +95,15 @@ def get_current_monthly_price(
     # Bestandsschutz prüfen
     months_running = months_between(contract.start_date, date)
     
+    # Get excluded price increase IDs for this contract
+    excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
+    
     # Preiserhöhungen anwenden pro Betrag-Typ
     for price_increase in price_increases:
+        # Skip if this price increase is excluded for this contract
+        if price_increase.id in excluded_ids:
+            continue
+            
         if price_increase.valid_from <= date:
             if months_running >= price_increase.lock_in_months:
                 # Preiserhöhungen pro Betrag-Typ anwenden
@@ -137,8 +144,15 @@ def get_current_monthly_commission(
     # Bestandsschutz für Preiserhöhungen prüfen
     months_running = months_since_rental_start
     
+    # Get excluded price increase IDs for this contract
+    excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
+    
     # Preiserhöhungen anwenden
     for price_increase in price_increases:
+        # Skip if this price increase is excluded for this contract
+        if price_increase.id in excluded_ids:
+            continue
+            
         if price_increase.valid_from <= date:
             if months_running >= price_increase.lock_in_months:
                 if price_increase.amount_increases:
@@ -163,7 +177,12 @@ def get_current_monthly_commission(
                 # Vertragsende + post-contract periode vorbei
                 continue
         
-        total_commission += amount * (commission_rate / 100)
+        # Purchase rates are stored as direct factors (e.g., 0.083333 for 1/12), not percentages
+        # Other rates (rental, care, apps) are percentages
+        if amount_type == 'purchase':
+            total_commission += amount * commission_rate
+        else:
+            total_commission += amount * (commission_rate / 100)
     
     return total_commission
 
