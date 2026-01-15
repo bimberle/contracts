@@ -437,24 +437,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
-
-            {/* Buttons */}
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                {isLoading ? 'Speichern...' : contract ? 'Aktualisieren' : 'Erstellen'}
-              </button>
-            </div>
           </form>
         ) : (
           /* Breakdown Tab */
@@ -627,6 +609,24 @@ const ContractModal: React.FC<ContractModalProps> = ({
             </div>
           </div>
         )}
+
+        {/* Buttons - Outside Tabs */}
+        <div className="flex gap-3 justify-end p-6 border-t border-gray-200 bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+          >
+            Abbrechen
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {isLoading ? 'Speichern...' : contract ? 'Aktualisieren' : 'Erstellen'}
+          </button>
+        </div>
       </div>
     </div>
   );
