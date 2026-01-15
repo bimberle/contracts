@@ -29,6 +29,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     endDate: '',
     isFounderDiscount: false,
     notes: '',
+    excludedPriceIncreaseIds: [] as string[],
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +53,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
         isFounderDiscount: contract.isFounderDiscount,
         notes: contract.notes,
+        excludedPriceIncreaseIds: contract.excludedPriceIncreaseIds || [],
       });
     } else {
       setFormData({
@@ -64,6 +66,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         endDate: '',
         isFounderDiscount: false,
         notes: '',
+        excludedPriceIncreaseIds: [],
       });
     }
     setError(null);
@@ -127,6 +130,24 @@ const ContractModal: React.FC<ContractModalProps> = ({
     }));
   };
 
+  // Handle excluding/including price increases
+  const handlePriceIncreaseToggle = (priceIncreaseId: string) => {
+    setFormData((prev: any) => {
+      const excluded = prev.excludedPriceIncreaseIds || [];
+      if (excluded.includes(priceIncreaseId)) {
+        return {
+          ...prev,
+          excludedPriceIncreaseIds: excluded.filter((id: string) => id !== priceIncreaseId),
+        };
+      } else {
+        return {
+          ...prev,
+          excludedPriceIncreaseIds: [...excluded, priceIncreaseId],
+        };
+      }
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -144,6 +165,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         endDate: formData.endDate ? new Date(formData.endDate + 'T00:00:00').toISOString() : null,
         isFounderDiscount: formData.isFounderDiscount,
         notes: formData.notes,
+        excludedPriceIncreaseIds: formData.excludedPriceIncreaseIds || [],
       };
 
       if (contract) {
@@ -184,6 +206,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
     // Apply price increases
     for (const increase of priceIncreases) {
+      // Skip if excluded
+      if ((formData.excludedPriceIncreaseIds || []).includes(increase.id)) {
+        continue;
+      }
+
       const validFromDate = new Date(increase.validFrom);
       if (validFromDate <= today) {
         const monthsRunning = Math.floor(
@@ -460,23 +487,37 @@ const ContractModal: React.FC<ContractModalProps> = ({
               <div className="space-y-3">
                 <h3 className="font-semibold text-gray-900">Geltende Preiserhöhungen:</h3>
                 {getApplicablePriceIncreases().map((increase: any, index: number) => (
-                  <div key={index} className="border-l-4 border-blue-300 pl-4 py-2">
-                    <div className="text-sm font-medium text-gray-900">
-                      {formatDate(increase.validFrom)}
-                    </div>
-                    <div className="text-xs text-gray-600 space-y-1 mt-1">
-                      {increase.amountIncreases.softwareRental > 0 && (
-                        <div>Software Miete: +{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
-                      )}
-                      {increase.amountIncreases.softwareCare > 0 && (
-                        <div>Software Pflege: +{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
-                      )}
-                      {increase.amountIncreases.apps > 0 && (
-                        <div>Apps: +{increase.amountIncreases.apps.toFixed(1)}%</div>
-                      )}
-                      {increase.amountIncreases.purchase > 0 && (
-                        <div>Kauf Bestandsvertrag: +{increase.amountIncreases.purchase.toFixed(1)}%</div>
-                      )}
+                  <div key={increase.id || index} className="border-l-4 border-blue-300 pl-4 py-2 bg-blue-50 p-3 rounded">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {formatDate(increase.validFrom)}
+                          {increase.description && <span className="text-gray-600 ml-2">- {increase.description}</span>}
+                        </div>
+                        <div className="text-xs text-gray-600 space-y-1 mt-1">
+                          {increase.amountIncreases.softwareRental > 0 && (
+                            <div>Software Miete: +{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
+                          )}
+                          {increase.amountIncreases.softwareCare > 0 && (
+                            <div>Software Pflege: +{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
+                          )}
+                          {increase.amountIncreases.apps > 0 && (
+                            <div>Apps: +{increase.amountIncreases.apps.toFixed(1)}%</div>
+                          )}
+                          {increase.amountIncreases.purchase > 0 && (
+                            <div>Kauf Bestandsvertrag: +{increase.amountIncreases.purchase.toFixed(1)}%</div>
+                          )}
+                        </div>
+                      </div>
+                      <label className="flex items-center space-x-2 ml-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={!(formData.excludedPriceIncreaseIds || []).includes(increase.id)}
+                          onChange={() => handlePriceIncreaseToggle(increase.id)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-xs font-medium text-gray-700">Aktivieren</span>
+                      </label>
                     </div>
                   </div>
                 ))}
