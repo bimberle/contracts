@@ -209,9 +209,9 @@ function ContractStatistics() {
             {forecast.months.map((month, idx) => (
               <tr key={idx} className="hover:bg-gray-50">
                 <td className="px-6 py-3 text-sm font-medium text-gray-900">{month.monthName}</td>
-                <td className="px-6 py-3 text-sm text-right text-green-600 font-medium">{month.newContracts}</td>
-                <td className="px-6 py-3 text-sm text-right text-gray-700">{month.activeContracts}</td>
-                <td className="px-6 py-3 text-sm text-right text-blue-600 font-medium">{formatCurrency(month.totalRevenue)}</td>
+                <td className="px-6 py-3 text-sm text-right text-purple-600 font-medium">{month.newContracts}</td>
+                <td className="px-6 py-3 text-sm text-right text-purple-600">{month.activeContracts}</td>
+                <td className="px-6 py-3 text-sm text-right text-purple-600 font-medium">{formatCurrency(month.totalRevenue)}</td>
                 <td className="px-6 py-3 text-sm text-right text-green-600 font-medium">{formatCurrency(month.totalCommission)}</td>
               </tr>
             ))}

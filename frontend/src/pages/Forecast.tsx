@@ -335,19 +335,19 @@ function Forecast() {
                     {month.monthName}
                     {month.date === currentMonthKey && <span className="ml-2 text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">JETZT</span>}
                   </td>
-                  <td className="px-6 py-4 text-sm text-right text-blue-600 font-semibold">
+                  <td className="px-6 py-4 text-sm text-right text-purple-600 font-semibold">
                     {formatCurrency(month.totalRevenue)}
                   </td>
                   <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">
                     {formatCurrency(month.totalCommission)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-right text-purple-600 font-semibold">
+                  <td className="px-6 py-4 text-sm text-right text-green-600 font-semibold">
                     {formatCurrency(month.totalNetIncome)}
                   </td>
                   <td className="px-6 py-4 text-sm text-right text-gray-900 font-semibold">
                     {formatCurrency(month.cumulative)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-right text-gray-900">
+                  <td className="px-6 py-4 text-sm text-right text-purple-600">
                     {month.activeContracts}
                   </td>
                 </tr>

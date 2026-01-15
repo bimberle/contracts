@@ -411,7 +411,7 @@ export default function AllContracts() {
                     <td className="px-6 py-4 text-sm text-right text-gray-900">
                       {formatCurrency(contract.purchaseAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-gray-900">
+                    <td className="px-6 py-4 text-sm text-right font-semibold text-purple-600">
                       {formatCurrency(getTotalAmount(contract))}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
