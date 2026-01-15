@@ -296,6 +296,35 @@ const ContractModal: React.FC<ContractModalProps> = ({
               </div>
             )}
 
+            {/* Start Date - FIRST FIELD */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Startdatum *
+                </label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enddatum (optional)
+                </label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+            </div>
+
             {/* Amount Fields */}
             <div className="space-y-3 bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-3">Beträge (€/Monat)</h3>
@@ -311,7 +340,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     value={formData.softwareRentalAmount}
                     onChange={handleChange}
                     step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -325,7 +353,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     value={formData.softwareCareAmount}
                     onChange={handleChange}
                     step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -339,13 +366,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     value={formData.appsAmount}
                     onChange={handleChange}
                     step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kauf Bestandsvertrag
+                    Monatliche Softwarepflege Kauf
                   </label>
                   <input
                     type="number"
@@ -353,66 +379,23 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     value={formData.purchaseAmount}
                     onChange={handleChange}
                     step="0.01"
-                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Währung
+            <div className="flex items-center">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="isFounderDiscount"
+                  checked={formData.isFounderDiscount}
+                  onChange={handleChange}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">Existenzgründer-Rabatt</span>
               </label>
-              <input
-                type="text"
-                name="currency"
-                value={formData.currency}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unterzeichnungsdatum
-                </label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Enddatum (optional)
-                </label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div className="flex items-end">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="isFounderDiscount"
-                    checked={formData.isFounderDiscount}
-                    onChange={handleChange}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Existenzgründer-Rabatt</span>
-                </label>
-              </div>
             </div>
 
             <div>
