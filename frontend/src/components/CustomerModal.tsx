@@ -174,20 +174,6 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ort
-            </label>
-            <input
-              type="text"
-              name="ort"
-              value={formData.ort}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
               Postleitzahl (nur Ziffern)
             </label>
             <input
@@ -196,6 +182,20 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
               value={formData.plz}
               onChange={handleChange}
               maxLength={10}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ort
+            </label>
+            <input
+              type="text"
+              name="ort"
+              value={formData.ort}
+              onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               required
             />
