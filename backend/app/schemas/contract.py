@@ -64,3 +64,4 @@ class ContractMetrics(BaseModel):
     current_monthly_commission: float
     earned_commission_to_date: float
     projected_monthly_commission: float
+    exit_payout: float

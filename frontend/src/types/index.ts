@@ -204,6 +204,18 @@ export interface ContractWithMetrics extends Contract {
   projectedMonthlyCommission?: number;
 }
 
+// Contract Metrics (Berechnete Metriken für einen Vertrag)
+export interface ContractMetrics {
+  contractId: string;
+  currentMonthlyPrice: number;
+  monthsRunning: number;
+  isInFounderPeriod: boolean;
+  currentMonthlyCommission: number;
+  earnedCommissionToDate: number;
+  projectedMonthlyCommission: number;
+  exitPayout: number;
+}
+
 // API Response Wrapper
 export interface ApiResponse<T> {
   status: 'success' | 'error';

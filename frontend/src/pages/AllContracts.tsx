@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
-import { Contract, Customer } from '../types';
+import { Contract, Customer, ContractMetrics } from '../types';
 
 interface ContractWithCustomerInfo extends Contract {
   customerName: string;
@@ -15,6 +15,7 @@ interface ContractWithCustomerInfo extends Contract {
 export default function AllContracts() {
   const [contracts, setContracts] = useState<ContractWithCustomerInfo[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<ContractWithCustomerInfo[]>([]);
+  const [contractMetrics, setContractMetrics] = useState<Record<string, ContractMetrics>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +57,20 @@ export default function AllContracts() {
       });
 
       setContracts(contractsWithInfo);
+
+      // Lade Metriken für jeden Vertrag
+      const metricsMap: Record<string, ContractMetrics> = {};
+      const metricsPromises = contractsWithInfo.map(contract =>
+        api.getContractMetrics(contract.id)
+          .then(m => {
+            metricsMap[contract.id] = m;
+          })
+          .catch(err => {
+            console.warn(`Fehler beim Laden der Metriken für Vertrag ${contract.id}:`, err);
+          })
+      );
+      await Promise.all(metricsPromises);
+      setContractMetrics(metricsMap);
     } catch (err) {
       console.error('Failed to load contracts:', err);
       setError('Fehler beim Laden der Verträge');
@@ -358,6 +373,7 @@ export default function AllContracts() {
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Bestand</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Gesamt</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Provision</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Exit-Zahlung</th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
               </thead>
@@ -395,6 +411,11 @@ export default function AllContracts() {
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
                       {formatCurrency(getCommission(contract))}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right font-semibold text-orange-600">
+                      {contractMetrics[contract.id]?.exitPayout !== undefined
+                        ? formatCurrency(contractMetrics[contract.id].exitPayout)
+                        : '—'}
                     </td>
                     <td className="px-6 py-4 text-sm text-center">
                       <Link

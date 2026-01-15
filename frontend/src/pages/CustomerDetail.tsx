@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Customer, Contract, CalculatedMetrics, PriceIncrease } from '../types';
+import { Customer, Contract, CalculatedMetrics, PriceIncrease, ContractMetrics } from '../types';
 import api from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatting';
 import ContractModal from '../components/ContractModal';
@@ -12,6 +12,7 @@ function CustomerDetail() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [metrics, setMetrics] = useState<CalculatedMetrics | null>(null);
+  const [contractMetrics, setContractMetrics] = useState<Record<string, ContractMetrics>>({});
   const [priceIncreases, setPriceIncreases] = useState<PriceIncrease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,11 +138,26 @@ function CustomerDetail() {
       setContracts(contractsData);
       setMetrics(metricsData);
       
-      // Lade Preiserhöhungen nur wenn der Kunde Verträge hat
+      // Lade Metriken für jeden Vertrag
       if (contractsData.length > 0) {
+        const contractMetricsMap: Record<string, ContractMetrics> = {};
+        const metricsPromises = contractsData.map(contract =>
+          api.getContractMetrics(contract.id)
+            .then(m => {
+              contractMetricsMap[contract.id] = m;
+            })
+            .catch(err => {
+              console.warn(`Fehler beim Laden der Metriken für Vertrag ${contract.id}:`, err);
+            })
+        );
+        await Promise.all(metricsPromises);
+        setContractMetrics(contractMetricsMap);
+
+        // Lade Preiserhöhungen
         const priceIncreasesData = await api.getPriceIncreases();
         setPriceIncreases(priceIncreasesData);
       } else {
+        setContractMetrics({});
         setPriceIncreases([]);
       }
       setError(null);
@@ -339,7 +355,7 @@ function CustomerDetail() {
                       </span>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-6 mb-3">
+                    <div className="grid grid-cols-4 gap-6 mb-3">
                       <div>
                         <p className="text-sm text-gray-600">Monatspreis</p>
                         <p className="text-lg font-bold text-gray-900">{formatCurrency(amounts.totalAmount)}</p>
@@ -347,6 +363,10 @@ function CustomerDetail() {
                       <div>
                         <p className="text-sm text-gray-600">Meine Provision</p>
                         <p className="text-lg font-bold text-green-600">{formatCurrency(totalCommission)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Exit-Zahlung</p>
+                        <p className="text-lg font-bold text-orange-600">{formatCurrency(contractMetrics[contract.id]?.exitPayout || 0)}</p>
                       </div>
                       <div className="flex justify-end gap-2">
                         <button

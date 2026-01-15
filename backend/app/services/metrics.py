@@ -92,6 +92,9 @@ def calculate_contract_metrics(
     earned_commission_to_date = calculate_earnings_to_date(
         contract, settings, price_increases, commission_rates, today
     )
+    exit_payout = calculate_exit_payout(
+        contract, settings, price_increases, commission_rates, today
+    )
     
     return {
         "contract_id": contract.id,
@@ -100,5 +103,6 @@ def calculate_contract_metrics(
         "is_in_founder_period": is_in_founder_period,
         "current_monthly_commission": round(current_monthly_commission, 2),
         "earned_commission_to_date": round(earned_commission_to_date, 2),
-        "projected_monthly_commission": round(current_monthly_commission, 2)
+        "projected_monthly_commission": round(current_monthly_commission, 2),
+        "exit_payout": round(exit_payout, 2)
     }
