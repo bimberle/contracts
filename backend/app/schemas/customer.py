@@ -23,8 +23,8 @@ class CustomerBase(BaseModel):
     def validate_plz(cls, v):
         if not v.isdigit():
             raise ValueError('Postleitzahl darf nur Ziffern enthalten')
-        if len(v) < 4 or len(v) > 10:
-            raise ValueError('Postleitzahl muss zwischen 4 und 10 Ziffern enthalten')
+        if len(v) < 1 or len(v) > 10:
+            raise ValueError('Postleitzahl muss zwischen 1 und 10 Ziffern enthalten')
         return v
     
     @field_validator('kundennummer')
@@ -59,8 +59,8 @@ class CustomerUpdate(BaseModel):
         if v is not None:
             if not v.isdigit():
                 raise ValueError('Postleitzahl darf nur Ziffern enthalten')
-            if len(v) < 4 or len(v) > 10:
-                raise ValueError('Postleitzahl muss zwischen 4 und 10 Ziffern enthalten')
+            if len(v) < 1 or len(v) > 10:
+                raise ValueError('Postleitzahl muss zwischen 1 und 10 Ziffern enthalten')
         return v
     
     @field_validator('kundennummer')
