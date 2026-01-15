@@ -262,13 +262,13 @@ export default function AllContracts() {
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-sm font-medium mb-2">Monatliche Kosten</p>
-          <p className="text-3xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</p>
-          <p className="text-gray-500 text-xs mt-2">Gesamtumsatz/Monat</p>
+          <p className="text-3xl font-bold text-purple-600">{formatCurrency(totalRevenue)}</p>
+          <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-sm font-medium mb-2">Meine Provision</p>
           <p className="text-3xl font-bold text-green-600">{formatCurrency(totalCommission)}</p>
-          <p className="text-gray-500 text-xs mt-2">Geschätzte monatliche Provision</p>
+          <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
       </div>
 
