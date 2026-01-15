@@ -95,8 +95,12 @@ def get_forecast(months: int = 12, db: Session = Depends(get_db)):
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
     
-    # Generiere Forecast
+    # Generiere Forecast für die letzten X Monate
+    # Starte von vor X Monaten statt ab heute
     start_date = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Gehe X Monate zurück
+    start_date = add_months(start_date, -min(months, 36))
+    
     forecast_data = generate_forecast(
         contracts=contracts,
         settings=settings,
