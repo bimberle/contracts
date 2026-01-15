@@ -51,6 +51,10 @@ def generate_forecast(
             
             if commission > 0:
                 total_commission += commission
+            
+            # Zähle aktive Verträge unabhängig von Commission
+            # Ein Vertrag ist aktiv, wenn er gestartet hat und noch nicht beendet ist
+            if contract.status.value == 'active':
                 active_count += 1
             
             # Prüfe ob Vertrag in diesem Monat endet
