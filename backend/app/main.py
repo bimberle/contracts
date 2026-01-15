@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.21"
+BACKEND_VERSION = "1.0.22"
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 
 # Create database tables on startup
@@ -28,7 +28,7 @@ init_db()
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.21"
+    version="1.0.22"
 )
 
 # CORS Middleware
