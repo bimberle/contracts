@@ -49,6 +49,7 @@ function ContractStatistics() {
       date: month.date,
       activeContracts: month.activeContracts,
       endingContracts: month.endingContracts,
+      newContracts: month.newContracts,
     }));
   }, [forecast]);
 
@@ -70,6 +71,7 @@ function ContractStatistics() {
       return {
         avgActiveContracts: 0,
         totalEndingContracts: 0,
+        totalNewContracts: 0,
         totalRevenue: 0,
         avgRevenue: 0,
         totalCommission: 0,
@@ -81,10 +83,12 @@ function ContractStatistics() {
     const totalCommission = forecast.months.reduce((sum, m) => sum + m.totalCommission, 0);
     const totalActiveContracts = forecast.months.reduce((sum, m) => sum + m.activeContracts, 0);
     const totalEndingContracts = forecast.months.reduce((sum, m) => sum + m.endingContracts, 0);
+    const totalNewContracts = forecast.months.reduce((sum, m) => sum + m.newContracts, 0);
 
     return {
       avgActiveContracts: totalActiveContracts / forecast.months.length,
       totalEndingContracts,
+      totalNewContracts,
       totalRevenue,
       avgRevenue: totalRevenue / forecast.months.length,
       totalCommission,
@@ -121,11 +125,17 @@ function ContractStatistics() {
   return (
     <div className="space-y-8">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-gray-500 text-sm font-medium">Neue Verträge (12M)</div>
+          <div className="text-3xl font-bold text-gray-900 mt-2">{stats.totalNewContracts}</div>
+          <div className="text-sm text-gray-600 mt-2">Mietbeginn im Zeitraum</div>
+        </div>
+
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Ø Aktive Verträge</div>
           <div className="text-3xl font-bold text-gray-900 mt-2">{Math.round(stats.avgActiveContracts)}</div>
-          <div className="text-sm text-gray-600 mt-2">über alle 12 Monate</div>
+          <div className="text-sm text-gray-600 mt-2">pro Monat</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -151,6 +161,7 @@ function ContractStatistics() {
             <YAxis />
             <Tooltip />
             <Legend />
+            <Bar dataKey="newContracts" fill="#10b981" name="Neue Verträge" />
             <Bar dataKey="activeContracts" fill="#3b82f6" name="Aktive Verträge" />
             <Bar dataKey="endingContracts" fill="#ef4444" name="Endende Verträge" />
           </BarChart>
@@ -189,6 +200,7 @@ function ContractStatistics() {
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Monat</th>
+              <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Neue Verträge</th>
               <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Aktive Verträge</th>
               <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Umsatz</th>
               <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Provision</th>
@@ -198,6 +210,7 @@ function ContractStatistics() {
             {forecast.months.map((month, idx) => (
               <tr key={idx} className="hover:bg-gray-50">
                 <td className="px-6 py-3 text-sm font-medium text-gray-900">{month.monthName}</td>
+                <td className="px-6 py-3 text-sm text-right text-green-600 font-medium">{month.newContracts}</td>
                 <td className="px-6 py-3 text-sm text-right text-gray-700">{month.activeContracts}</td>
                 <td className="px-6 py-3 text-sm text-right text-blue-600 font-medium">{formatCurrency(month.totalRevenue)}</td>
                 <td className="px-6 py-3 text-sm text-right text-green-600 font-medium">{formatCurrency(month.totalCommission)}</td>

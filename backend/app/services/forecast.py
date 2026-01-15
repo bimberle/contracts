@@ -32,8 +32,15 @@ def generate_forecast(
         total_net_income = 0.0
         active_count = 0
         ending_count = 0
+        new_count = 0
         
         for contract in contracts:
+            # Prüfe ob Vertrag in diesem Monat BEGINNT (Mietbeginn = startDate)
+            if contract.start_date:
+                start_month_start = add_months(contract.start_date.replace(day=1), 0)
+                if start_month_start == month_date.replace(day=1):
+                    new_count += 1
+            
             # Berechne Umsatz mit Preiserhöhungen
             monthly_price = get_current_monthly_price(contract, price_increases, month_date)
             total_revenue += monthly_price
@@ -62,7 +69,8 @@ def generate_forecast(
             "total_commission": round(total_commission, 2),
             "total_net_income": total_net_income,
             "active_contracts": active_count,
-            "ending_contracts": ending_count
+            "ending_contracts": ending_count,
+            "new_contracts": new_count
         })
     
     return forecast

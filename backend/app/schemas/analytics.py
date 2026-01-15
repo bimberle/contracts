@@ -46,6 +46,7 @@ class ForecastMonth(BaseModel):
     total_net_income: float
     active_contracts: int
     ending_contracts: int
+    new_contracts: int
     cumulative: float
     cumulative_net_income: float
 
