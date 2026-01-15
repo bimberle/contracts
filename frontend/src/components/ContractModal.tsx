@@ -113,6 +113,45 @@ const ContractModal: React.FC<ContractModalProps> = ({
     });
   };
 
+  // Hilfsfunktion: Finde Preiserhöhungen, deren Schonfrist noch nicht abgelaufen ist
+  const getPendingPriceIncreases = () => {
+    if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
+
+    const startDate = new Date(formData.startDate);
+    const today = new Date();
+
+    return priceIncreases.filter((increase: any) => {
+      try {
+        const validFromDate = new Date(increase.validFrom);
+        if (isNaN(validFromDate.getTime())) return false;
+
+        // Muss gültig sein (validFrom in der Vergangenheit)
+        if (validFromDate > today) return false;
+
+        // Bestandsschutz-Prüfung: Vertrag DARF NOCH NICHT die lockInMonths erreicht haben
+        const monthsRunning = Math.floor(
+          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        );
+        if (monthsRunning >= increase.lockInMonths) return false;
+
+        // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
+        if (!increase.amountIncreases) return false;
+        
+        // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        const hasApplicableIncrease = 
+          (formData.softwareRentalAmount > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (formData.softwareCareAmount > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (formData.appsAmount > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (formData.purchaseAmount > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+
+        return hasApplicableIncrease;
+      } catch (error) {
+        console.warn(`Error processing price increase:`, error);
+        return false;
+      }
+    });
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -465,7 +504,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     <td className="px-4 py-3 text-center">-</td>
                   </tr>
 
-                  {/* Price Increases Rows */}
+                  {/* Active Price Increases Rows */}
                   {getApplicablePriceIncreases().map((increase: any, index: number) => {
                     // Calculate the amounts with this specific increase applied
                     const increaseAmounts = {
@@ -555,6 +594,96 @@ const ContractModal: React.FC<ContractModalProps> = ({
                             />
                           </label>
                         </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Pending Price Increases (Still in grace period) */}
+                  {getPendingPriceIncreases().map((increase: any, index: number) => {
+                    // Calculate the amounts with this specific increase applied
+                    const increaseAmounts = {
+                      softwareRental: breakdown.baseAmounts.softwareRental * (increase.amountIncreases.softwareRental / 100),
+                      softwareCare: breakdown.baseAmounts.softwareCare * (increase.amountIncreases.softwareCare / 100),
+                      apps: breakdown.baseAmounts.apps * (increase.amountIncreases.apps / 100),
+                      purchase: breakdown.baseAmounts.purchase * (increase.amountIncreases.purchase / 100),
+                    };
+
+                    const monthsRunning = Math.floor(
+                      (new Date().getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30)
+                    );
+                    const monthsUntilActive = increase.lockInMonths - monthsRunning;
+
+                    return (
+                      <tr
+                        key={`pending-${increase.id}`}
+                        className="border-b border-gray-200 bg-gray-100 opacity-50 hover:opacity-60 transition"
+                      >
+                        <td className="px-4 py-3 text-gray-600">
+                          <div className="text-sm font-medium">
+                            {formatDate(increase.validFrom)}
+                            {increase.description && <span className="text-gray-500 ml-1">({increase.description})</span>}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            <span className="inline-block mr-3 italic">
+                              ⏳ Schonfrist: noch {monthsUntilActive} {monthsUntilActive === 1 ? 'Monat' : 'Monate'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {increase.amountIncreases.softwareRental > 0 && (
+                              <span className="inline-block mr-3">SM: +{increase.amountIncreases.softwareRental.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.softwareCare > 0 && (
+                              <span className="inline-block mr-3">SP: +{increase.amountIncreases.softwareCare.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.apps > 0 && (
+                              <span className="inline-block mr-3">Apps: +{increase.amountIncreases.apps.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.purchase > 0 && (
+                              <span className="inline-block">KB: +{increase.amountIncreases.purchase.toFixed(1)}%</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.softwareRental > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.softwareCare > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.apps > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.purchase > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-500">-</td>
                       </tr>
                     );
                   })}
