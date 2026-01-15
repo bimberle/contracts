@@ -255,6 +255,8 @@ export interface DashboardSummary {
   totalMonthlyRevenue: number;
   totalMonthlyCommission: number;
   totalMonthlyNetIncome: number;
+  totalExitPayout: number; // Gesamte Exit-Auszahlungen aller Kunden
+  totalExitPayoutNet: number; // Nach Steuern
   totalActiveContracts: number;
   averageCommissionPerCustomer: number;
   topCustomers: Array<{

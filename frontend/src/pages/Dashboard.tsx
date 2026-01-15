@@ -115,6 +115,12 @@ function Dashboard() {
             <div className="text-gray-500 text-sm font-medium">Aktive Verträge</div>
             <div className="text-3xl font-bold text-gray-900 mt-2">{summary.totalActiveContracts}</div>
           </div>
+        </div>
+      )}
+
+      {/* Revenue & Commission Cards in one row */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Mtl. Umsatz</div>
             <div className="text-3xl font-bold text-blue-600 mt-2">
@@ -127,10 +133,16 @@ function Dashboard() {
               {formatCurrency(summary.totalMonthlyCommission)}
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 md:col-span-2">
+          <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Mtl. Netto-Gehalt</div>
             <div className="text-3xl font-bold text-purple-600 mt-2">
               {formatCurrency(summary.totalMonthlyNetIncome)}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-gray-500 text-sm font-medium">Netto-Exit-Zahlung</div>
+            <div className="text-3xl font-bold text-orange-600 mt-2">
+              {formatCurrency(summary.totalExitPayoutNet)}
             </div>
           </div>
         </div>

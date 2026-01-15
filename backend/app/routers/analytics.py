@@ -28,6 +28,7 @@ def get_dashboard(db: Session = Depends(get_db)):
     
     total_monthly_revenue = 0.0
     total_monthly_commission = 0.0
+    total_exit_payout = 0.0
     total_customers = len(customers)
     total_active_contracts = 0
     top_customers_data = []
@@ -45,6 +46,7 @@ def get_dashboard(db: Session = Depends(get_db)):
         
         total_monthly_revenue += metrics["total_monthly_revenue"]
         total_monthly_commission += metrics["total_monthly_commission"]
+        total_exit_payout += metrics.get("total_exit_payout", 0.0)
         total_active_contracts += metrics["active_contracts"]
         
         if metrics["total_monthly_commission"] > 0:
@@ -62,12 +64,16 @@ def get_dashboard(db: Session = Depends(get_db)):
     )[:3]
     
     average_commission = total_monthly_commission / len(customers) if customers else 0.0
+    total_monthly_net_income = total_monthly_commission * (1 - settings.personal_tax_rate / 100)
+    total_exit_payout_net = total_exit_payout * (1 - settings.personal_tax_rate / 100)
     
     dashboard = DashboardSummary(
         total_customers=total_customers,
         total_monthly_revenue=round(total_monthly_revenue, 2),
         total_monthly_commission=round(total_monthly_commission, 2),
-        total_monthly_net_income=round(total_monthly_commission * (1 - settings.personal_tax_rate / 100), 2),
+        total_monthly_net_income=round(total_monthly_net_income, 2),
+        total_exit_payout=round(total_exit_payout, 2),
+        total_exit_payout_net=round(total_exit_payout_net, 2),
         total_active_contracts=total_active_contracts,
         average_commission_per_customer=round(average_commission, 2),
         top_customers=top_customers

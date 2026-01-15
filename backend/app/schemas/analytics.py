@@ -25,6 +25,8 @@ class DashboardSummary(BaseModel):
     total_monthly_revenue: float
     total_monthly_commission: float
     total_monthly_net_income: float
+    total_exit_payout: float
+    total_exit_payout_net: float
     total_active_contracts: int
     average_commission_per_customer: float
     top_customers: List[TopCustomer]
