@@ -128,19 +128,19 @@ function ContractStatistics() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Neue Verträge (12M)</div>
-          <div className="text-3xl font-bold text-gray-900 mt-2">{stats.totalNewContracts}</div>
+          <div className="text-3xl font-bold text-purple-600 mt-2">{stats.totalNewContracts}</div>
           <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Ø Aktive Verträge</div>
-          <div className="text-3xl font-bold text-gray-900 mt-2">{Math.round(stats.avgActiveContracts)}</div>
+          <div className="text-3xl font-bold text-purple-600 mt-2">{Math.round(stats.avgActiveContracts)}</div>
           <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Gesamtumsatz (12M)</div>
-          <div className="text-3xl font-bold text-blue-600 mt-2">{formatCurrency(stats.totalRevenue)}</div>
+          <div className="text-3xl font-bold text-green-600 mt-2">{formatCurrency(stats.totalRevenue)}</div>
           <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
 

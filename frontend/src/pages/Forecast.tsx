@@ -224,7 +224,7 @@ function Forecast() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Ø Umsatz/Monat</div>
-          <div className="text-3xl font-bold text-blue-600 mt-2">
+          <div className="text-3xl font-bold text-purple-600 mt-2">
             {formatCurrency(averageMonthlyRevenue)}
           </div>
           <div className="text-xs text-gray-500 mt-2">brutto</div>
@@ -237,22 +237,22 @@ function Forecast() {
           <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Ø Netto-Gehalt/Monat</div>
-          <div className="text-3xl font-bold text-purple-600 mt-2">
+          <div className="text-gray-500 text-sm font-medium">Ø Gehalt/Monat</div>
+          <div className="text-3xl font-bold text-green-600 mt-2">
             {formatCurrency(averageMonthlyNetIncome)}
           </div>
           <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Jahresbrutto {currentYear}</div>
-          <div className="text-3xl font-bold text-green-600 mt-2">
+          <div className="text-gray-500 text-sm font-medium">Jahre {currentYear}</div>
+          <div className="text-3xl font-bold text-purple-600 mt-2">
             {formatCurrency(yearlyCommission)}
           </div>
           <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-gray-500 text-sm font-medium">Jahresnetto {currentYear}</div>
-          <div className="text-3xl font-bold text-purple-600 mt-2">
+          <div className="text-gray-500 text-sm font-medium">Jahr {currentYear}</div>
+          <div className="text-3xl font-bold text-green-600 mt-2">
             {formatCurrency(yearlyNetIncome)}
           </div>
           <div className="text-xs text-gray-500 mt-2">netto</div>
@@ -261,7 +261,7 @@ function Forecast() {
 
       {/* Chart */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Netto-Gehalt - 12-Monats-Prognose</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">12-Monats-Prognose</h2>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
