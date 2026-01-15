@@ -180,7 +180,7 @@ function Dashboard() {
                   Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Ort
+                  PLZ / Ort
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Monatliche Provision
@@ -215,7 +215,7 @@ function Dashboard() {
                         {customer.name} {customer.name2}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {customer.ort}, {customer.plz}
+                        {customer.plz} {customer.ort}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {metrics ? formatCurrency(metrics.totalMonthlyCommission) : '—'}

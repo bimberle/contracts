@@ -257,7 +257,7 @@ function CustomerDetail() {
               </div>
               <p className="text-gray-600 mt-2">Kundennummer: {customer.kundennummer}</p>
               <p className="text-gray-600">
-                {customer.ort}, {customer.plz}, {customer.land}
+                {customer.plz} {customer.ort}, {customer.land}
               </p>
             </div>
             <div className="space-y-3">
