@@ -14,6 +14,7 @@ def get_commission_rates_for_date(
     Findet die geltenden Provisionsätze für ein bestimmtes Datum
     Returns the most recent commission rate that is valid on or before the given date
     Uses snake_case keys for all rate dictionaries
+    All rates are stored as percentages (e.g., 20 for 20%)
     """
     # Keine Commission Rates verfügbar - Fallback zu Default
     if not commission_rates_list:
@@ -21,7 +22,7 @@ def get_commission_rates_for_date(
             "software_rental": 20.0,
             "software_care": 20.0,
             "apps": 20.0,
-            "purchase": 0.083333
+            "purchase": 10.0
         }
     
     # Finde die neueste Commission Rate die auf oder vor dem Datum gültig ist
@@ -177,12 +178,8 @@ def get_current_monthly_commission(
                 # Vertragsende + post-contract periode vorbei
                 continue
         
-        # Purchase rates are stored as direct factors (e.g., 0.083333 for 1/12), not percentages
-        # Other rates (rental, care, apps) are percentages
-        if amount_type == 'purchase':
-            total_commission += amount * commission_rate
-        else:
-            total_commission += amount * (commission_rate / 100)
+        # All rates (including purchase) are now stored as percentages
+        total_commission += amount * (commission_rate / 100)
     
     return total_commission
 

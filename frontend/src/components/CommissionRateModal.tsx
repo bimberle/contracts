@@ -19,7 +19,7 @@ export default function CommissionRateModal({
       softwareRental: 20,
       softwareCare: 20,
       apps: 20,
-      purchase: 0.083333,
+      purchase: 10,
     },
     description: '',
   });
@@ -41,7 +41,7 @@ export default function CommissionRateModal({
             softwareRental: 20,
             softwareCare: 20,
             apps: 20,
-            purchase: 0.083333,
+            purchase: 10,
           },
           description: '',
         });
@@ -53,11 +53,13 @@ export default function CommissionRateModal({
   const handleChange = (field: string, value: string | number) => {
     if (field.startsWith('rates.')) {
       const rateField = field.split('.')[1];
+      // Konvertiere Komma zu Punkt für Dezimalzahlen
+      const stringValue = String(value).replace(',', '.');
       setFormData({
         ...formData,
         rates: {
           ...formData.rates,
-          [rateField]: parseFloat(String(value)) || 0,
+          [rateField]: parseFloat(stringValue) || 0,
         },
       });
     } else {
@@ -148,53 +150,51 @@ export default function CommissionRateModal({
             <div className="space-y-3">
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
-                  Software Miete
+                  Software Miete (%)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
                   value={formData.rates.softwareRental}
                   onChange={(e) => handleChange('rates.softwareRental', e.target.value)}
+                  placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
-                  Software Pflege
+                  Software Pflege (%)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
                   value={formData.rates.softwareCare}
                   onChange={(e) => handleChange('rates.softwareCare', e.target.value)}
+                  placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
-                  Apps
+                  Apps (%)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
                   value={formData.rates.apps}
                   onChange={(e) => handleChange('rates.apps', e.target.value)}
+                  placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-1">
-                  Kauf Bestandsvertrag
+                  Kauf Bestandsvertrag (%)
                 </label>
                 <input
-                  type="number"
-                  step="0.000001"
+                  type="text"
+                  step="0.01"
                   min="0"
                   value={formData.rates.purchase}
                   onChange={(e) => handleChange('rates.purchase', e.target.value)}
+                  placeholder="z.B. 10 oder 10,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
