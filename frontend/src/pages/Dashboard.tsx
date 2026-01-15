@@ -57,8 +57,13 @@ function Dashboard() {
         try {
           const customerMetrics = await api.getCustomerMetrics(customer.id);
           metrics[customer.id] = customerMetrics;
-        } catch (err) {
-          console.error(`Fehler beim Laden der Metriken für Kunde ${customer.id}:`, err);
+        } catch (err: any) {
+          // Nur 404-Fehler silenzieren (Kunde wurde gelöscht), andere Fehler loggen
+          if (err.response?.status === 404) {
+            console.debug(`Kunde ${customer.id} nicht mehr vorhanden (wurde gelöscht)`);
+          } else {
+            console.error(`Fehler beim Laden der Metriken für Kunde ${customer.id}:`, err);
+          }
         }
       }
       setCustomerMetrics(metrics);

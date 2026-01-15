@@ -65,8 +65,13 @@ export default function AllContracts() {
           .then(m => {
             metricsMap[contract.id] = m;
           })
-          .catch(err => {
-            console.warn(`Fehler beim Laden der Metriken für Vertrag ${contract.id}:`, err);
+          .catch((err: any) => {
+            // Nur 404-Fehler silenzieren (Vertrag wurde gelöscht), andere Fehler loggen
+            if (err.response?.status === 404) {
+              console.debug(`Vertrag ${contract.id} nicht mehr vorhanden (wurde gelöscht)`);
+            } else {
+              console.warn(`Fehler beim Laden der Metriken für Vertrag ${contract.id}:`, err);
+            }
           })
       );
       await Promise.all(metricsPromises);
