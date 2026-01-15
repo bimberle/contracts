@@ -46,7 +46,7 @@ def get_dashboard(db: Session = Depends(get_db)):
         
         total_monthly_revenue += metrics["total_monthly_revenue"]
         total_monthly_commission += metrics["total_monthly_commission"]
-        total_exit_payout += metrics.get("total_exit_payout", 0.0)
+        total_exit_payout += metrics.get("exit_payout_if_today_in_months", 0.0)
         total_active_contracts += metrics["active_contracts"]
         
         if metrics["total_monthly_commission"] > 0:
