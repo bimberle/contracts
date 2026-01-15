@@ -151,9 +151,9 @@ function ContractStatistics() {
         </div>
       </div>
 
-      {/* Chart 1: Active Contracts Trend */}
+      {/* Chart 1: New Contracts Trend */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Verträge - Trend der letzten 12 Monate</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Neue Verträge der letzten 12 Monate</h2>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={contractTrendData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -162,7 +162,6 @@ function ContractStatistics() {
             <Tooltip />
             <Legend />
             <Bar dataKey="newContracts" fill="#10b981" name="Neue Verträge" />
-            <Bar dataKey="activeContracts" fill="#3b82f6" name="Aktive Verträge" />
             <Bar dataKey="endingContracts" fill="#ef4444" name="Endende Verträge" />
           </BarChart>
         </ResponsiveContainer>
