@@ -248,6 +248,14 @@ function CustomerDetail() {
               {metrics && (
                 <>
                   <div className="flex justify-between">
+                    <span className="text-gray-600">Monatliche Basisbeträge:</span>
+                    <span className="font-bold">{formatCurrency(metrics.totalMonthlyRental)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mit Preiserhöhungen:</span>
+                    <span className="font-bold text-blue-600">{formatCurrency(metrics.totalMonthlyRevenue)}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-600">Monatliche Provision:</span>
                     <span className="font-bold text-green-600">
                       {formatCurrency(metrics.totalMonthlyCommission)}
