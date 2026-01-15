@@ -459,101 +459,149 @@ const ContractModal: React.FC<ContractModalProps> = ({
         ) : (
           /* Breakdown Tab */
           <div className="p-6 space-y-6">
-            {/* Base Amounts */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900 mb-2">Basis-Beträge:</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
-                  <span className="text-gray-700">Software Miete:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.softwareRental)}</span>
-                </div>
-                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
-                  <span className="text-gray-700">Software Pflege:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.softwareCare)}</span>
-                </div>
-                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
-                  <span className="text-gray-700">Apps:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.apps)}</span>
-                </div>
-                <div className="flex justify-between py-2 px-3 bg-gray-50 rounded">
-                  <span className="text-gray-700">Kauf Bestandsvertrag:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.baseAmounts.purchase)}</span>
-                </div>
-              </div>
+            {/* Breakdown Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-gray-300">
+                    <th className="px-4 py-2 text-left font-semibold text-gray-900">Beschreibung</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-900">Software Miete</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-900">Software Pflege</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-900">Apps</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-900">Kauf Bestandsvertrag</th>
+                    <th className="px-4 py-2 text-center font-semibold text-gray-900">Aktion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Base Amounts Row */}
+                  <tr className="border-b border-gray-200 bg-blue-50 hover:bg-blue-100 transition">
+                    <td className="px-4 py-3 font-medium text-gray-900">Basispreise</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(breakdown.baseAmounts.softwareRental)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(breakdown.baseAmounts.softwareCare)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(breakdown.baseAmounts.apps)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCurrency(breakdown.baseAmounts.purchase)}</td>
+                    <td className="px-4 py-3 text-center">-</td>
+                  </tr>
+
+                  {/* Price Increases Rows */}
+                  {getApplicablePriceIncreases().map((increase: any, index: number) => {
+                    // Calculate the amounts with this specific increase applied
+                    const increaseAmounts = {
+                      softwareRental: breakdown.baseAmounts.softwareRental * (increase.amountIncreases.softwareRental / 100),
+                      softwareCare: breakdown.baseAmounts.softwareCare * (increase.amountIncreases.softwareCare / 100),
+                      apps: breakdown.baseAmounts.apps * (increase.amountIncreases.apps / 100),
+                      purchase: breakdown.baseAmounts.purchase * (increase.amountIncreases.purchase / 100),
+                    };
+
+                    const isExcluded = (formData.excludedPriceIncreaseIds || []).includes(increase.id);
+
+                    return (
+                      <tr
+                        key={increase.id || index}
+                        className={`border-b border-gray-200 transition ${
+                          isExcluded ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-gray-900">
+                          <div className="text-sm font-medium">
+                            {formatDate(increase.validFrom)}
+                            {increase.description && <span className="text-gray-600 ml-1">({increase.description})</span>}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {increase.amountIncreases.softwareRental > 0 && (
+                              <span className="inline-block mr-3">SM: +{increase.amountIncreases.softwareRental.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.softwareCare > 0 && (
+                              <span className="inline-block mr-3">SP: +{increase.amountIncreases.softwareCare.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.apps > 0 && (
+                              <span className="inline-block mr-3">Apps: +{increase.amountIncreases.apps.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.purchase > 0 && (
+                              <span className="inline-block">KB: +{increase.amountIncreases.purchase.toFixed(1)}%</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-900">
+                          {increaseAmounts.softwareRental > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-900">
+                          {increaseAmounts.softwareCare > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-900">
+                          {increaseAmounts.apps > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-900">
+                          {increaseAmounts.purchase > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <label className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={!isExcluded}
+                              onChange={() => handlePriceIncreaseToggle(increase.id)}
+                              className="rounded border-gray-300 cursor-pointer w-4 h-4"
+                              title={isExcluded ? 'Preiserhöhung ist deaktiviert' : 'Preiserhöhung ist aktiv'}
+                            />
+                          </label>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Total Row */}
+                  <tr className="bg-green-100 border-t-2 border-gray-400">
+                    <td className="px-4 py-3 font-bold text-gray-900">Summe (mit Erhöhungen)</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(breakdown.adjustedAmounts.softwareRental)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(breakdown.adjustedAmounts.softwareCare)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(breakdown.adjustedAmounts.apps)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(breakdown.adjustedAmounts.purchase)}</td>
+                    <td className="px-4 py-3 text-center">-</td>
+                  </tr>
+
+                  {/* Grand Total Row */}
+                  <tr className="bg-green-600 text-white">
+                    <td className="px-4 py-3 font-bold">Gesamtbetrag</td>
+                    <td colSpan={4} className="px-4 py-3 text-right font-bold text-lg">
+                      {formatCurrency(breakdown.totalAmount)}
+                    </td>
+                    <td className="px-4 py-3 text-center">-</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            {/* Price Increases */}
-            {getApplicablePriceIncreases().length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-gray-900">Geltende Preiserhöhungen:</h3>
-                {getApplicablePriceIncreases().map((increase: any, index: number) => (
-                  <div key={increase.id || index} className="border-l-4 border-blue-300 pl-4 py-2 bg-blue-50 p-3 rounded">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {formatDate(increase.validFrom)}
-                          {increase.description && <span className="text-gray-600 ml-2">- {increase.description}</span>}
-                        </div>
-                        <div className="text-xs text-gray-600 space-y-1 mt-1">
-                          {increase.amountIncreases.softwareRental > 0 && (
-                            <div>Software Miete: +{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
-                          )}
-                          {increase.amountIncreases.softwareCare > 0 && (
-                            <div>Software Pflege: +{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
-                          )}
-                          {increase.amountIncreases.apps > 0 && (
-                            <div>Apps: +{increase.amountIncreases.apps.toFixed(1)}%</div>
-                          )}
-                          {increase.amountIncreases.purchase > 0 && (
-                            <div>Kauf Bestandsvertrag: +{increase.amountIncreases.purchase.toFixed(1)}%</div>
-                          )}
-                        </div>
-                      </div>
-                      <label className="flex items-center space-x-2 ml-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={!(formData.excludedPriceIncreaseIds || []).includes(increase.id)}
-                          onChange={() => handlePriceIncreaseToggle(increase.id)}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-xs font-medium text-gray-700">Aktivieren</span>
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Adjusted Amounts */}
-            <div className="space-y-3 bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900 mb-2">Beträge nach Erhöhungen:</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-700">Software Miete:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.softwareRental)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700">Software Pflege:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.softwareCare)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700">Apps:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.apps)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-700">Kauf Bestandsvertrag:</span>
-                  <span className="font-medium">{formatCurrency(breakdown.adjustedAmounts.purchase)}</span>
-                </div>
-              </div>
-              <div className="border-t border-green-200 pt-3 mt-3 flex justify-between font-bold text-lg">
-                <span>Gesamtbetrag:</span>
-                <span>{formatCurrency(breakdown.totalAmount)}</span>
-              </div>
-            </div>
-
-            {/* Commissions */}
+            {/* Commission Summary */}
             <div className="space-y-3 bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-purple-900 mb-2">Provisionen:</h3>
+              <h3 className="font-semibold text-purple-900 mb-2">Provisionen (basierend auf Summe):</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Software Miete (20%):</span>
