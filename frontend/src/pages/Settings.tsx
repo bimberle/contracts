@@ -50,7 +50,7 @@ function Settings() {
   const handleSettingsChange = (field: string, value: any) => {
     if (!formData) return;
 
-    if (field.includes('post_contract_months.')) {
+    if (field.includes('postContractMonths.')) {
       const [section, key] = field.split('.');
       const sectionData = formData[section as keyof typeof formData];
       if (typeof sectionData === 'object' && sectionData !== null) {
