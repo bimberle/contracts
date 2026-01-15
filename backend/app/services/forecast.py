@@ -37,8 +37,9 @@ def generate_forecast(
         for contract in contracts:
             # Prüfe ob Vertrag in diesem Monat BEGINNT (Mietbeginn = startDate)
             if contract.start_date:
-                start_month_start = add_months(contract.start_date.replace(day=1), 0)
-                if start_month_start == month_date.replace(day=1):
+                start_month_start = contract.start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                current_month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                if start_month_start == current_month_start:
                     new_count += 1
             
             # Berechne Umsatz mit Preiserhöhungen
@@ -59,8 +60,9 @@ def generate_forecast(
             
             # Prüfe ob Vertrag in diesem Monat endet
             if contract.end_date:
-                end_month_start = add_months(contract.end_date.replace(day=1), 0)
-                if end_month_start == month_date.replace(day=1):
+                end_month_start = contract.end_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                current_month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                if end_month_start == current_month_start:
                     ending_count += 1
         
         # Berechne Netto-Einkommen basierend auf persönlichem Steuersatz
