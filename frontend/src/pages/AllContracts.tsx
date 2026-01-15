@@ -22,6 +22,12 @@ export default function AllContracts() {
   const [sortBy, setSortBy] = useState<'customer' | 'cost' | 'commission'>('customer');
   const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [amountTypeFilters, setAmountTypeFilters] = useState({
+    softwareRental: true,
+    softwareCare: true,
+    apps: true,
+    purchase: true,
+  });
 
   useEffect(() => {
     loadAllContracts();
@@ -65,6 +71,15 @@ export default function AllContracts() {
       filtered = filtered.filter((c) => c.status === statusFilter);
     }
 
+    // Filter by amount types - only include contracts that have at least one selected amount type
+    filtered = filtered.filter((c) => {
+      if (amountTypeFilters.softwareRental && c.softwareRentalAmount > 0) return true;
+      if (amountTypeFilters.softwareCare && c.softwareCareAmount > 0) return true;
+      if (amountTypeFilters.apps && c.appsAmount > 0) return true;
+      if (amountTypeFilters.purchase && c.purchaseAmount > 0) return true;
+      return false;
+    });
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter((c) =>
@@ -89,7 +104,7 @@ export default function AllContracts() {
     });
 
     setFilteredContracts(filtered);
-  }, [contracts, searchTerm, statusFilter, sortBy]);
+  }, [contracts, searchTerm, statusFilter, sortBy, amountTypeFilters]);
 
   const getTotalAmount = (contract: Contract): number => {
     return (contract.softwareRentalAmount || 0) +
@@ -275,6 +290,49 @@ export default function AllContracts() {
               <option value="cost">Kosten (absteigend)</option>
               <option value="commission">Provision (absteigend)</option>
             </select>
+          </div>
+        </div>
+
+        {/* Amount Type Filters */}
+        <div className="border-t border-gray-200 pt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-3">Nach Betragstypen filtern</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={amountTypeFilters.softwareRental}
+                onChange={(e) => setAmountTypeFilters({...amountTypeFilters, softwareRental: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Software Miete</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={amountTypeFilters.softwareCare}
+                onChange={(e) => setAmountTypeFilters({...amountTypeFilters, softwareCare: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Software Pflege</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={amountTypeFilters.apps}
+                onChange={(e) => setAmountTypeFilters({...amountTypeFilters, apps: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Apps</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={amountTypeFilters.purchase}
+                onChange={(e) => setAmountTypeFilters({...amountTypeFilters, purchase: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Softwarepflege Kauf</span>
+            </label>
           </div>
         </div>
       </div>
