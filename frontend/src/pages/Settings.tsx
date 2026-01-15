@@ -3,6 +3,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { Settings as SettingsType, SettingsUpdateRequest, PriceIncrease, CommissionRate } from '../types';
 import { formatDate } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
+import CommissionRateModal from '../components/CommissionRateModal';
 
 function Settings() {
   const { settings, loading, error, fetchSettings, updateSettings, fetchPriceIncreases, priceIncreases, deletePriceIncrease } = useSettingsStore();
@@ -13,6 +14,8 @@ function Settings() {
   const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
+  const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
+  const [selectedCommissionRateForEdit, setSelectedCommissionRateForEdit] = useState<CommissionRate | null>(null);
 
   useEffect(() => {
     fetchSettings();
@@ -402,7 +405,18 @@ function Settings() {
         {/* Tab 3: Commission Rates */}
         {activeTab === 'commission-rates' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-900">Provisionsätze</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Provisionsätze</h2>
+              <button
+                onClick={() => {
+                  setSelectedCommissionRateForEdit(null);
+                  setIsCommissionRateModalOpen(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
+              >
+                + Neuer Provisionsatz
+              </button>
+            </div>
 
             {commissionLoading ? (
               <div className="text-center py-8">
@@ -436,6 +450,16 @@ function Settings() {
                         <td className="px-6 py-4 text-sm text-gray-600">{rate.description || '—'}</td>
                         <td className="px-6 py-4 text-center text-sm space-x-2">
                           <button
+                            onClick={() => {
+                              setSelectedCommissionRateForEdit(rate);
+                              setIsCommissionRateModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-blue-100 text-blue-600 hover:text-blue-800 transition"
+                            title="Bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
                             onClick={() => handleDeleteCommissionRate(rate.id)}
                             className="inline-flex items-center justify-center w-8 h-8 rounded hover:bg-red-100 text-red-600 hover:text-red-800 transition"
                             title="Löschen"
@@ -464,6 +488,20 @@ function Settings() {
           fetchPriceIncreases();
           setIsPriceIncreaseModalOpen(false);
           setSelectedPriceIncreaseForEdit(null);
+        }}
+      />
+
+      <CommissionRateModal
+        isOpen={isCommissionRateModalOpen}
+        onClose={() => {
+          setIsCommissionRateModalOpen(false);
+          setSelectedCommissionRateForEdit(null);
+        }}
+        commissionRate={selectedCommissionRateForEdit}
+        onSuccess={() => {
+          loadCommissionRates();
+          setIsCommissionRateModalOpen(false);
+          setSelectedCommissionRateForEdit(null);
         }}
       />
     </div>

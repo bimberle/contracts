@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { IconSettings } from '@tabler/icons-react';
 import { useCustomerStore } from './stores/customerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import api from './services/api';
@@ -154,10 +155,10 @@ function App() {
               <div className="flex items-center space-x-4">
                 <Link
                   to="/settings"
-                  className="text-gray-700 hover:text-blue-600 transition text-xl"
+                  className="text-gray-700 hover:text-blue-600 transition"
                   title="Einstellungen"
                 >
-                  {String.fromCharCode(0xeb20)}
+                  <IconSettings size={24} stroke={2} />
                 </Link>
                 <button
                   onClick={handleLogout}
