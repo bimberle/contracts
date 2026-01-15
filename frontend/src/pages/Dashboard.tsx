@@ -238,13 +238,13 @@ function Dashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {customer.plz} {customer.ort}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
                         {metrics ? formatCurrency(metrics.totalMonthlyCommission) : '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {metrics ? formatCurrency(metrics.totalMonthlyNetIncome) : '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-semibold">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {metrics ? formatCurrency(metrics.exitPayoutIfTodayInMonths) : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
