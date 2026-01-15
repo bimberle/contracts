@@ -126,24 +126,28 @@ function Dashboard() {
             <div className="text-3xl font-bold text-blue-600 mt-2">
               {formatCurrency(summary.totalMonthlyRevenue)}
             </div>
+            <div className="text-xs text-gray-500 mt-2">brutto</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Mtl. Provision</div>
             <div className="text-3xl font-bold text-green-600 mt-2">
               {formatCurrency(summary.totalMonthlyCommission)}
             </div>
+            <div className="text-xs text-gray-500 mt-2">netto</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Mtl. Netto-Gehalt</div>
             <div className="text-3xl font-bold text-purple-600 mt-2">
               {formatCurrency(summary.totalMonthlyNetIncome)}
             </div>
+            <div className="text-xs text-gray-500 mt-2">netto</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <div className="text-gray-500 text-sm font-medium">Netto-Exit-Zahlung</div>
             <div className="text-3xl font-bold text-orange-600 mt-2">
               {formatCurrency(summary.totalExitPayoutNet)}
             </div>
+            <div className="text-xs text-gray-500 mt-2">netto</div>
           </div>
         </div>
       )}

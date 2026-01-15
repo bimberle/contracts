@@ -227,30 +227,35 @@ function Forecast() {
           <div className="text-3xl font-bold text-blue-600 mt-2">
             {formatCurrency(averageMonthlyRevenue)}
           </div>
+          <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Ø Provision/Monat</div>
           <div className="text-3xl font-bold text-green-600 mt-2">
             {formatCurrency(averageMonthlyCommission)}
           </div>
+          <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Ø Netto-Gehalt/Monat</div>
           <div className="text-3xl font-bold text-purple-600 mt-2">
             {formatCurrency(averageMonthlyNetIncome)}
           </div>
+          <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Jahresbrutto {currentYear}</div>
           <div className="text-3xl font-bold text-green-600 mt-2">
             {formatCurrency(yearlyCommission)}
           </div>
+          <div className="text-xs text-gray-500 mt-2">brutto</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-gray-500 text-sm font-medium">Jahresnetto {currentYear}</div>
           <div className="text-3xl font-bold text-purple-600 mt-2">
             {formatCurrency(yearlyNetIncome)}
           </div>
+          <div className="text-xs text-gray-500 mt-2">netto</div>
         </div>
       </div>
 
