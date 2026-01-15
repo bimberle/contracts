@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.6"
+BACKEND_VERSION = "1.0.7"
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 
 # Create database tables on startup
