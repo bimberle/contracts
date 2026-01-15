@@ -74,7 +74,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     fetchPriceIncreases();
   }, [contract, isOpen, fetchPriceIncreases]);
 
-  // Hilfsfunktion: Finde geltende Preiserhöhungen
+  // Hilfsfunktion: Finde geltende Preiserhöhungen (Schonfrist vorbei)
   const getApplicablePriceIncreases = () => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
@@ -86,13 +86,14 @@ const ContractModal: React.FC<ContractModalProps> = ({
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Preiserhöhung darf nicht VOR dem Vertragsbeginn liegen
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
         if (validFromDate < startDate) return false;
 
-        // Muss gültig sein (validFrom in der Vergangenheit)
+        // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
         // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
+        // (Schonfrist muss vorbei sein)
         const monthsRunning = Math.floor(
           (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
@@ -128,13 +129,14 @@ const ContractModal: React.FC<ContractModalProps> = ({
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Preiserhöhung darf nicht VOR dem Vertragsbeginn liegen
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
         if (validFromDate < startDate) return false;
 
-        // Muss gültig sein (validFrom in der Vergangenheit)
+        // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
         // Bestandsschutz-Prüfung: Vertrag DARF NOCH NICHT die lockInMonths erreicht haben
+        // (Schonfrist ist noch aktiv)
         const monthsRunning = Math.floor(
           (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
@@ -257,6 +259,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
       }
 
       const validFromDate = new Date(increase.validFrom);
+      
+      // Preiserhöhung muss NACH oder AM Vertragsbeginn gültig werden
+      if (validFromDate < startDate) {
+        continue;
+      }
+
       if (validFromDate <= today) {
         const monthsRunning = Math.floor(
           (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
