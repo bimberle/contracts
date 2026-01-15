@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { PriceIncreaseCreateRequest } from '../types';
+import { PriceIncreaseCreateRequest, PriceIncrease } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
 
 interface PriceIncreaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  priceIncrease?: PriceIncrease | null;
   onSuccess?: () => void;
 }
 
-const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose, priceIncrease, onSuccess }) => {
   const [formData, setFormData] = useState<PriceIncreaseCreateRequest>({
     validFrom: new Date().toISOString().split('T')[0],
     amountIncreases: {
@@ -24,24 +25,35 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
   const [isLoading, setIsLoading] = useState(false);
 
   const createPriceIncrease = useSettingsStore((state) => state.createPriceIncrease);
+  const updatePriceIncrease = useSettingsStore((state) => state.updatePriceIncrease);
 
   useEffect(() => {
     if (isOpen) {
-      // Reset form when modal opens
-      setFormData({
-        validFrom: new Date().toISOString().split('T')[0],
-        amountIncreases: {
-          softwareRental: 0,
-          softwareCare: 0,
-          apps: 0,
-          purchase: 0,
-        },
-        lockInMonths: 24,
-        description: '',
-      });
+      if (priceIncrease) {
+        // Edit mode: pre-fill with existing data
+        setFormData({
+          validFrom: priceIncrease.validFrom.split('T')[0],
+          amountIncreases: priceIncrease.amountIncreases,
+          lockInMonths: priceIncrease.lockInMonths,
+          description: priceIncrease.description || '',
+        });
+      } else {
+        // Create mode: reset form
+        setFormData({
+          validFrom: new Date().toISOString().split('T')[0],
+          amountIncreases: {
+            softwareRental: 0,
+            softwareCare: 0,
+            apps: 0,
+            purchase: 0,
+          },
+          lockInMonths: 24,
+          description: '',
+        });
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, priceIncrease]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,12 +76,23 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
       const dateStr = formData.validFrom;
       const dateObj = new Date(dateStr + 'T00:00:00Z');
 
-      await createPriceIncrease({
-        validFrom: dateObj.toISOString(),
-        amountIncreases: formData.amountIncreases,
-        lockInMonths: formData.lockInMonths || 24,
-        description: formData.description,
-      });
+      if (priceIncrease) {
+        // Update mode
+        await updatePriceIncrease(priceIncrease.id, {
+          validFrom: dateObj.toISOString(),
+          amountIncreases: formData.amountIncreases,
+          lockInMonths: formData.lockInMonths || 24,
+          description: formData.description,
+        });
+      } else {
+        // Create mode
+        await createPriceIncrease({
+          validFrom: dateObj.toISOString(),
+          amountIncreases: formData.amountIncreases,
+          lockInMonths: formData.lockInMonths || 24,
+          description: formData.description,
+        });
+      }
 
       onSuccess?.();
       onClose();
@@ -86,8 +109,16 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 my-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Neue Preiserhöhung</h2>
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">
+            {priceIncrease ? 'Preiserhöhung bearbeiten' : 'Neue Preiserhöhung'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -265,7 +296,13 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
               disabled={isLoading}
             >
-              {isLoading ? 'Wird hinzugefügt...' : 'Hinzufügen'}
+              {isLoading
+                ? priceIncrease
+                  ? 'Wird aktualisiert...'
+                  : 'Wird hinzugefügt...'
+                : priceIncrease
+                ? 'Aktualisieren'
+                : 'Hinzufügen'}
             </button>
           </div>
         </form>
