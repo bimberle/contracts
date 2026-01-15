@@ -86,6 +86,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
+        // Preiserhöhung darf nicht VOR dem Vertragsbeginn liegen
+        if (validFromDate < startDate) return false;
+
         // Muss gültig sein (validFrom in der Vergangenheit)
         if (validFromDate > today) return false;
 
@@ -124,6 +127,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
       try {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
+
+        // Preiserhöhung darf nicht VOR dem Vertragsbeginn liegen
+        if (validFromDate < startDate) return false;
 
         // Muss gültig sein (validFrom in der Vergangenheit)
         if (validFromDate > today) return false;
