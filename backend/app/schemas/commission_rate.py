@@ -20,7 +20,7 @@ class CommissionRateBase(BaseModel):
             "software_rental": 20.0,
             "software_care": 20.0,
             "apps": 20.0,
-            "purchase": 0.083333
+            "purchase": 10.0
         }
     )
     description: Optional[str] = None

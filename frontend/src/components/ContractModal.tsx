@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Contract } from '../types';
+import { Contract, CommissionRate } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useCommissionRateStore } from '../stores/commissionRateStore';
 import { formatCurrency, formatDate } from '../utils/formatting';
 
 interface ContractModalProps {
@@ -40,6 +41,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
   const fetchPriceIncreases = useSettingsStore((state: any) => state.fetchPriceIncreases);
   const priceIncreases = useSettingsStore((state: any) => state.priceIncreases);
   const settings = useSettingsStore((state: any) => state.settings);
+  
+  // Commission Rates aus separatem Store laden
+  const commissionRatesFromStore = useCommissionRateStore((state) => state.commissionRates);
+  const fetchCommissionRates = useCommissionRateStore((state) => state.fetchCommissionRates);
 
   useEffect(() => {
     if (contract) {
@@ -72,7 +77,8 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setError(null);
     setActiveTab('form');
     fetchPriceIncreases();
-  }, [contract, isOpen, fetchPriceIncreases]);
+    fetchCommissionRates();
+  }, [contract, isOpen, fetchPriceIncreases, fetchCommissionRates]);
 
   // Hilfsfunktion: Finde geltende Preiserhöhungen (Schonfrist vorbei)
   const getApplicablePriceIncreases = () => {
@@ -296,19 +302,27 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
     const totalAmount = Object.values(adjustedAmounts).reduce((a, b) => a + b, 0);
 
-    // Calculate commissions
-    const commissionRates = settings?.commissionRates || {
-      software_rental: 20,
-      software_care: 20,
+    // Finde den aktuell gültigen CommissionRate-Satz basierend auf validFrom
+    // today ist bereits oben definiert
+    const validRates = commissionRatesFromStore
+      .filter((rate: CommissionRate) => new Date(rate.validFrom) <= today)
+      .sort((a: CommissionRate, b: CommissionRate) => 
+        new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime()
+      );
+    
+    // Nimm den neuesten gültigen Satz oder Fallback
+    const currentRates = validRates.length > 0 ? validRates[0].rates : {
+      softwareRental: 20,
+      softwareCare: 20,
       apps: 20,
-      purchase: 0.083333,
+      purchase: 10,
     };
 
     const commissions = {
-      softwareRental: adjustedAmounts.softwareRental * (commissionRates.software_rental / 100),
-      softwareCare: adjustedAmounts.softwareCare * (commissionRates.software_care / 100),
-      apps: adjustedAmounts.apps * (commissionRates.apps / 100),
-      purchase: adjustedAmounts.purchase * (commissionRates.purchase / 100),
+      softwareRental: adjustedAmounts.softwareRental * (currentRates.softwareRental / 100),
+      softwareCare: adjustedAmounts.softwareCare * (currentRates.softwareCare / 100),
+      apps: adjustedAmounts.apps * (currentRates.apps / 100),
+      purchase: adjustedAmounts.purchase * (currentRates.purchase / 100),
     };
 
     const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);

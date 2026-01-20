@@ -8,8 +8,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.29"
+BACKEND_VERSION = "1.0.41"
+logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
+logger.info("=" * 50)
 
 # Create database tables on startup
 def init_db():
@@ -22,13 +24,14 @@ def init_db():
         logger.error(f"Error initializing database: {e}")
         raise
 
-# Initialize database when app starts
-init_db()
+# NOTE: Database schema initialization is now handled by Alembic migrations
+# in the startup script. Do NOT call init_db() here.
+# init_db()
 
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.29"
+    version="1.0.41"
 )
 
 # CORS Middleware

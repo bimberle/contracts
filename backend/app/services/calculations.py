@@ -1,14 +1,22 @@
-from datetime import datetime
-from typing import List, Dict
+from datetime import datetime, date as date_type
+from typing import List, Dict, Union
 from app.models.contract import Contract
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
 from app.models.commission_rate import CommissionRate
 from app.utils.date_utils import months_between
 
+
+def _to_date(d: Union[datetime, date_type]) -> date_type:
+    """Konvertiert datetime zu date für Vergleiche"""
+    if isinstance(d, datetime):
+        return d.date()
+    return d
+
+
 def get_commission_rates_for_date(
     commission_rates_list: List[CommissionRate],
-    date: datetime
+    date: Union[datetime, date_type]
 ) -> Dict[str, float]:
     """
     Findet die geltenden Provisionsätze für ein bestimmtes Datum
@@ -25,10 +33,14 @@ def get_commission_rates_for_date(
             "purchase": 10.0
         }
     
+    # Normalisiere das Datum für Vergleiche
+    compare_date = _to_date(date)
+    
     # Finde die neueste Commission Rate die auf oder vor dem Datum gültig ist
     applicable_rate = None
     for rate in sorted(commission_rates_list, key=lambda r: r.valid_from, reverse=True):
-        if rate.valid_from <= date:
+        rate_date = _to_date(rate.valid_from)
+        if rate_date <= compare_date:
             applicable_rate = rate
             break
     
