@@ -20,7 +20,26 @@ const ContractModal: React.FC<ContractModalProps> = ({
   contract,
   onSuccess,
 }) => {
-  const [formData, setFormData] = useState({
+  // Hilfsfunktion für Komma-Anzeige
+  const displayWithComma = (val: number | string): string => {
+    if (val === '' || val === '-') return String(val);
+    const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val;
+    if (isNaN(num)) return '';
+    return num.toString().replace('.', ',');
+  };
+
+  const [formData, setFormData] = useState<{
+    softwareRentalAmount: number | string;
+    softwareCareAmount: number | string;
+    appsAmount: number | string;
+    purchaseAmount: number | string;
+    currency: string;
+    startDate: string;
+    endDate: string;
+    isFounderDiscount: boolean;
+    notes: string;
+    excludedPriceIncreaseIds: string[];
+  }>({
     softwareRentalAmount: 0,
     softwareCareAmount: 0,
     appsAmount: 0,
@@ -30,7 +49,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     endDate: '',
     isFounderDiscount: false,
     notes: '',
-    excludedPriceIncreaseIds: [] as string[],
+    excludedPriceIncreaseIds: [],
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +99,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
     fetchCommissionRates();
   }, [contract, isOpen, fetchPriceIncreases, fetchCommissionRates]);
 
+  // Hilfsfunktion zum Parsen von Beträgen (für Vergleiche)
+  const toNum = (val: number | string): number => {
+    if (typeof val === 'number') return val;
+    return parseFloat(val.replace(',', '.')) || 0;
+  };
+
   // Hilfsfunktion: Finde geltende Preiserhöhungen (Schonfrist vorbei)
   const getApplicablePriceIncreases = () => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
@@ -110,10 +135,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         
         // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
         const hasApplicableIncrease = 
-          (formData.softwareRentalAmount > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
-          (formData.softwareCareAmount > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
-          (formData.appsAmount > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
-          (formData.purchaseAmount > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
 
         return hasApplicableIncrease;
       } catch (error) {
@@ -153,10 +178,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         
         // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
         const hasApplicableIncrease = 
-          (formData.softwareRentalAmount > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
-          (formData.softwareCareAmount > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
-          (formData.appsAmount > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
-          (formData.purchaseAmount > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
 
         return hasApplicableIncrease;
       } catch (error) {
@@ -178,7 +203,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         type === 'checkbox'
           ? checked
           : ['softwareRentalAmount', 'softwareCareAmount', 'appsAmount', 'purchaseAmount'].includes(name)
-          ? parseFloat(value) || 0
+          ? value // String speichern, nicht sofort parsen
           : value,
     }));
   };
@@ -206,16 +231,22 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setError(null);
     setIsLoading(true);
 
+    // Hilfsfunktion zum Parsen (Komma → Punkt)
+    const parseAmount = (val: number | string): number => {
+      if (typeof val === 'number') return val;
+      return parseFloat(val.replace(',', '.')) || 0;
+    };
+
     try {
       // Konvertiere Daten in das richtige Format
       const payload: any = {
-        softwareRentalAmount: formData.softwareRentalAmount,
-        softwareCareAmount: formData.softwareCareAmount,
-        appsAmount: formData.appsAmount,
-        purchaseAmount: formData.purchaseAmount,
+        softwareRentalAmount: parseAmount(formData.softwareRentalAmount),
+        softwareCareAmount: parseAmount(formData.softwareCareAmount),
+        appsAmount: parseAmount(formData.appsAmount),
+        purchaseAmount: parseAmount(formData.purchaseAmount),
         currency: formData.currency,
-        startDate: new Date(formData.startDate + 'T00:00:00').toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate + 'T00:00:00').toISOString() : null,
+        startDate: new Date(formData.startDate + 'T12:00:00').toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate + 'T12:00:00').toISOString() : null,
         isFounderDiscount: formData.isFounderDiscount,
         notes: formData.notes,
         excludedPriceIncreaseIds: formData.excludedPriceIncreaseIds || [],
@@ -242,10 +273,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
   // Calculate breakdown with price increases
   const calculateBreakdown = () => {
     const baseAmounts = {
-      softwareRental: formData.softwareRentalAmount,
-      softwareCare: formData.softwareCareAmount,
-      apps: formData.appsAmount,
-      purchase: formData.purchaseAmount,
+      softwareRental: toNum(formData.softwareRentalAmount),
+      softwareCare: toNum(formData.softwareCareAmount),
+      apps: toNum(formData.appsAmount),
+      purchase: toNum(formData.purchaseAmount),
     };
 
     const startDate = new Date(formData.startDate);
@@ -334,6 +365,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       totalAmount,
       commissions,
       totalCommission,
+      currentRates,  // Rates für Label-Anzeige
     };
   };
 
@@ -405,18 +437,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Enddatum (optional)
-                </label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
             </div>
 
             {/* Amount Fields */}
@@ -429,11 +449,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     Software Miete
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="softwareRentalAmount"
-                    value={formData.softwareRentalAmount}
+                    value={displayWithComma(formData.softwareRentalAmount)}
                     onChange={handleChange}
-                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -442,11 +462,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     Software Pflege
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="softwareCareAmount"
-                    value={formData.softwareCareAmount}
+                    value={displayWithComma(formData.softwareCareAmount)}
                     onChange={handleChange}
-                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -455,11 +475,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     Apps
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="appsAmount"
-                    value={formData.appsAmount}
+                    value={displayWithComma(formData.appsAmount)}
                     onChange={handleChange}
-                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -468,11 +488,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     Monatliche Softwarepflege Kauf
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     name="purchaseAmount"
-                    value={formData.purchaseAmount}
+                    value={displayWithComma(formData.purchaseAmount)}
                     onChange={handleChange}
-                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
@@ -743,19 +763,19 @@ const ContractModal: React.FC<ContractModalProps> = ({
               <h3 className="font-semibold text-purple-900 mb-2">Provisionen (basierend auf Summe):</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Software Miete (20%):</span>
+                  <span className="text-gray-700">Software Miete ({breakdown.currentRates.softwareRental}%):</span>
                   <span className="font-medium">{formatCurrency(breakdown.commissions.softwareRental)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Software Pflege (20%):</span>
+                  <span className="text-gray-700">Software Pflege ({breakdown.currentRates.softwareCare}%):</span>
                   <span className="font-medium">{formatCurrency(breakdown.commissions.softwareCare)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Apps (20%):</span>
+                  <span className="text-gray-700">Apps ({breakdown.currentRates.apps}%):</span>
                   <span className="font-medium">{formatCurrency(breakdown.commissions.apps)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-700">Kauf Bestandsvertrag (1/12%):</span>
+                  <span className="text-gray-700">Kauf ({breakdown.currentRates.purchase}%):</span>
                   <span className="font-medium">{formatCurrency(breakdown.commissions.purchase)}</span>
                 </div>
               </div>

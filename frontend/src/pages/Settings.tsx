@@ -391,7 +391,7 @@ function Settings() {
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareRental.toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareCare.toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.apps.toFixed(2)}%</td>
-                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.purchase.toFixed(6)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.purchase.toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{rate.description || '—'}</td>
                         <td className="px-6 py-4 text-center text-sm space-x-2">
                           <button

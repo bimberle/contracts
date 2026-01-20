@@ -1,10 +1,33 @@
 import { useState, useEffect } from 'react';
 
+// Hilfsfunktion für Komma-Anzeige - Strings werden direkt durchgelassen
+const displayWithComma = (val: number | string): string => {
+  // Wenn es bereits ein String ist, einfach durchlassen (für Eingabe)
+  if (typeof val === 'string') return val;
+  // Nur Zahlen konvertieren (für initiale Anzeige aus DB)
+  if (typeof val === 'number') {
+    if (isNaN(val)) return '';
+    return val.toString().replace('.', ',');
+  }
+  return '';
+};
+
 interface CommissionRateModalProps {
   isOpen: boolean;
   onClose: () => void;
   commissionRate?: any;
   onSuccess: () => void;
+}
+
+interface FormDataType {
+  validFrom: string;
+  rates: {
+    softwareRental: number | string;
+    softwareCare: number | string;
+    apps: number | string;
+    purchase: number | string;
+  };
+  description: string;
 }
 
 export default function CommissionRateModal({
@@ -13,7 +36,7 @@ export default function CommissionRateModal({
   commissionRate,
   onSuccess,
 }: CommissionRateModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataType>({
     validFrom: new Date().toISOString().split('T')[0],
     rates: {
       softwareRental: 20,
@@ -53,13 +76,12 @@ export default function CommissionRateModal({
   const handleChange = (field: string, value: string | number) => {
     if (field.startsWith('rates.')) {
       const rateField = field.split('.')[1];
-      // Konvertiere Komma zu Punkt für Dezimalzahlen
-      const stringValue = String(value).replace(',', '.');
+      // String speichern, nicht sofort parsen (für Komma-Eingabe)
       setFormData({
         ...formData,
         rates: {
           ...formData.rates,
-          [rateField]: parseFloat(stringValue) || 0,
+          [rateField]: value,
         },
       });
     } else {
@@ -75,10 +97,21 @@ export default function CommissionRateModal({
     setError(null);
     setLoading(true);
 
+    // Hilfsfunktion zum Parsen (Komma → Punkt)
+    const parseRate = (val: number | string): number => {
+      if (typeof val === 'number') return val;
+      return parseFloat(val.replace(',', '.')) || 0;
+    };
+
     try {
       const payload = {
-        validFrom: new Date(formData.validFrom + 'T00:00:00').toISOString(),
-        rates: formData.rates,
+        validFrom: new Date(formData.validFrom + 'T12:00:00').toISOString(),
+        rates: {
+          softwareRental: parseRate(formData.rates.softwareRental),
+          softwareCare: parseRate(formData.rates.softwareCare),
+          apps: parseRate(formData.rates.apps),
+          purchase: parseRate(formData.rates.purchase),
+        },
         description: formData.description,
       };
 
@@ -154,7 +187,8 @@ export default function CommissionRateModal({
                 </label>
                 <input
                   type="text"
-                  value={formData.rates.softwareRental}
+                  inputMode="decimal"
+                  value={displayWithComma(formData.rates.softwareRental)}
                   onChange={(e) => handleChange('rates.softwareRental', e.target.value)}
                   placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -166,7 +200,8 @@ export default function CommissionRateModal({
                 </label>
                 <input
                   type="text"
-                  value={formData.rates.softwareCare}
+                  inputMode="decimal"
+                  value={displayWithComma(formData.rates.softwareCare)}
                   onChange={(e) => handleChange('rates.softwareCare', e.target.value)}
                   placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -178,7 +213,8 @@ export default function CommissionRateModal({
                 </label>
                 <input
                   type="text"
-                  value={formData.rates.apps}
+                  inputMode="decimal"
+                  value={displayWithComma(formData.rates.apps)}
                   onChange={(e) => handleChange('rates.apps', e.target.value)}
                   placeholder="z.B. 20 oder 20,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -190,9 +226,8 @@ export default function CommissionRateModal({
                 </label>
                 <input
                   type="text"
-                  step="0.01"
-                  min="0"
-                  value={formData.rates.purchase}
+                  inputMode="decimal"
+                  value={displayWithComma(formData.rates.purchase)}
                   onChange={(e) => handleChange('rates.purchase', e.target.value)}
                   placeholder="z.B. 10 oder 10,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"

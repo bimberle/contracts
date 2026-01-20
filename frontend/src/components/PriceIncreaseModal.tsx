@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { PriceIncreaseCreateRequest, PriceIncrease } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
 
+// Hilfsfunktion für Komma-Anzeige - Strings werden direkt durchgelassen
+const displayWithComma = (val: number | string): string => {
+  // Wenn es bereits ein String ist, einfach durchlassen (für Eingabe)
+  if (typeof val === 'string') return val;
+  // Nur Zahlen konvertieren (für initiale Anzeige aus DB)
+  if (typeof val === 'number') {
+    if (isNaN(val)) return '';
+    return val.toString().replace('.', ',');
+  }
+  return '';
+};
+
 interface PriceIncreaseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -9,8 +21,20 @@ interface PriceIncreaseModalProps {
   onSuccess?: () => void;
 }
 
+interface FormDataType {
+  validFrom: string;
+  amountIncreases: {
+    softwareRental: number | string;
+    softwareCare: number | string;
+    apps: number | string;
+    purchase: number | string;
+  };
+  lockInMonths: number;
+  description: string;
+}
+
 const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose, priceIncrease, onSuccess }) => {
-  const [formData, setFormData] = useState<PriceIncreaseCreateRequest>({
+  const [formData, setFormData] = useState<FormDataType>({
     validFrom: new Date().toISOString().split('T')[0],
     amountIncreases: {
       softwareRental: 0,
@@ -60,12 +84,25 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
     setError(null);
     setIsLoading(true);
 
+    // Hilfsfunktion zum Parsen (Komma → Punkt)
+    const parseAmount = (val: number | string): number => {
+      if (typeof val === 'number') return val;
+      return parseFloat(val.replace(',', '.')) || 0;
+    };
+
+    const parsedAmounts = {
+      softwareRental: parseAmount(formData.amountIncreases.softwareRental),
+      softwareCare: parseAmount(formData.amountIncreases.softwareCare),
+      apps: parseAmount(formData.amountIncreases.apps),
+      purchase: parseAmount(formData.amountIncreases.purchase),
+    };
+
     try {
       if (
-        formData.amountIncreases.softwareRental === 0 &&
-        formData.amountIncreases.softwareCare === 0 &&
-        formData.amountIncreases.apps === 0 &&
-        formData.amountIncreases.purchase === 0
+        parsedAmounts.softwareRental === 0 &&
+        parsedAmounts.softwareCare === 0 &&
+        parsedAmounts.apps === 0 &&
+        parsedAmounts.purchase === 0
       ) {
         setError('Bitte geben Sie mindestens eine Preiserhöhung ein.');
         setIsLoading(false);
@@ -74,13 +111,13 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
 
       // Konvertiere das Datum zu ISO8601 Format
       const dateStr = formData.validFrom;
-      const dateObj = new Date(dateStr + 'T00:00:00Z');
+      const dateObj = new Date(dateStr + 'T12:00:00Z');
 
       if (priceIncrease) {
         // Update mode
         await updatePriceIncrease(priceIncrease.id, {
           validFrom: dateObj.toISOString(),
-          amountIncreases: formData.amountIncreases,
+          amountIncreases: parsedAmounts,
           lockInMonths: formData.lockInMonths || 24,
           description: formData.description,
         });
@@ -88,7 +125,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
         // Create mode
         await createPriceIncrease({
           validFrom: dateObj.toISOString(),
-          amountIncreases: formData.amountIncreases,
+          amountIncreases: parsedAmounts,
           lockInMonths: formData.lockInMonths || 24,
           description: formData.description,
         });
@@ -158,16 +195,15 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
                 Software Miete
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.amountIncreases.softwareRental}
+                type="text"
+                inputMode="decimal"
+                value={displayWithComma(formData.amountIncreases.softwareRental)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     amountIncreases: {
                       ...formData.amountIncreases,
-                      softwareRental: parseFloat(e.target.value) || 0,
+                      softwareRental: e.target.value,
                     },
                   })
                 }
@@ -180,16 +216,15 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
                 Software Pflege
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.amountIncreases.softwareCare}
+                type="text"
+                inputMode="decimal"
+                value={displayWithComma(formData.amountIncreases.softwareCare)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     amountIncreases: {
                       ...formData.amountIncreases,
-                      softwareCare: parseFloat(e.target.value) || 0,
+                      softwareCare: e.target.value,
                     },
                   })
                 }
@@ -202,16 +237,15 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
                 Apps
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.amountIncreases.apps}
+                type="text"
+                inputMode="decimal"
+                value={displayWithComma(formData.amountIncreases.apps)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     amountIncreases: {
                       ...formData.amountIncreases,
-                      apps: parseFloat(e.target.value) || 0,
+                      apps: e.target.value,
                     },
                   })
                 }
@@ -224,16 +258,15 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
                 Kauf Bestandsvertrag
               </label>
               <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.amountIncreases.purchase}
+                type="text"
+                inputMode="decimal"
+                value={displayWithComma(formData.amountIncreases.purchase)}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     amountIncreases: {
                       ...formData.amountIncreases,
-                      purchase: parseFloat(e.target.value) || 0,
+                      purchase: e.target.value,
                     },
                   })
                 }
