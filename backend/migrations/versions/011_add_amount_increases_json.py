@@ -1,11 +1,11 @@
+
 """Add amount_increases as JSON column to price_increases table.
 
 The price_increases table originally had a 'factor' column (Float).
 This was changed to 'amount_increases' (JSON) to support different
 percentage increases per contract type.
 
-This migration adds the amount_increases column if it doesn't exist,
-or alters it from Float to JSON if it was incorrectly created.
+This migration alters the amount_increases column from Float to JSONB.
 
 Revision ID: 011_add_amount_increases_json
 Revises: 010_add_excluded_price_increases
@@ -13,7 +13,7 @@ Create Date: 2026-01-21
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 # revision identifiers, used by Alembic.
@@ -24,29 +24,56 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Get current table structure
-    inspector = sa.inspect(op.get_bind())
+    # Use raw SQL to alter the column type directly
+    # This handles the case where the column exists as DOUBLE PRECISION
+    conn = op.get_bind()
     
-    if 'price_increases' not in inspector.get_table_names():
-        # Table doesn't exist yet, it will be created by SQLAlchemy
+    # Check if table exists
+    result = conn.execute(sa.text("""
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'price_increases'
+        )
+    """))
+    table_exists = result.scalar()
+    
+    if not table_exists:
         return
     
-    columns = {col['name']: col for col in inspector.get_columns('price_increases')}
+    # Check current column type
+    result = conn.execute(sa.text("""
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'price_increases' 
+        AND column_name = 'amount_increases'
+    """))
+    row = result.fetchone()
     
-    if 'amount_increases' not in columns:
-        # Column doesn't exist, add it as JSON
+    if row is None:
+        # Column doesn't exist, add it as JSONB
         op.add_column('price_increases', 
-            sa.Column('amount_increases', JSON(), nullable=True, 
+            sa.Column('amount_increases', JSONB(), nullable=True,
                       server_default='{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'))
     else:
-        # Column exists - check if it's the wrong type (Float/Double)
-        col_type = str(columns['amount_increases']['type']).upper()
-        if 'FLOAT' in col_type or 'DOUBLE' in col_type or 'NUMERIC' in col_type:
-            # Need to drop and recreate as JSON
+        current_type = row[0].lower()
+        if current_type in ('double precision', 'real', 'numeric', 'float', 'float8', 'float4'):
+            # Column is wrong type - drop and recreate
+            # First, drop the column
             op.drop_column('price_increases', 'amount_increases')
+            # Then add it as JSONB
             op.add_column('price_increases', 
-                sa.Column('amount_increases', JSON(), nullable=True,
+                sa.Column('amount_increases', JSONB(), nullable=True,
                           server_default='{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'))
+        elif current_type not in ('json', 'jsonb'):
+            # Unknown type, try to alter it
+            conn.execute(sa.text("""
+                ALTER TABLE price_increases 
+                DROP COLUMN amount_increases
+            """))
+            conn.execute(sa.text("""
+                ALTER TABLE price_increases 
+                ADD COLUMN amount_increases JSONB DEFAULT '{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'::jsonb
+            """))
 
 
 def downgrade() -> None:
