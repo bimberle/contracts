@@ -4,34 +4,48 @@ from app.config import settings
 from app.database import engine
 from app import models
 import logging
+import subprocess
+import os
 
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.45"
+BACKEND_VERSION = "1.0.46"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
 
-# Create database tables on startup
-def init_db():
-    """Initialize database tables if they don't exist"""
+# Run Alembic migrations on startup
+def run_migrations():
+    """Run Alembic migrations to update database schema"""
     try:
-        logger.info("Initializing database schema...")
-        models.Base.metadata.create_all(bind=engine)
-        logger.info("Database schema initialized successfully")
+        logger.info("Running Alembic migrations...")
+        # Change to the app directory where alembic.ini is located
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=app_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            logger.info("Alembic migrations completed successfully")
+            if result.stdout:
+                logger.info(f"Migration output: {result.stdout}")
+        else:
+            logger.error(f"Alembic migration failed: {result.stderr}")
+            # Don't raise - let the app start anyway
     except Exception as e:
-        logger.error(f"Error initializing database: {e}")
-        raise
+        logger.error(f"Error running migrations: {e}")
+        # Don't raise - let the app start anyway
 
-# NOTE: Database schema initialization is now handled by Alembic migrations
-# in the startup script. Do NOT call init_db() here.
-# init_db()
+# Run migrations on module load
+run_migrations()
 
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.45"
+    version="1.0.46"
 )
 
 # CORS Middleware
