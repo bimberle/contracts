@@ -22,10 +22,16 @@ const ContractModal: React.FC<ContractModalProps> = ({
 }) => {
   // Hilfsfunktion für Komma-Anzeige
   const displayWithComma = (val: number | string): string => {
-    if (val === '' || val === '-') return String(val);
-    const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val;
-    if (isNaN(num)) return '';
-    return num.toString().replace('.', ',');
+    // Wenn der Wert ein String ist, gib ihn direkt zurück (für Eingabe-Zwischenstände wie "123,")
+    if (typeof val === 'string') {
+      return val;
+    }
+    // Wenn es eine Zahl ist, formatiere mit Komma
+    if (typeof val === 'number') {
+      if (isNaN(val)) return '';
+      return val.toString().replace('.', ',');
+    }
+    return '';
   };
 
   const [formData, setFormData] = useState<{
@@ -66,12 +72,15 @@ const ContractModal: React.FC<ContractModalProps> = ({
   const fetchCommissionRates = useCommissionRateStore((state) => state.fetchCommissionRates);
 
   useEffect(() => {
+    // Hilfsfunktion um Zahl zu Komma-String zu konvertieren
+    const numToComma = (n: number): string => n.toString().replace('.', ',');
+    
     if (contract) {
       setFormData({
-        softwareRentalAmount: contract.softwareRentalAmount,
-        softwareCareAmount: contract.softwareCareAmount,
-        appsAmount: contract.appsAmount,
-        purchaseAmount: contract.purchaseAmount,
+        softwareRentalAmount: numToComma(contract.softwareRentalAmount),
+        softwareCareAmount: numToComma(contract.softwareCareAmount),
+        appsAmount: numToComma(contract.appsAmount),
+        purchaseAmount: numToComma(contract.purchaseAmount),
         currency: contract.currency,
         startDate: contract.startDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
@@ -81,10 +90,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
       });
     } else {
       setFormData({
-        softwareRentalAmount: 0,
-        softwareCareAmount: 0,
-        appsAmount: 0,
-        purchaseAmount: 0,
+        softwareRentalAmount: '0',
+        softwareCareAmount: '0',
+        appsAmount: '0',
+        purchaseAmount: '0',
         currency: 'EUR',
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',

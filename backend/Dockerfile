@@ -18,5 +18,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Start server (migrations run automatically in app/main.py)
-CMD ["sh", "-c", "sleep 5 && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Start server with migrations via entrypoint
+CMD ["python", "entrypoint.py"]

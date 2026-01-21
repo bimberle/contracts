@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.database import engine
+from app.database import engine, Base
 from app import models
 import logging
 import subprocess
@@ -11,78 +11,63 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.47"
+BACKEND_VERSION = "1.0.49"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
 
-# Fix database schema directly (bypassing Alembic due to broken migration chain)
-def fix_database_schema():
-    """Fix the amount_increases column type directly with raw SQL"""
+# Latest migration revision (used to stamp alembic_version for fresh installs)
+LATEST_MIGRATION = "011_add_amount_increases_json"
+
+def initialize_database():
+    """
+    Initialize database schema.
+    For fresh installations: Create all tables via SQLAlchemy ORM and stamp alembic version.
+    For existing installations: Let Alembic handle migrations.
+    """
     try:
-        logger.info("Checking and fixing database schema...")
+        logger.info("Checking database schema...")
         with engine.connect() as conn:
-            # Check if price_increases table exists
+            # Check if any of our core tables exist
             result = conn.execute(text("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
-                    WHERE table_name = 'price_increases'
+                    WHERE table_name = 'customers'
                 )
             """))
-            table_exists = result.scalar()
+            customers_exists = result.scalar()
             
-            if not table_exists:
-                logger.info("price_increases table doesn't exist yet, skipping fix")
-                return
-            
-            # Check current column type
-            result = conn.execute(text("""
-                SELECT data_type 
-                FROM information_schema.columns 
-                WHERE table_name = 'price_increases' 
-                AND column_name = 'amount_increases'
-            """))
-            row = result.fetchone()
-            
-            if row is None:
-                # Column doesn't exist, add it as JSONB
-                logger.info("Adding amount_increases column as JSONB...")
-                conn.execute(text("""
-                    ALTER TABLE price_increases 
-                    ADD COLUMN amount_increases JSONB DEFAULT '{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'::jsonb
-                """))
-                conn.commit()
-                logger.info("Added amount_increases column successfully")
-            else:
-                current_type = row[0].lower()
-                logger.info(f"Current amount_increases column type: {current_type}")
+            if not customers_exists:
+                logger.info("Fresh installation detected - creating all tables...")
+                # Create all tables from ORM models
+                Base.metadata.create_all(bind=engine)
+                logger.info("✅ All tables created successfully")
                 
-                if current_type in ('double precision', 'real', 'numeric', 'float', 'float8', 'float4'):
-                    # Column is wrong type - drop and recreate
-                    logger.info("Fixing amount_increases column: dropping and recreating as JSONB...")
-                    conn.execute(text("ALTER TABLE price_increases DROP COLUMN amount_increases"))
-                    conn.execute(text("""
-                        ALTER TABLE price_increases 
-                        ADD COLUMN amount_increases JSONB DEFAULT '{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'::jsonb
-                    """))
-                    conn.commit()
-                    logger.info("Fixed amount_increases column successfully")
-                elif current_type in ('json', 'jsonb'):
-                    logger.info("amount_increases column already has correct type")
-                else:
-                    logger.warning(f"Unknown column type: {current_type}")
-                    
+                # Stamp alembic version to latest so migrations don't run on existing schema
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS alembic_version (
+                        version_num VARCHAR(32) NOT NULL,
+                        CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num)
+                    )
+                """))
+                conn.execute(text("DELETE FROM alembic_version"))
+                conn.execute(text(f"INSERT INTO alembic_version (version_num) VALUES ('{LATEST_MIGRATION}')"))
+                conn.commit()
+                logger.info(f"✅ Alembic version stamped to {LATEST_MIGRATION}")
+            else:
+                logger.info("Existing database detected - schema already initialized")
+                
     except Exception as e:
-        logger.error(f"Error fixing database schema: {e}")
-        # Don't raise - let the app start anyway
+        logger.error(f"Error initializing database: {e}")
+        raise
 
-# Fix schema on module load
-fix_database_schema()
+# Initialize database on module load
+initialize_database()
 
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.47"
+    version="1.0.49"
 )
 
 # CORS Middleware
