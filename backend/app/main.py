@@ -6,46 +6,83 @@ from app import models
 import logging
 import subprocess
 import os
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.46"
+BACKEND_VERSION = "1.0.47"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
 
-# Run Alembic migrations on startup
-def run_migrations():
-    """Run Alembic migrations to update database schema"""
+# Fix database schema directly (bypassing Alembic due to broken migration chain)
+def fix_database_schema():
+    """Fix the amount_increases column type directly with raw SQL"""
     try:
-        logger.info("Running Alembic migrations...")
-        # Change to the app directory where alembic.ini is located
-        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        result = subprocess.run(
-            ["alembic", "upgrade", "head"],
-            cwd=app_dir,
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            logger.info("Alembic migrations completed successfully")
-            if result.stdout:
-                logger.info(f"Migration output: {result.stdout}")
-        else:
-            logger.error(f"Alembic migration failed: {result.stderr}")
-            # Don't raise - let the app start anyway
+        logger.info("Checking and fixing database schema...")
+        with engine.connect() as conn:
+            # Check if price_increases table exists
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'price_increases'
+                )
+            """))
+            table_exists = result.scalar()
+            
+            if not table_exists:
+                logger.info("price_increases table doesn't exist yet, skipping fix")
+                return
+            
+            # Check current column type
+            result = conn.execute(text("""
+                SELECT data_type 
+                FROM information_schema.columns 
+                WHERE table_name = 'price_increases' 
+                AND column_name = 'amount_increases'
+            """))
+            row = result.fetchone()
+            
+            if row is None:
+                # Column doesn't exist, add it as JSONB
+                logger.info("Adding amount_increases column as JSONB...")
+                conn.execute(text("""
+                    ALTER TABLE price_increases 
+                    ADD COLUMN amount_increases JSONB DEFAULT '{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'::jsonb
+                """))
+                conn.commit()
+                logger.info("Added amount_increases column successfully")
+            else:
+                current_type = row[0].lower()
+                logger.info(f"Current amount_increases column type: {current_type}")
+                
+                if current_type in ('double precision', 'real', 'numeric', 'float', 'float8', 'float4'):
+                    # Column is wrong type - drop and recreate
+                    logger.info("Fixing amount_increases column: dropping and recreating as JSONB...")
+                    conn.execute(text("ALTER TABLE price_increases DROP COLUMN amount_increases"))
+                    conn.execute(text("""
+                        ALTER TABLE price_increases 
+                        ADD COLUMN amount_increases JSONB DEFAULT '{"software_rental": 0, "software_care": 0, "apps": 0, "purchase": 0}'::jsonb
+                    """))
+                    conn.commit()
+                    logger.info("Fixed amount_increases column successfully")
+                elif current_type in ('json', 'jsonb'):
+                    logger.info("amount_increases column already has correct type")
+                else:
+                    logger.warning(f"Unknown column type: {current_type}")
+                    
     except Exception as e:
-        logger.error(f"Error running migrations: {e}")
+        logger.error(f"Error fixing database schema: {e}")
         # Don't raise - let the app start anyway
 
-# Run migrations on module load
-run_migrations()
+# Fix schema on module load
+fix_database_schema()
 
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.46"
+    version="1.0.47"
 )
 
 # CORS Middleware
