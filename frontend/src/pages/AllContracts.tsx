@@ -20,7 +20,6 @@ export default function AllContracts() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'completed'>('all');
   const [sortBy, setSortBy] = useState<'customer' | 'cost' | 'commission'>('customer');
   const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
@@ -88,18 +87,22 @@ export default function AllContracts() {
   useEffect(() => {
     let filtered = contracts;
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((c) => c.status === statusFilter);
+    // Filter by amount types - wenn ALLE Filter aktiv sind, zeige alle Verträge
+    // Ansonsten zeige nur Verträge, die mindestens einen ausgewählten Typ mit > 0 haben
+    const allFiltersActive = amountTypeFilters.softwareRental && 
+                              amountTypeFilters.softwareCare && 
+                              amountTypeFilters.apps && 
+                              amountTypeFilters.purchase;
+    
+    if (!allFiltersActive) {
+      filtered = filtered.filter((c) => {
+        if (amountTypeFilters.softwareRental && c.softwareRentalAmount > 0) return true;
+        if (amountTypeFilters.softwareCare && c.softwareCareAmount > 0) return true;
+        if (amountTypeFilters.apps && c.appsAmount > 0) return true;
+        if (amountTypeFilters.purchase && c.purchaseAmount > 0) return true;
+        return false;
+      });
     }
-
-    // Filter by amount types - only include contracts that have at least one selected amount type
-    filtered = filtered.filter((c) => {
-      if (amountTypeFilters.softwareRental && c.softwareRentalAmount > 0) return true;
-      if (amountTypeFilters.softwareCare && c.softwareCareAmount > 0) return true;
-      if (amountTypeFilters.apps && c.appsAmount > 0) return true;
-      if (amountTypeFilters.purchase && c.purchaseAmount > 0) return true;
-      return false;
-    });
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -118,14 +121,17 @@ export default function AllContracts() {
         case 'cost':
           return getTotalAmount(b) - getTotalAmount(a);
         case 'commission':
-          return getCommission(b) - getCommission(a);
+          // Verwende echte Metriken für Sortierung
+          const commA = contractMetrics[a.id]?.currentMonthlyCommission || 0;
+          const commB = contractMetrics[b.id]?.currentMonthlyCommission || 0;
+          return commB - commA;
         default:
           return 0;
       }
     });
 
     setFilteredContracts(filtered);
-  }, [contracts, searchTerm, statusFilter, sortBy, amountTypeFilters]);
+  }, [contracts, searchTerm, sortBy, amountTypeFilters, contractMetrics]);
 
   const getTotalAmount = (contract: Contract): number => {
     return (contract.softwareRentalAmount || 0) +
@@ -134,8 +140,23 @@ export default function AllContracts() {
       (contract.purchaseAmount || 0);
   };
 
+  // Verwende echte Metriken statt statischer Berechnung
   const getCommission = (contract: Contract): number => {
-    return getTotalAmount(contract) * 0.15;
+    return contractMetrics[contract.id]?.currentMonthlyCommission || 0;
+  };
+
+  // Vertrag löschen
+  const handleDeleteContract = async (contract: ContractWithCustomerInfo) => {
+    if (!confirm(`Vertrag von "${contract.customerName}" wirklich löschen?`)) {
+      return;
+    }
+    try {
+      await api.deleteContract(contract.id);
+      loadAllContracts();
+    } catch (err) {
+      console.error('Fehler beim Löschen des Vertrags:', err);
+      alert('Fehler beim Löschen des Vertrags');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -166,21 +187,25 @@ export default function AllContracts() {
   };
 
   const handleExportToExcel = () => {
-    // Prepare data for export
-    const exportData: Array<Record<string, unknown>> = filteredContracts.map((contract) => ({
-      'Kundenname': contract.customerName,
-      'Name 2': contract.customerName2 || '',
-      'PLZ': contract.plz,
-      'Ort': contract.ort,
-      'Status': contract.status,
-      'Software Miete': contract.softwareRentalAmount || 0,
-      'Software Pflege': contract.softwareCareAmount || 0,
-      'Apps': contract.appsAmount || 0,
-      'Bestand': contract.purchaseAmount || 0,
-      'Gesamtbetrag': getTotalAmount(contract),
-      'Provision': getCommission(contract),
-      'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
-    }));
+    // Prepare data for export - verwende echte Metriken
+    const exportData: Array<Record<string, unknown>> = filteredContracts.map((contract) => {
+      const metrics = contractMetrics[contract.id];
+      return {
+        'Kundenname': contract.customerName,
+        'Name 2': contract.customerName2 || '',
+        'PLZ': contract.plz,
+        'Ort': contract.ort,
+        'Status': contract.status,
+        'Software Miete': contract.softwareRentalAmount || 0,
+        'Software Pflege': contract.softwareCareAmount || 0,
+        'Apps': contract.appsAmount || 0,
+        'Bestand': contract.purchaseAmount || 0,
+        'Gesamtbetrag': metrics?.currentMonthlyPrice || getTotalAmount(contract),
+        'Provision': metrics?.currentMonthlyCommission || 0,
+        'Exit-Zahlung': metrics?.exitPayout || 0,
+        'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
+      };
+    });
 
     // Add summary row
     exportData.push({
@@ -195,6 +220,7 @@ export default function AllContracts() {
       'Bestand': 0,
       'Gesamtbetrag': totalRevenue,
       'Provision': totalCommission,
+      'Exit-Zahlung': filteredContracts.reduce((sum, c) => sum + (contractMetrics[c.id]?.exitPayout || 0), 0),
       'Startdatum': '',
     });
 
@@ -227,7 +253,12 @@ export default function AllContracts() {
     XLSX.writeFile(workbook, filename);
   };
 
-  const totalRevenue = filteredContracts.reduce((sum, c) => sum + getTotalAmount(c), 0);
+  // Verwende echte Metriken für die Summen
+  const totalRevenue = filteredContracts.reduce((sum, c) => {
+    const metrics = contractMetrics[c.id];
+    // Verwende aktuelle Preise mit Erhöhungen falls verfügbar
+    return sum + (metrics?.currentMonthlyPrice || getTotalAmount(c));
+  }, 0);
   const totalCommission = filteredContracts.reduce((sum, c) => sum + getCommission(c), 0);
 
   if (isLoading) {
@@ -274,7 +305,7 @@ export default function AllContracts() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Suchen</label>
             <input
@@ -284,20 +315,6 @@ export default function AllContracts() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Alle</option>
-              <option value="active">Aktiv</option>
-              <option value="inactive">Inaktiv</option>
-              <option value="completed">Abgeschlossen</option>
-            </select>
           </div>
 
           <div>
@@ -438,6 +455,13 @@ export default function AllContracts() {
                           title="Vertrag anschauen"
                         >
                           🔍
+                        </button>
+                        <button
+                          onClick={() => handleDeleteContract(contract)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-red-100 text-red-600 hover:text-red-800 transition"
+                          title="Vertrag löschen"
+                        >
+                          🗑️
                         </button>
                       </div>
                     </td>

@@ -42,7 +42,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
       apps: 0,
       purchase: 0,
     },
-    lockInMonths: 24,
+    lockInMonths: 48,
     description: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
           description: priceIncrease.description || '',
         });
       } else {
-        // Create mode: reset form
+        // Create mode: reset form with default 48 months lock-in
         setFormData({
           validFrom: new Date().toISOString().split('T')[0],
           amountIncreases: {
@@ -71,7 +71,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
             apps: 0,
             purchase: 0,
           },
-          lockInMonths: 24,
+          lockInMonths: 48,
           description: '',
         });
       }

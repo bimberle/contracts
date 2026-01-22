@@ -111,6 +111,8 @@ def delete_contract(contract_id: str, db: Session = Depends(get_db)):
 @router.get("/{contract_id}/metrics")
 def get_contract_metrics(contract_id: str, db: Session = Depends(get_db)):
     """Berechnet Metriken für einen Vertrag"""
+    from app.services.metrics import get_customer_first_contract_date
+    
     db_contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not db_contract:
         raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
@@ -123,12 +125,17 @@ def get_contract_metrics(contract_id: str, db: Session = Depends(get_db)):
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
     
+    # Ermittle das erste Vertragsdatum des Kunden für Bestandsschutz
+    customer_contracts = db.query(Contract).filter(Contract.customer_id == db_contract.customer_id).all()
+    customer_first_contract_date = get_customer_first_contract_date(customer_contracts)
+    
     metrics_dict = calculate_contract_metrics(
         contract=db_contract,
         settings=settings,
         price_increases=price_increases,
         commission_rates=commission_rates,
-        today=datetime.utcnow()
+        today=datetime.utcnow(),
+        customer_first_contract_date=customer_first_contract_date
     )
     
     # Konvertiere zu Pydantic Model für camelCase Serialisierung

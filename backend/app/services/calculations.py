@@ -86,16 +86,22 @@ def _normalize_rate_keys(rates: Dict[str, float]) -> Dict[str, float]:
 def get_current_monthly_price(
     contract: Contract,
     price_increases: List[PriceIncrease],
-    date: datetime
+    date: datetime,
+    customer_first_contract_date: datetime = None
 ) -> float:
     """
     Berechnet den aktuellen Gesamtpreis (Summe aller 4 Beträge mit Erhöhungen)
     Berücksichtigt:
     1. Alle gültigen Preiserhöhungen (pro Betrag-Typ)
-    2. Bestandsschutz (lockInMonths)
+    2. Bestandsschutz (lockInMonths) - basierend auf ERSTEM Kundenvertrag
     3. Datum der Anfrage
     
     Formel: total = sum(amount * (1 + applicable_increases))
+    
+    Args:
+        customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
+                                      Wird für die Bestandsschutz-Berechnung verwendet.
+                                      Falls None, wird das Startdatum des aktuellen Vertrags verwendet.
     """
     # Basis-Beträge
     amounts = {
@@ -105,8 +111,9 @@ def get_current_monthly_price(
         'purchase': contract.purchase_amount,
     }
     
-    # Bestandsschutz prüfen
-    months_running = months_between(contract.start_date, date)
+    # Bestandsschutz prüfen - basierend auf erstem Kundenvertrag
+    reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
+    months_running = months_between(reference_date, date)
     
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
@@ -132,10 +139,16 @@ def get_current_monthly_commission(
     settings: Settings,
     price_increases: List[PriceIncrease],
     commission_rates_list: List[CommissionRate],
-    date: datetime
+    date: datetime,
+    customer_first_contract_date: datetime = None
 ) -> float:
     """
     Berechnet die aktuelle monatliche Provision (Summe aller Betrag-Typen)
+    
+    Args:
+        customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
+                                      Wird für die Bestandsschutz-Berechnung verwendet.
+                                      Falls None, wird das Startdatum des aktuellen Vertrags verwendet.
     """
     if contract.status.value != 'active':
         return 0.0
@@ -154,8 +167,9 @@ def get_current_monthly_commission(
     if months_since_rental_start < 0:
         return 0.0
     
-    # Bestandsschutz für Preiserhöhungen prüfen
-    months_running = months_since_rental_start
+    # Bestandsschutz für Preiserhöhungen prüfen - basierend auf erstem Kundenvertrag
+    reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
+    months_running = months_between(reference_date, date)
     
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
@@ -200,11 +214,15 @@ def calculate_earnings_to_date(
     settings: Settings,
     price_increases: List[PriceIncrease],
     commission_rates_list: List[CommissionRate],
-    to_date: datetime
+    to_date: datetime,
+    customer_first_contract_date: datetime = None
 ) -> float:
     """
     Addiert alle Provisionen vom Vertragsbeginn bis to_date
     Berücksichtigt alle Preiserhöhungen im Zeitraum
+    
+    Args:
+        customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
     """
     from app.utils.date_utils import add_months
     
@@ -213,7 +231,8 @@ def calculate_earnings_to_date(
     
     while current_date <= to_date:
         commission = get_current_monthly_commission(
-            contract, settings, price_increases, commission_rates_list, current_date
+            contract, settings, price_increases, commission_rates_list, current_date,
+            customer_first_contract_date
         )
         total += commission
         current_date = add_months(current_date, 1)
@@ -225,10 +244,15 @@ def calculate_exit_payout(
     settings: Settings,
     price_increases: List[PriceIncrease],
     commission_rates_list: List[CommissionRate],
-    today: datetime
+    today: datetime,
+    customer_first_contract_date: datetime = None
 ) -> float:
     """
-    Berechnet was bei Ausscheiden heute ausbezahlt würde
+    Berechnet was bei Ausscheiden heute ausbezahlt würde.
+    Gibt immer 0 zurück wenn das Ergebnis negativ wäre.
+    
+    Args:
+        customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
     """
     months_running = months_between(contract.start_date, today)
     
@@ -241,8 +265,17 @@ def calculate_exit_payout(
         return 0.0
     
     months_remaining = settings.min_contract_months_for_payout - months_running
+    
+    # Negative Restmonate bedeuten, dass bereits überzahlt wurde -> 0
+    if months_remaining <= 0:
+        return 0.0
+    
     monthly_commission = get_current_monthly_commission(
-        contract, settings, price_increases, commission_rates_list, today
+        contract, settings, price_increases, commission_rates_list, today,
+        customer_first_contract_date
     )
     
-    return monthly_commission * months_remaining
+    result = monthly_commission * months_remaining
+    
+    # Niemals negative Auszahlungen
+    return max(0.0, result)

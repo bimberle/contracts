@@ -326,13 +326,9 @@ function CustomerDetail() {
               if (!contract) return null;
               
               const amounts = calculateContractAmounts(contract);
-              const commissions = {
-                softwareRental: (amounts?.adjustedAmounts?.softwareRental || 0) * 0.20,
-                softwareCare: (amounts?.adjustedAmounts?.softwareCare || 0) * 0.20,
-                apps: (amounts?.adjustedAmounts?.apps || 0) * 0.20,
-                purchase: (amounts?.adjustedAmounts?.purchase || 0) * 0.00083333,
-              };
-              const totalCommission = Object.values(commissions).reduce((a, b) => a + b, 0);
+              // Verwende echte Metriken vom Backend statt lokale Berechnung
+              const metricsForContract = contractMetrics[contract.id];
+              const totalCommission = metricsForContract?.currentMonthlyCommission || 0;
               
               const applicableIncreases = getApplicablePriceIncreases(contract);
               const isExpanded = expandedContractId === contract.id;
@@ -385,6 +381,21 @@ function CustomerDetail() {
                           className="text-blue-600 hover:text-blue-800 transition text-sm"
                         >
                           Bearbeiten
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Vertrag wirklich löschen?')) {
+                              try {
+                                await api.deleteContract(contract.id);
+                                loadData();
+                              } catch (err) {
+                                alert('Fehler beim Löschen des Vertrags');
+                              }
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-800 transition text-sm"
+                        >
+                          Löschen
                         </button>
                         {applicableIncreases.length > 0 && (
                           <button 
