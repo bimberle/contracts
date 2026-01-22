@@ -204,6 +204,9 @@ function Dashboard() {
                   PLZ / Ort
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Mtl. Umsatz
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Monatliche Provision
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -220,7 +223,7 @@ function Dashboard() {
             <tbody className="divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     Keine Kunden gefunden
                   </td>
                 </tr>
@@ -237,6 +240,9 @@ function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {customer.plz} {customer.ort}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-blue-600 font-semibold">
+                        {metrics ? formatCurrency(metrics.totalMonthlyRevenue) : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
                         {metrics ? formatCurrency(metrics.totalMonthlyCommission) : '—'}

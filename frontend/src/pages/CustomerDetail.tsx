@@ -21,37 +21,53 @@ function CustomerDetail() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
 
+  // Hilfsfunktion: Ermittle das früheste Vertragsdatum des Kunden
+  const getCustomerFirstContractDate = (): Date | null => {
+    if (!contracts || contracts.length === 0) return null;
+    
+    let earliestDate: Date | null = null;
+    for (const contract of contracts) {
+      const startDate = new Date(contract.startDate);
+      if (!earliestDate || startDate < earliestDate) {
+        earliestDate = startDate;
+      }
+    }
+    return earliestDate;
+  };
+
   // Hilfsfunktion: Finde geltende Preiserhöhungen für einen Vertrag
+  // WICHTIG: Bestandsschutz basiert auf dem ERSTEN Vertrag des Kunden, nicht dem aktuellen!
   const getApplicablePriceIncreases = (contract: Contract): PriceIncrease[] => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
-    const startDate = new Date(contract.startDate);
     const today = new Date();
+    // Bestandsschutz basiert auf dem ERSTEN Kundenvertrag
+    const customerFirstDate = getCustomerFirstContractDate();
+    const referenceDate = customerFirstDate || new Date(contract.startDate);
 
     return priceIncreases.filter((increase) => {
       try {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if (validFromDate < startDate) return false;
-
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
-        const monthsRunning = Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        // Bestandsschutz-Prüfung: KUNDE muss mindestens lockInMonths Kunde sein
+        const monthsCustomer = Math.floor(
+          (today.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
-        if (monthsRunning < increase.lockInMonths) return false;
+        if (monthsCustomer < increase.lockInMonths) return false;
 
         // Prüfe: Hat diese Preiserhöhung überhaupt positive Werte?
         if (!increase.amountIncreases) return false;
         
-        const hasSoftwareRentalIncrease = (increase.amountIncreases.softwareRental ?? 0) > 0;
-        const hasSoftwareCareIncrease = (increase.amountIncreases.softwareCare ?? 0) > 0;
-        const hasAppsIncrease = (increase.amountIncreases.apps ?? 0) > 0;
-        const hasPurchaseIncrease = (increase.amountIncreases.purchase ?? 0) > 0;
+        // Unterstütze sowohl camelCase als auch snake_case
+        const amounts = increase.amountIncreases as unknown as Record<string, number>;
+        const hasSoftwareRentalIncrease = (amounts.softwareRental ?? amounts.software_rental ?? 0) > 0;
+        const hasSoftwareCareIncrease = (amounts.softwareCare ?? amounts.software_care ?? 0) > 0;
+        const hasAppsIncrease = (amounts.apps ?? 0) > 0;
+        const hasPurchaseIncrease = (amounts.purchase ?? 0) > 0;
         
         // Keine Erhöhungen haben? Dann ist die Preiserhöhung ungültig
         if (!hasSoftwareRentalIncrease && !hasSoftwareCareIncrease && !hasAppsIncrease && !hasPurchaseIncrease) {
@@ -362,7 +378,7 @@ function CustomerDetail() {
                     <div className="grid grid-cols-4 gap-6 mb-3">
                       <div>
                         <p className="text-sm text-gray-600">Monatspreis</p>
-                        <p className="text-lg font-bold text-gray-900">{formatCurrency(amounts.totalAmount)}</p>
+                        <p className="text-lg font-bold text-gray-900">{formatCurrency(metricsForContract?.currentMonthlyPrice || amounts.totalAmount)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Meine Provision</p>

@@ -430,7 +430,7 @@ export default function AllContracts() {
                       {formatCurrency(contract.purchaseAmount || 0)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-purple-600">
-                      {formatCurrency(getTotalAmount(contract))}
+                      {formatCurrency(contractMetrics[contract.id]?.currentMonthlyPrice || getTotalAmount(contract))}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
                       {formatCurrency(getCommission(contract))}

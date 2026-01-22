@@ -111,6 +111,14 @@ def get_current_monthly_price(
         'purchase': contract.purchase_amount,
     }
     
+    # Mapping von camelCase zu snake_case
+    camel_to_snake = {
+        'softwareRental': 'software_rental',
+        'softwareCare': 'software_care',
+        'apps': 'apps',
+        'purchase': 'purchase',
+    }
+    
     # Bestandsschutz prüfen - basierend auf erstem Kundenvertrag
     reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
     months_running = months_between(reference_date, date)
@@ -129,8 +137,10 @@ def get_current_monthly_price(
                 # Preiserhöhungen pro Betrag-Typ anwenden
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
-                        if amount_type in amounts:
-                            amounts[amount_type] *= (1 + increase_percent / 100)
+                        # Normalisiere den Schlüssel (camelCase → snake_case)
+                        normalized_key = camel_to_snake.get(amount_type, amount_type)
+                        if normalized_key in amounts:
+                            amounts[normalized_key] *= (1 + increase_percent / 100)
     
     return sum(amounts.values())
 
@@ -161,6 +171,14 @@ def get_current_monthly_commission(
         'purchase': contract.purchase_amount,
     }
     
+    # Mapping von camelCase zu snake_case
+    camel_to_snake = {
+        'softwareRental': 'software_rental',
+        'softwareCare': 'software_care',
+        'apps': 'apps',
+        'purchase': 'purchase',
+    }
+    
     months_since_rental_start = months_between(contract.start_date, date)
     
     # Noch in Gründerphase - keine Provision
@@ -184,8 +202,10 @@ def get_current_monthly_commission(
             if months_running >= price_increase.lock_in_months:
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
-                        if amount_type in amounts:
-                            amounts[amount_type] *= (1 + increase_percent / 100)
+                        # Normalisiere den Schlüssel (camelCase → snake_case)
+                        normalized_key = camel_to_snake.get(amount_type, amount_type)
+                        if normalized_key in amounts:
+                            amounts[normalized_key] *= (1 + increase_percent / 100)
     
     # Berechne Provisionen pro Betrag-Typ mit aktuellen Sätzen
     total_commission = 0.0

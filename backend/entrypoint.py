@@ -104,7 +104,7 @@ def run_migrations():
 
 def main():
     logger.info("==================================================")
-    logger.info("=== Contracts Backend v1.0.50 starting ===")
+    logger.info("=== Contracts Backend v1.0.53 starting ===")
     logger.info("==================================================")
     
     # Wait for database

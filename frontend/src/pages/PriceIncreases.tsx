@@ -2,6 +2,28 @@ import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { formatDate } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
+import { PriceIncrease } from '../types';
+
+// Hilfsfunktion zum Lesen von amountIncreases (unterstützt snake_case und camelCase)
+const getAmountIncrease = (pi: PriceIncrease, key: 'softwareRental' | 'softwareCare' | 'apps' | 'purchase'): number => {
+  const amounts = pi.amountIncreases as unknown as Record<string, number>;
+  if (!amounts) return 0;
+  
+  const snakeMap: Record<string, string> = {
+    softwareRental: 'software_rental',
+    softwareCare: 'software_care',
+    apps: 'apps',
+    purchase: 'purchase',
+  };
+  
+  return amounts[key] ?? amounts[snakeMap[key]] ?? 0;
+};
+
+// Formatiert den Prozentsatz - zeigt "—" bei 0
+const formatPercent = (value: number): string => {
+  if (value === 0) return '—';
+  return `+${value}%`;
+};
 
 function PriceIncreases() {
   const { priceIncreases, loading, fetchPriceIncreases, deletePriceIncrease } = useSettingsStore();
@@ -82,16 +104,16 @@ function PriceIncreases() {
                       {formatDate(pi.validFrom)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {pi.amountIncreases?.softwareRental ?? 0}%
+                      {formatPercent(getAmountIncrease(pi, 'softwareRental'))}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {pi.amountIncreases?.softwareCare ?? 0}%
+                      {formatPercent(getAmountIncrease(pi, 'softwareCare'))}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {pi.amountIncreases?.apps ?? 0}%
+                      {formatPercent(getAmountIncrease(pi, 'apps'))}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {pi.amountIncreases?.purchase ?? 0}%
+                      {formatPercent(getAmountIncrease(pi, 'purchase'))}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{pi.lockInMonths}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{pi.description || '—'}</td>

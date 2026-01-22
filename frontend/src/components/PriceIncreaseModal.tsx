@@ -3,7 +3,9 @@ import { PriceIncreaseCreateRequest, PriceIncrease } from '../types';
 import { useSettingsStore } from '../stores/settingsStore';
 
 // Hilfsfunktion für Komma-Anzeige - Strings werden direkt durchgelassen
-const displayWithComma = (val: number | string): string => {
+const displayWithComma = (val: number | string | undefined | null): string => {
+  // Wenn undefined oder null, leerer String
+  if (val === undefined || val === null) return '0';
   // Wenn es bereits ein String ist, einfach durchlassen (für Eingabe)
   if (typeof val === 'string') return val;
   // Nur Zahlen konvertieren (für initiale Anzeige aus DB)
@@ -12,6 +14,24 @@ const displayWithComma = (val: number | string): string => {
     return val.toString().replace('.', ',');
   }
   return '';
+};
+
+// Hilfsfunktion zum Normalisieren von amountIncreases (snake_case → camelCase)
+const normalizeAmountIncreases = (amounts: Record<string, number> | undefined): {
+  softwareRental: number;
+  softwareCare: number;
+  apps: number;
+  purchase: number;
+} => {
+  if (!amounts) {
+    return { softwareRental: 0, softwareCare: 0, apps: 0, purchase: 0 };
+  }
+  return {
+    softwareRental: amounts.softwareRental ?? amounts.software_rental ?? 0,
+    softwareCare: amounts.softwareCare ?? amounts.software_care ?? 0,
+    apps: amounts.apps ?? 0,
+    purchase: amounts.purchase ?? 0,
+  };
 };
 
 interface PriceIncreaseModalProps {
@@ -55,9 +75,11 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
     if (isOpen) {
       if (priceIncrease) {
         // Edit mode: pre-fill with existing data
+        // Normalize amount increases to handle both snake_case and camelCase from API
+        const normalizedAmounts = normalizeAmountIncreases(priceIncrease.amountIncreases as unknown as Record<string, number>);
         setFormData({
           validFrom: priceIncrease.validFrom.split('T')[0],
-          amountIncreases: priceIncrease.amountIncreases,
+          amountIncreases: normalizedAmounts,
           lockInMonths: priceIncrease.lockInMonths,
           description: priceIncrease.description || '',
         });
