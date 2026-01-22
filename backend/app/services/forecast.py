@@ -24,6 +24,17 @@ def generate_forecast(
     forecast = []
     current_date = start_date
     
+    # Ermittle für jeden Kunden das früheste Vertragsdatum
+    # (für Karenzzeit bei Preiserhöhungen)
+    customer_first_dates: Dict[str, datetime] = {}
+    for contract in contracts:
+        if contract.customer_id:
+            customer_id = str(contract.customer_id)
+            if customer_id not in customer_first_dates:
+                customer_first_dates[customer_id] = contract.start_date
+            elif contract.start_date and contract.start_date < customer_first_dates[customer_id]:
+                customer_first_dates[customer_id] = contract.start_date
+    
     for month_offset in range(months):
         month_date = add_months(current_date, month_offset)
         
@@ -35,6 +46,10 @@ def generate_forecast(
         new_count = 0
         
         for contract in contracts:
+            # Hole das erste Vertragsdatum des Kunden für Karenzzeit
+            customer_id = str(contract.customer_id) if contract.customer_id else None
+            customer_first_contract_date = customer_first_dates.get(customer_id) if customer_id else None
+            
             # Prüfe ob Vertrag in diesem Monat BEGINNT (Mietbeginn = startDate)
             if contract.start_date:
                 start_month_start = contract.start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -43,11 +58,11 @@ def generate_forecast(
                     new_count += 1
             
             # Berechne Umsatz mit Preiserhöhungen
-            monthly_price = get_current_monthly_price(contract, price_increases, month_date)
+            monthly_price = get_current_monthly_price(contract, price_increases, month_date, customer_first_contract_date)
             total_revenue += monthly_price
             
             commission = get_current_monthly_commission(
-                contract, settings, price_increases, commission_rates, month_date
+                contract, settings, price_increases, commission_rates, month_date, customer_first_contract_date
             )
             
             if commission > 0:

@@ -37,18 +37,23 @@ function CustomerDetail() {
 
   // Hilfsfunktion: Finde geltende Preiserhöhungen für einen Vertrag
   // WICHTIG: Bestandsschutz basiert auf dem ERSTEN Vertrag des Kunden, nicht dem aktuellen!
+  // ABER: Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
   const getApplicablePriceIncreases = (contract: Contract): PriceIncrease[] => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
     const today = new Date();
+    const contractStartDate = new Date(contract.startDate);
     // Bestandsschutz basiert auf dem ERSTEN Kundenvertrag
     const customerFirstDate = getCustomerFirstContractDate();
-    const referenceDate = customerFirstDate || new Date(contract.startDate);
+    const referenceDate = customerFirstDate || contractStartDate;
 
     return priceIncreases.filter((increase) => {
       try {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
+
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if (validFromDate < contractStartDate) return false;
 
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;

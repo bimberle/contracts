@@ -63,6 +63,8 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
   const createContract = useContractStore((state: any) => state.createContract);
   const updateContract = useContractStore((state: any) => state.updateContract);
+  const contractsByCustomer = useContractStore((state: any) => state.contractsByCustomer);
+  const fetchContractsByCustomer = useContractStore((state: any) => state.fetchContractsByCustomer);
   const fetchPriceIncreases = useSettingsStore((state: any) => state.fetchPriceIncreases);
   const priceIncreases = useSettingsStore((state: any) => state.priceIncreases);
   const settings = useSettingsStore((state: any) => state.settings);
@@ -70,6 +72,23 @@ const ContractModal: React.FC<ContractModalProps> = ({
   // Commission Rates aus separatem Store laden
   const commissionRatesFromStore = useCommissionRateStore((state) => state.commissionRates);
   const fetchCommissionRates = useCommissionRateStore((state) => state.fetchCommissionRates);
+  
+  // Ermittle das erste Vertragsdatum des Kunden (für Karenzzeit-Berechnung)
+  const getCustomerFirstContractDate = (): Date | null => {
+    const customerContracts = contractsByCustomer[customerId] || [];
+    if (customerContracts.length === 0) return null;
+    
+    let firstDate: Date | null = null;
+    for (const c of customerContracts) {
+      if (c.startDate) {
+        const contractDate = new Date(c.startDate);
+        if (!firstDate || contractDate < firstDate) {
+          firstDate = contractDate;
+        }
+      }
+    }
+    return firstDate;
+  };
 
   useEffect(() => {
     // Hilfsfunktion um Zahl zu Komma-String zu konvertieren
@@ -106,7 +125,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
     setActiveTab('form');
     fetchPriceIncreases();
     fetchCommissionRates();
-  }, [contract, isOpen, fetchPriceIncreases, fetchCommissionRates]);
+    // Lade Verträge des Kunden für Karenzzeit-Berechnung
+    if (customerId) {
+      fetchContractsByCustomer(customerId);
+    }
+  }, [contract, isOpen, fetchPriceIncreases, fetchCommissionRates, customerId, fetchContractsByCustomer]);
 
   // Hilfsfunktion zum Parsen von Beträgen (für Vergleiche)
   const toNum = (val: number | string): number => {
@@ -120,6 +143,8 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
     const startDate = new Date(formData.startDate);
     const today = new Date();
+    // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
+    const customerFirstDate = getCustomerFirstContractDate() || startDate;
 
     return priceIncreases.filter((increase: any) => {
       try {
@@ -132,10 +157,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: Vertrag muss mindestens lockInMonths alt sein
+        // Bestandsschutz-Prüfung: Monate seit ERSTEM Kundenvertrag
         // (Schonfrist muss vorbei sein)
         const monthsRunning = Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
         if (monthsRunning < increase.lockInMonths) return false;
 
@@ -163,6 +188,8 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
     const startDate = new Date(formData.startDate);
     const today = new Date();
+    // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
+    const customerFirstDate = getCustomerFirstContractDate() || startDate;
 
     return priceIncreases.filter((increase: any) => {
       try {
@@ -175,10 +202,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: Vertrag DARF NOCH NICHT die lockInMonths erreicht haben
+        // Bestandsschutz-Prüfung: Monate seit ERSTEM Kundenvertrag
         // (Schonfrist ist noch aktiv)
         const monthsRunning = Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
         if (monthsRunning >= increase.lockInMonths) return false;
 
@@ -290,6 +317,8 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
     const startDate = new Date(formData.startDate);
     const today = new Date();
+    // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
+    const customerFirstDate = getCustomerFirstContractDate() || startDate;
     const increases = {
       softwareRental: 0,
       softwareCare: 0,
@@ -312,8 +341,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
       }
 
       if (validFromDate <= today) {
+        // Karenzzeit basiert auf erstem Kundenvertrag
         const monthsRunning = Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
 
         if (monthsRunning >= increase.lockInMonths) {
@@ -665,8 +695,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
                       purchase: breakdown.baseAmounts.purchase * (increase.amountIncreases.purchase / 100),
                     };
 
+                    // Karenzzeit basiert auf erstem Kundenvertrag
+                    const customerFirstDate = getCustomerFirstContractDate() || new Date(formData.startDate);
                     const monthsRunning = Math.floor(
-                      (new Date().getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24 * 30)
+                      (new Date().getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
                     );
                     const monthsUntilActive = increase.lockInMonths - monthsRunning;
 

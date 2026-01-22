@@ -131,6 +131,10 @@ def get_current_monthly_price(
         # Skip if this price increase is excluded for this contract
         if price_increase.id in excluded_ids:
             continue
+        
+        # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if price_increase.valid_from < contract.start_date:
+            continue
             
         if price_increase.valid_from <= date:
             if months_running >= price_increase.lock_in_months:
@@ -196,6 +200,10 @@ def get_current_monthly_commission(
     for price_increase in price_increases:
         # Skip if this price increase is excluded for this contract
         if price_increase.id in excluded_ids:
+            continue
+        
+        # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if price_increase.valid_from < contract.start_date:
             continue
             
         if price_increase.valid_from <= date:
