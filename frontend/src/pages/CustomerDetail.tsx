@@ -104,41 +104,35 @@ function CustomerDetail() {
       purchase: contract.purchaseAmount || 0,
     };
 
-    const increases = {
-      softwareRental: 0,
-      softwareCare: 0,
-      apps: 0,
-      purchase: 0,
+    // Starte mit den Basisbeträgen und wende Preiserhöhungen kaskadiert an
+    const adjustedAmounts = {
+      softwareRental: baseAmounts.softwareRental,
+      softwareCare: baseAmounts.softwareCare,
+      apps: baseAmounts.apps,
+      purchase: baseAmounts.purchase,
     };
 
-    // Wende alle gültigen Preiserhöhungen an
+    // Wende alle gültigen Preiserhöhungen nacheinander an (kaskadiert)
     const applicableIncreases = getApplicablePriceIncreases(contract);
     for (const increase of applicableIncreases) {
       try {
         if (increase.amountIncreases?.softwareRental > 0) {
-          increases.softwareRental += increase.amountIncreases.softwareRental;
+          adjustedAmounts.softwareRental *= (1 + increase.amountIncreases.softwareRental / 100);
         }
         if (increase.amountIncreases?.softwareCare > 0) {
-          increases.softwareCare += increase.amountIncreases.softwareCare;
+          adjustedAmounts.softwareCare *= (1 + increase.amountIncreases.softwareCare / 100);
         }
         if (increase.amountIncreases?.apps > 0) {
-          increases.apps += increase.amountIncreases.apps;
+          adjustedAmounts.apps *= (1 + increase.amountIncreases.apps / 100);
         }
         if (increase.amountIncreases?.purchase > 0) {
-          increases.purchase += increase.amountIncreases.purchase;
+          adjustedAmounts.purchase *= (1 + increase.amountIncreases.purchase / 100);
         }
       } catch (error) {
         console.warn(`Error processing price increase:`, error);
         continue;
       }
     }
-
-    const adjustedAmounts = {
-      softwareRental: baseAmounts.softwareRental * (1 + increases.softwareRental / 100),
-      softwareCare: baseAmounts.softwareCare * (1 + increases.softwareCare / 100),
-      apps: baseAmounts.apps * (1 + increases.apps / 100),
-      purchase: baseAmounts.purchase * (1 + increases.purchase / 100),
-    };
 
     const totalAmount = Object.values(adjustedAmounts).reduce((a, b) => a + b, 0);
 

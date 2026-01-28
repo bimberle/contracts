@@ -318,6 +318,16 @@ const ContractModal: React.FC<ContractModalProps> = ({
     const today = new Date();
     // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
     const customerFirstDate = getCustomerFirstContractDate() || startDate;
+    
+    // Starte mit den Basisbeträgen und wende Preiserhöhungen kaskadiert an
+    const adjustedAmounts = {
+      softwareRental: baseAmounts.softwareRental,
+      softwareCare: baseAmounts.softwareCare,
+      apps: baseAmounts.apps,
+      purchase: baseAmounts.purchase,
+    };
+    
+    // Speichere die kumulierten Erhöhungen für die Anzeige
     const increases = {
       softwareRental: 0,
       softwareCare: 0,
@@ -325,7 +335,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       purchase: 0,
     };
 
-    // Apply price increases
+    // Apply price increases (kaskadiert - nacheinander multiplizieren)
     for (const increase of priceIncreases) {
       // Skip if excluded
       if ((formData.excludedPriceIncreaseIds || []).includes(increase.id)) {
@@ -346,28 +356,26 @@ const ContractModal: React.FC<ContractModalProps> = ({
         );
 
         if (monthsAtPriceIncrease >= increase.lockInMonths) {
+          // Kaskadiert anwenden: auf den aktuellen Wert multiplizieren
           if (increase.amountIncreases.softwareRental > 0) {
+            adjustedAmounts.softwareRental *= (1 + increase.amountIncreases.softwareRental / 100);
             increases.softwareRental += increase.amountIncreases.softwareRental;
           }
           if (increase.amountIncreases.softwareCare > 0) {
+            adjustedAmounts.softwareCare *= (1 + increase.amountIncreases.softwareCare / 100);
             increases.softwareCare += increase.amountIncreases.softwareCare;
           }
           if (increase.amountIncreases.apps > 0) {
+            adjustedAmounts.apps *= (1 + increase.amountIncreases.apps / 100);
             increases.apps += increase.amountIncreases.apps;
           }
           if (increase.amountIncreases.purchase > 0) {
+            adjustedAmounts.purchase *= (1 + increase.amountIncreases.purchase / 100);
             increases.purchase += increase.amountIncreases.purchase;
           }
         }
       }
     }
-
-    const adjustedAmounts = {
-      softwareRental: baseAmounts.softwareRental * (1 + increases.softwareRental / 100),
-      softwareCare: baseAmounts.softwareCare * (1 + increases.softwareCare / 100),
-      apps: baseAmounts.apps * (1 + increases.apps / 100),
-      purchase: baseAmounts.purchase * (1 + increases.purchase / 100),
-    };
 
     const totalAmount = Object.values(adjustedAmounts).reduce((a, b) => a + b, 0);
 
