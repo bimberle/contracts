@@ -20,6 +20,7 @@ function CustomerDetail() {
   const [selectedContractForEdit, setSelectedContractForEdit] = useState<Contract | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
+  const [contractSortBy, setContractSortBy] = useState<'date-desc' | 'date-asc' | 'amount' | 'commission'>('date-desc');
 
   // Hilfsfunktion: Ermittle das früheste Vertragsdatum des Kunden
   const getCustomerFirstContractDate = (): Date | null => {
@@ -58,11 +59,11 @@ function CustomerDetail() {
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: KUNDE muss mindestens lockInMonths Kunde sein
-        const monthsCustomer = Math.floor(
-          (today.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        // Bestandsschutz-Prüfung: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+        const monthsAtPriceIncrease = Math.floor(
+          (validFromDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
-        if (monthsCustomer < increase.lockInMonths) return false;
+        if (monthsAtPriceIncrease < increase.lockInMonths) return false;
 
         // Prüfe: Hat diese Preiserhöhung überhaupt positive Werte?
         if (!increase.amountIncreases) return false;
@@ -329,12 +330,24 @@ function CustomerDetail() {
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900">Verträge</h2>
-          <button
-            onClick={() => setIsContractModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
-          >
-            + Neuer Vertrag
-          </button>
+          <div className="flex items-center gap-3">
+            <select
+              value={contractSortBy}
+              onChange={(e) => setContractSortBy(e.target.value as typeof contractSortBy)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="date-desc">Datum (neueste zuerst)</option>
+              <option value="date-asc">Datum (älteste zuerst)</option>
+              <option value="amount">Betrag (höchste zuerst)</option>
+              <option value="commission">Provision (höchste zuerst)</option>
+            </select>
+            <button
+              onClick={() => setIsContractModalOpen(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
+            >
+              + Neuer Vertrag
+            </button>
+          </div>
         </div>
 
         <div className="divide-y divide-gray-200">
@@ -343,7 +356,25 @@ function CustomerDetail() {
               Keine Verträge vorhanden
             </div>
           ) : (
-            contracts.map((contract) => {
+            [...contracts].sort((a, b) => {
+              const getTotalAmount = (c: Contract) => 
+                (c.softwareRentalAmount || 0) + (c.softwareCareAmount || 0) + 
+                (c.appsAmount || 0) + (c.purchaseAmount || 0);
+              
+              switch (contractSortBy) {
+                case 'date-desc':
+                  return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+                case 'date-asc':
+                  return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+                case 'amount':
+                  return getTotalAmount(b) - getTotalAmount(a);
+                case 'commission':
+                  return (contractMetrics[b.id]?.currentMonthlyCommission || 0) - 
+                         (contractMetrics[a.id]?.currentMonthlyCommission || 0);
+                default:
+                  return 0;
+              }
+            }).map((contract) => {
               if (!contract) return null;
               
               const amounts = calculateContractAmounts(contract);

@@ -121,7 +121,6 @@ def get_current_monthly_price(
     
     # Bestandsschutz prüfen - basierend auf erstem Kundenvertrag
     reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
-    months_running = months_between(reference_date, date)
     
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
@@ -137,7 +136,9 @@ def get_current_monthly_price(
             continue
             
         if price_increase.valid_from <= date:
-            if months_running >= price_increase.lock_in_months:
+            # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            months_at_price_increase = months_between(reference_date, price_increase.valid_from)
+            if months_at_price_increase >= price_increase.lock_in_months:
                 # Preiserhöhungen pro Betrag-Typ anwenden
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
@@ -191,7 +192,6 @@ def get_current_monthly_commission(
     
     # Bestandsschutz für Preiserhöhungen prüfen - basierend auf erstem Kundenvertrag
     reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
-    months_running = months_between(reference_date, date)
     
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
@@ -207,7 +207,9 @@ def get_current_monthly_commission(
             continue
             
         if price_increase.valid_from <= date:
-            if months_running >= price_increase.lock_in_months:
+            # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            months_at_price_increase = months_between(reference_date, price_increase.valid_from)
+            if months_at_price_increase >= price_increase.lock_in_months:
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
                         # Normalisiere den Schlüssel (camelCase → snake_case)

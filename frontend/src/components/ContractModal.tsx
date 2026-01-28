@@ -157,12 +157,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: Monate seit ERSTEM Kundenvertrag
-        // (Schonfrist muss vorbei sein)
-        const monthsRunning = Math.floor(
-          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        // Bestandsschutz-Prüfung: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+        const monthsAtPriceIncrease = Math.floor(
+          (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
-        if (monthsRunning < increase.lockInMonths) return false;
+        if (monthsAtPriceIncrease < increase.lockInMonths) return false;
 
         // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
         if (!increase.amountIncreases) return false;
@@ -202,12 +201,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
-        // Bestandsschutz-Prüfung: Monate seit ERSTEM Kundenvertrag
+        // Bestandsschutz-Prüfung: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) noch NICHT genug Monate Kunde?
         // (Schonfrist ist noch aktiv)
-        const monthsRunning = Math.floor(
-          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        const monthsAtPriceIncrease = Math.floor(
+          (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
-        if (monthsRunning >= increase.lockInMonths) return false;
+        if (monthsAtPriceIncrease >= increase.lockInMonths) return false;
 
         // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
         if (!increase.amountIncreases) return false;
@@ -341,12 +340,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
       }
 
       if (validFromDate <= today) {
-        // Karenzzeit basiert auf erstem Kundenvertrag
-        const monthsRunning = Math.floor(
-          (today.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+        // Karenzzeit basiert auf erstem Kundenvertrag - prüfe zum Zeitpunkt der Preiserhöhung
+        const monthsAtPriceIncrease = Math.floor(
+          (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
 
-        if (monthsRunning >= increase.lockInMonths) {
+        if (monthsAtPriceIncrease >= increase.lockInMonths) {
           if (increase.amountIncreases.softwareRental > 0) {
             increases.softwareRental += increase.amountIncreases.softwareRental;
           }
@@ -695,12 +694,13 @@ const ContractModal: React.FC<ContractModalProps> = ({
                       purchase: breakdown.baseAmounts.purchase * (increase.amountIncreases.purchase / 100),
                     };
 
-                    // Karenzzeit basiert auf erstem Kundenvertrag
+                    // Mit der neuen Logik: Wenn der Kunde zum Zeitpunkt der Preiserhöhung nicht genug Monate Kunde war,
+                    // greift diese Preiserhöhung NIE für diesen Kunden
+                    const validFromDate = new Date(increase.validFrom);
                     const customerFirstDate = getCustomerFirstContractDate() || new Date(formData.startDate);
-                    const monthsRunning = Math.floor(
-                      (new Date().getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+                    const monthsAtPriceIncrease = Math.floor(
+                      (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
                     );
-                    const monthsUntilActive = increase.lockInMonths - monthsRunning;
 
                     return (
                       <tr
@@ -714,7 +714,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             <span className="inline-block mr-3 italic">
-                              ⏳ Schonfrist: noch {monthsUntilActive} {monthsUntilActive === 1 ? 'Monat' : 'Monate'}
+                              🛡️ Bestandsschutz: {monthsAtPriceIncrease} von {increase.lockInMonths} Monaten
                             </span>
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
