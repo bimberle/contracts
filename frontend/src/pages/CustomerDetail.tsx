@@ -396,35 +396,11 @@ function CustomerDetail() {
                           {contract.appsAmount ? (contract.softwareRentalAmount || contract.softwareCareAmount ? ' + ' : '') + '📱 Apps' : ''}
                           {contract.purchaseAmount ? (contract.softwareRentalAmount || contract.softwareCareAmount || contract.appsAmount ? ' + ' : '') + '💳 Kauf' : ''}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">Startdatum: {formatDate(contract.startDate)}</p>
+                        {contract.notes && (
+                          <p className="text-sm text-gray-500 mt-1 italic">{contract.notes}</p>
+                        )}
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          contract.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : contract.status === 'inactive'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-4 gap-6 mb-3">
-                      <div>
-                        <p className="text-sm text-gray-600">Monatspreis</p>
-                        <p className="text-lg font-bold text-gray-900">{formatCurrency(metricsForContract?.currentMonthlyPrice || amounts.totalAmount)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Meine Provision</p>
-                        <p className="text-lg font-bold text-green-600">{formatCurrency(totalCommission)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Exit-Zahlung</p>
-                        <p className="text-lg font-bold text-orange-600">{formatCurrency(contractMetrics[contract.id]?.exitPayout || 0)}</p>
-                      </div>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => {
                             setSelectedContractForEdit(contract);
@@ -457,6 +433,39 @@ function CustomerDetail() {
                             {isExpanded ? '▼' : '▶'} {applicableIncreases.length}
                           </button>
                         )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-5 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Status</p>
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                            contract.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : contract.status === 'inactive'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Startdatum</p>
+                        <p className="text-lg font-bold text-gray-900">{formatDate(contract.startDate)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Monatspreis</p>
+                        <p className="text-lg font-bold text-gray-900">{formatCurrency(metricsForContract?.currentMonthlyPrice || amounts.totalAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Meine Provision</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(totalCommission)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Exit-Zahlung</p>
+                        <p className="text-lg font-bold text-orange-600">{formatCurrency(contractMetrics[contract.id]?.exitPayout || 0)}</p>
                       </div>
                     </div>
                   </div>
