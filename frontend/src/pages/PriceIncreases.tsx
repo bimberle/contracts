@@ -28,10 +28,68 @@ const formatPercent = (value: number): string => {
 function PriceIncreases() {
   const { priceIncreases, loading, fetchPriceIncreases, deletePriceIncrease } = useSettingsStore();
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'validFrom' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'lockInMonths' | 'description'>('validFrom');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchPriceIncreases();
   }, [fetchPriceIncreases]);
+
+  // Sortierte Preiserhöhungen
+  const sortedPriceIncreases = [...priceIncreases].sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case 'validFrom':
+        comparison = new Date(a.validFrom).getTime() - new Date(b.validFrom).getTime();
+        break;
+      case 'softwareRental':
+        comparison = getAmountIncrease(a, 'softwareRental') - getAmountIncrease(b, 'softwareRental');
+        break;
+      case 'softwareCare':
+        comparison = getAmountIncrease(a, 'softwareCare') - getAmountIncrease(b, 'softwareCare');
+        break;
+      case 'apps':
+        comparison = getAmountIncrease(a, 'apps') - getAmountIncrease(b, 'apps');
+        break;
+      case 'purchase':
+        comparison = getAmountIncrease(a, 'purchase') - getAmountIncrease(b, 'purchase');
+        break;
+      case 'lockInMonths':
+        comparison = a.lockInMonths - b.lockInMonths;
+        break;
+      case 'description':
+        comparison = (a.description || '').localeCompare(b.description || '');
+        break;
+      default:
+        comparison = 0;
+    }
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Sortier-Handler für Spaltenköpfe
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sortierbare Spaltenüberschrift Komponente
+  const SortHeader = ({ column, children }: { column: typeof sortBy; children: React.ReactNode }) => (
+    <th
+      onClick={() => handleSort(column)}
+      className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase cursor-pointer hover:bg-gray-100 select-none"
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortBy === column && (
+          <span className="text-blue-600">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+        )}
+      </div>
+    </th>
+  );
 
   if (loading && priceIncreases.length === 0) {
     return (
@@ -71,34 +129,20 @@ function PriceIncreases() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Gültig ab
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Software Miete (%)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Software Pflege (%)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Apps (%)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Kauf (%)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Bestandsschutz (Monate)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                    Beschreibung
-                  </th>
+                  <SortHeader column="validFrom">Gültig ab</SortHeader>
+                  <SortHeader column="softwareRental">Software Miete (%)</SortHeader>
+                  <SortHeader column="softwareCare">Software Pflege (%)</SortHeader>
+                  <SortHeader column="apps">Apps (%)</SortHeader>
+                  <SortHeader column="purchase">Kauf (%)</SortHeader>
+                  <SortHeader column="lockInMonths">Bestandsschutz (Monate)</SortHeader>
+                  <SortHeader column="description">Beschreibung</SortHeader>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                     Aktionen
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {priceIncreases.map((pi) => (
+                {sortedPriceIncreases.map((pi) => (
                   <tr key={pi.id}>
                     <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                       {formatDate(pi.validFrom)}

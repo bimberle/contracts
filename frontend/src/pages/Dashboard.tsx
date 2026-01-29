@@ -15,6 +15,31 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'kundennummer' | 'name' | 'ort' | 'revenue' | 'commission' | 'netIncome' | 'exit'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortHeader = ({ column, children, align = 'left' }: { column: typeof sortBy; children: React.ReactNode; align?: 'left' | 'right' }) => (
+    <th
+      className={`px-6 py-3 text-${align} text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition select-none`}
+      onClick={() => handleSort(column)}
+    >
+      <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
+        {children}
+        <span className="text-gray-400">
+          {sortBy === column ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </div>
+    </th>
+  );
 
   const loadDashboardData = async () => {
     try {
@@ -72,11 +97,43 @@ function Dashboard() {
     loadAllMetrics();
   }, [customers]);
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      `${customer.name} ${customer.name2}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.kundennummer.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers
+    .filter(
+      (customer) =>
+        `${customer.name} ${customer.name2}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.kundennummer.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const metricsA = customerMetrics[a.id];
+      const metricsB = customerMetrics[b.id];
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'kundennummer':
+          comparison = a.kundennummer.localeCompare(b.kundennummer);
+          break;
+        case 'name':
+          comparison = `${a.name} ${a.name2}`.localeCompare(`${b.name} ${b.name2}`);
+          break;
+        case 'ort':
+          comparison = `${a.plz} ${a.ort}`.localeCompare(`${b.plz} ${b.ort}`);
+          break;
+        case 'revenue':
+          comparison = (metricsA?.totalMonthlyRevenue || 0) - (metricsB?.totalMonthlyRevenue || 0);
+          break;
+        case 'commission':
+          comparison = (metricsA?.totalMonthlyCommission || 0) - (metricsB?.totalMonthlyCommission || 0);
+          break;
+        case 'netIncome':
+          comparison = (metricsA?.totalMonthlyNetIncome || 0) - (metricsB?.totalMonthlyNetIncome || 0);
+          break;
+        case 'exit':
+          comparison = (metricsA?.exitPayoutIfTodayInMonths || 0) - (metricsB?.exitPayoutIfTodayInMonths || 0);
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
 
   if (loading && !summary) {
     return (
@@ -194,27 +251,13 @@ function Dashboard() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Kundennummer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  PLZ / Ort
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Mtl. Umsatz
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Monatliche Provision
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Netto-Gehalt
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Exit-Auszahlung
-                </th>
+                <SortHeader column="kundennummer">Kundennummer</SortHeader>
+                <SortHeader column="name">Name</SortHeader>
+                <SortHeader column="ort">PLZ / Ort</SortHeader>
+                <SortHeader column="revenue" align="right">Mtl. Umsatz</SortHeader>
+                <SortHeader column="commission" align="right">Monatliche Provision</SortHeader>
+                <SortHeader column="netIncome" align="right">Netto-Gehalt</SortHeader>
+                <SortHeader column="exit" align="right">Exit-Auszahlung</SortHeader>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Aktionen
                 </th>
@@ -236,7 +279,12 @@ function Dashboard() {
                         {customer.kundennummer}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.name} {customer.name2}
+                        <Link
+                          to={`/customers/${customer.id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          {customer.name} {customer.name2}
+                        </Link>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {customer.plz} {customer.ort}

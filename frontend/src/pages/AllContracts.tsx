@@ -20,7 +20,8 @@ export default function AllContracts() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'customer' | 'cost' | 'commission'>('customer');
+  const [sortBy, setSortBy] = useState<'customer' | 'plz' | 'status' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'total' | 'commission' | 'exit'>('customer');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [amountTypeFilters, setAmountTypeFilters] = useState({
@@ -115,23 +116,50 @@ export default function AllContracts() {
     }
 
     filtered.sort((a, b) => {
+      let comparison = 0;
       switch (sortBy) {
         case 'customer':
-          return a.customerName.localeCompare(b.customerName);
-        case 'cost':
-          return getTotalAmount(b) - getTotalAmount(a);
+          comparison = a.customerName.localeCompare(b.customerName);
+          break;
+        case 'plz':
+          comparison = (a.plz || '').localeCompare(b.plz || '');
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'softwareRental':
+          comparison = (a.softwareRentalAmount || 0) - (b.softwareRentalAmount || 0);
+          break;
+        case 'softwareCare':
+          comparison = (a.softwareCareAmount || 0) - (b.softwareCareAmount || 0);
+          break;
+        case 'apps':
+          comparison = (a.appsAmount || 0) - (b.appsAmount || 0);
+          break;
+        case 'purchase':
+          comparison = (a.purchaseAmount || 0) - (b.purchaseAmount || 0);
+          break;
+        case 'total':
+          comparison = getTotalAmount(a) - getTotalAmount(b);
+          break;
         case 'commission':
-          // Verwende echte Metriken für Sortierung
           const commA = contractMetrics[a.id]?.currentMonthlyCommission || 0;
           const commB = contractMetrics[b.id]?.currentMonthlyCommission || 0;
-          return commB - commA;
+          comparison = commA - commB;
+          break;
+        case 'exit':
+          const exitA = contractMetrics[a.id]?.exitPayout || 0;
+          const exitB = contractMetrics[b.id]?.exitPayout || 0;
+          comparison = exitA - exitB;
+          break;
         default:
-          return 0;
+          comparison = 0;
       }
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 
     setFilteredContracts(filtered);
-  }, [contracts, searchTerm, sortBy, amountTypeFilters, contractMetrics]);
+  }, [contracts, searchTerm, sortBy, sortDirection, amountTypeFilters, contractMetrics]);
 
   const getTotalAmount = (contract: Contract): number => {
     return (contract.softwareRentalAmount || 0) +
@@ -167,6 +195,31 @@ export default function AllContracts() {
     };
     return badges[status] || status;
   };
+
+  // Sortier-Handler für Spaltenköpfe
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sortierbare Spaltenüberschrift Komponente
+  const SortHeader = ({ column, children, align = 'left' }: { column: typeof sortBy; children: React.ReactNode; align?: 'left' | 'right' | 'center' }) => (
+    <th
+      onClick={() => handleSort(column)}
+      className={`px-6 py-3 text-${align} text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none`}
+    >
+      <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}>
+        {children}
+        {sortBy === column && (
+          <span className="text-blue-600">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+        )}
+      </div>
+    </th>
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', {
@@ -305,7 +358,7 @@ export default function AllContracts() {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Suchen</label>
             <input
@@ -315,19 +368,6 @@ export default function AllContracts() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sortieren</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="customer">Kunde</option>
-              <option value="cost">Kosten (absteigend)</option>
-              <option value="commission">Provision (absteigend)</option>
-            </select>
           </div>
         </div>
 
@@ -387,16 +427,16 @@ export default function AllContracts() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Kundenname</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">PLZ / Ort</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Software Miete</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Software Pflege</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Apps</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Bestand</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Gesamt</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Provision</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Exit-Zahlung</th>
+                  <SortHeader column="customer">Kundenname</SortHeader>
+                  <SortHeader column="plz">PLZ / Ort</SortHeader>
+                  <SortHeader column="status">Status</SortHeader>
+                  <SortHeader column="softwareRental" align="right">Software Miete</SortHeader>
+                  <SortHeader column="softwareCare" align="right">Software Pflege</SortHeader>
+                  <SortHeader column="apps" align="right">Apps</SortHeader>
+                  <SortHeader column="purchase" align="right">Bestand</SortHeader>
+                  <SortHeader column="total" align="right">Gesamt</SortHeader>
+                  <SortHeader column="commission" align="right">Provision</SortHeader>
+                  <SortHeader column="exit" align="right">Exit-Zahlung</SortHeader>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
               </thead>
