@@ -13,12 +13,13 @@ class PriceIncrease(Base):
     valid_from = Column(DateTime, nullable=False, index=True)
     
     # Erhöhungen pro Betrag-Typ (stored as JSONB with key-value pairs)
-    # Example: { "software_rental": 5.0, "software_care": 3.0, "apps": 2.0, "purchase": 1.0 }
+    # Example: { "software_rental": 5.0, "software_care": 3.0, "apps": 2.0, "purchase": 1.0, "cloud": 0 }
     amount_increases = Column(JSONB, default={
         "software_rental": 0,
         "software_care": 0,
         "apps": 0,
-        "purchase": 0
+        "purchase": 0,
+        "cloud": 0
     })
     
     # Bestandsschutz

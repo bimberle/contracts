@@ -12,12 +12,13 @@ class CommissionRate(Base):
     valid_from = Column(DateTime, nullable=False, index=True)
     
     # Provisionsätze pro Betrag-Typ (stored as JSON with key-value pairs)
-    # Example: { "software_rental": 20.0, "software_care": 20.0, "apps": 20.0, "purchase": 10.0 }
+    # Example: { "software_rental": 20.0, "software_care": 20.0, "apps": 20.0, "purchase": 10.0, "cloud": 10.0 }
     rates = Column(JSON, default={
         "software_rental": 20.0,
         "software_care": 20.0,
         "apps": 20.0,
-        "purchase": 10.0
+        "purchase": 10.0,
+        "cloud": 10.0
     })
     
     description = Column(String, default="")

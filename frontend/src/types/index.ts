@@ -43,6 +43,7 @@ export interface Contract {
   softwareCareAmount: number;   // Software Pflege (in der gewählten Währung)
   appsAmount: number;           // Apps (in der gewählten Währung)
   purchaseAmount: number;       // Kauf Bestandsvertrag (in der gewählten Währung)
+  cloudAmount: number;          // Cloudkosten (in der gewählten Währung)
   currency: Currency; // EUR oder CHF
   startDate: ISO8601String; // Mietbeginn
   endDate: ISO8601String | null; // null = unbegrenzt
@@ -60,6 +61,7 @@ export interface ContractCreateRequest {
   softwareCareAmount: number;
   appsAmount: number;
   purchaseAmount: number;
+  cloudAmount?: number;
   currency?: Currency;
   startDate: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
@@ -73,6 +75,7 @@ export interface ContractUpdateRequest {
   softwareCareAmount?: number;
   appsAmount?: number;
   purchaseAmount?: number;
+  cloudAmount?: number;
   currency?: Currency;
   startDate?: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
@@ -90,6 +93,7 @@ export interface PriceIncrease {
     softwareCare: number;   // % Erhöhung für Software Pflege
     apps: number;           // % Erhöhung für Apps
     purchase: number;       // % Erhöhung für Kauf Bestandsvertrag
+    cloud: number;          // % Erhöhung für Cloudkosten
   };
   lockInMonths: number; // Bestandsschutz in Monaten
   description: string;
@@ -104,6 +108,7 @@ export interface PriceIncreaseCreateRequest {
     softwareCare: number;
     apps: number;
     purchase: number;
+    cloud: number;
   };
   lockInMonths?: number;
   description?: string;
@@ -116,6 +121,7 @@ export interface PriceIncreaseUpdateRequest {
     softwareCare?: number;
     apps?: number;
     purchase?: number;
+    cloud?: number;
   };
   lockInMonths?: number;
   description?: string;
@@ -130,6 +136,7 @@ export interface CommissionRate {
     softwareCare: number;    // Software Pflege: z.B. 20%
     apps: number;            // Apps: z.B. 20%
     purchase: number;        // Kauf Bestandsvertrag: z.B. 0.083333 (1/12%)
+    cloud: number;           // Cloudkosten: z.B. 10%
   };
   description: string;
   createdAt: ISO8601String;
@@ -143,6 +150,7 @@ export interface CommissionRateCreateRequest {
     softwareCare: number;
     apps: number;
     purchase: number;
+    cloud: number;
   };
   description?: string;
 }
@@ -154,6 +162,7 @@ export interface CommissionRateUpdateRequest {
     softwareCare?: number;
     apps?: number;
     purchase?: number;
+    cloud?: number;
   };
   description?: string;
 }

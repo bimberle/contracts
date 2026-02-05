@@ -20,7 +20,7 @@ export default function AllContracts() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'customer' | 'plz' | 'status' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'total' | 'commission' | 'exit'>('customer');
+  const [sortBy, setSortBy] = useState<'customer' | 'plz' | 'status' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'cloud' | 'total' | 'commission' | 'exit'>('customer');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
@@ -29,6 +29,7 @@ export default function AllContracts() {
     softwareCare: true,
     apps: true,
     purchase: true,
+    cloud: true,
   });
 
   useEffect(() => {
@@ -93,7 +94,8 @@ export default function AllContracts() {
     const allFiltersActive = amountTypeFilters.softwareRental && 
                               amountTypeFilters.softwareCare && 
                               amountTypeFilters.apps && 
-                              amountTypeFilters.purchase;
+                              amountTypeFilters.purchase &&
+                              amountTypeFilters.cloud;
     
     if (!allFiltersActive) {
       filtered = filtered.filter((c) => {
@@ -101,6 +103,7 @@ export default function AllContracts() {
         if (amountTypeFilters.softwareCare && c.softwareCareAmount > 0) return true;
         if (amountTypeFilters.apps && c.appsAmount > 0) return true;
         if (amountTypeFilters.purchase && c.purchaseAmount > 0) return true;
+        if (amountTypeFilters.cloud && (c.cloudAmount || 0) > 0) return true;
         return false;
       });
     }
@@ -139,6 +142,9 @@ export default function AllContracts() {
         case 'purchase':
           comparison = (a.purchaseAmount || 0) - (b.purchaseAmount || 0);
           break;
+        case 'cloud':
+          comparison = (a.cloudAmount || 0) - (b.cloudAmount || 0);
+          break;
         case 'total':
           comparison = getTotalAmount(a) - getTotalAmount(b);
           break;
@@ -165,7 +171,8 @@ export default function AllContracts() {
     return (contract.softwareRentalAmount || 0) +
       (contract.softwareCareAmount || 0) +
       (contract.appsAmount || 0) +
-      (contract.purchaseAmount || 0);
+      (contract.purchaseAmount || 0) +
+      (contract.cloudAmount || 0);
   };
 
   // Verwende echte Metriken statt statischer Berechnung
@@ -374,7 +381,7 @@ export default function AllContracts() {
         {/* Amount Type Filters */}
         <div className="border-t border-gray-200 pt-4">
           <label className="block text-sm font-medium text-gray-700 mb-3">Nach Betragstypen filtern</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -411,6 +418,15 @@ export default function AllContracts() {
               />
               <span className="text-sm text-gray-700">Softwarepflege Kauf</span>
             </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={amountTypeFilters.cloud}
+                onChange={(e) => setAmountTypeFilters({...amountTypeFilters, cloud: e.target.checked})}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">Cloudkosten</span>
+            </label>
           </div>
         </div>
       </div>
@@ -429,11 +445,11 @@ export default function AllContracts() {
                 <tr>
                   <SortHeader column="customer">Kundenname</SortHeader>
                   <SortHeader column="plz">PLZ / Ort</SortHeader>
-                  <SortHeader column="status">Status</SortHeader>
                   <SortHeader column="softwareRental" align="right">Software Miete</SortHeader>
                   <SortHeader column="softwareCare" align="right">Software Pflege</SortHeader>
                   <SortHeader column="apps" align="right">Apps</SortHeader>
                   <SortHeader column="purchase" align="right">Bestand</SortHeader>
+                  <SortHeader column="cloud" align="right">Cloud</SortHeader>
                   <SortHeader column="total" align="right">Gesamt</SortHeader>
                   <SortHeader column="commission" align="right">Provision</SortHeader>
                   <SortHeader column="exit" align="right">Exit-Zahlung</SortHeader>
@@ -456,7 +472,6 @@ export default function AllContracts() {
                       <div>{contract.plz}</div>
                       <div className="text-xs text-gray-500">{contract.ort}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm">{getStatusBadge(contract.status)}</td>
                     <td className="px-6 py-4 text-sm text-right text-gray-900">
                       {formatCurrency(contract.softwareRentalAmount || 0)}
                     </td>
@@ -468,6 +483,9 @@ export default function AllContracts() {
                     </td>
                     <td className="px-6 py-4 text-sm text-right text-gray-900">
                       {formatCurrency(contract.purchaseAmount || 0)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                      {formatCurrency(contract.cloudAmount || 0)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-purple-600">
                       {formatCurrency(contractMetrics[contract.id]?.currentMonthlyPrice || getTotalAmount(contract))}

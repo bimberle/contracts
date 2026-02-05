@@ -26,6 +26,7 @@ interface FormDataType {
     softwareCare: number | string;
     apps: number | string;
     purchase: number | string;
+    cloud: number | string;
   };
   description: string;
 }
@@ -43,6 +44,7 @@ export default function CommissionRateModal({
       softwareCare: 20,
       apps: 20,
       purchase: 10,
+      cloud: 10,
     },
     description: '',
   });
@@ -65,6 +67,7 @@ export default function CommissionRateModal({
             softwareCare: 20,
             apps: 20,
             purchase: 10,
+            cloud: 10,
           },
           description: '',
         });
@@ -111,6 +114,7 @@ export default function CommissionRateModal({
           softwareCare: parseRate(formData.rates.softwareCare),
           apps: parseRate(formData.rates.apps),
           purchase: parseRate(formData.rates.purchase),
+          cloud: parseRate(formData.rates.cloud),
         },
         description: formData.description,
       };
@@ -229,6 +233,19 @@ export default function CommissionRateModal({
                   inputMode="decimal"
                   value={displayWithComma(formData.rates.purchase)}
                   onChange={(e) => handleChange('rates.purchase', e.target.value)}
+                  placeholder="z.B. 10 oder 10,5"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">
+                  Cloud (%)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={displayWithComma(formData.rates.cloud)}
+                  onChange={(e) => handleChange('rates.cloud', e.target.value)}
                   placeholder="z.B. 10 oder 10,5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />

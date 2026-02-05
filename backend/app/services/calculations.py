@@ -30,7 +30,8 @@ def get_commission_rates_for_date(
             "software_rental": 20.0,
             "software_care": 20.0,
             "apps": 20.0,
-            "purchase": 10.0
+            "purchase": 10.0,
+            "cloud": 10.0
         }
     
     # Normalisiere das Datum für Vergleiche
@@ -65,7 +66,8 @@ def _normalize_rate_keys(rates: Dict[str, float]) -> Dict[str, float]:
         "softwareRental": "software_rental",
         "softwareCare": "software_care",
         "apps": "apps",
-        "purchase": "purchase"
+        "purchase": "purchase",
+        "cloud": "cloud"
     }
     
     normalized = {}
@@ -109,6 +111,7 @@ def get_current_monthly_price(
         'software_care': contract.software_care_amount,
         'apps': contract.apps_amount,
         'purchase': contract.purchase_amount,
+        'cloud': getattr(contract, 'cloud_amount', 0) or 0,
     }
     
     # Mapping von camelCase zu snake_case
@@ -117,6 +120,7 @@ def get_current_monthly_price(
         'softwareCare': 'software_care',
         'apps': 'apps',
         'purchase': 'purchase',
+        'cloud': 'cloud',
     }
     
     # Bestandsschutz prüfen - basierend auf erstem Kundenvertrag
@@ -174,6 +178,7 @@ def get_current_monthly_commission(
         'software_care': contract.software_care_amount,
         'apps': contract.apps_amount,
         'purchase': contract.purchase_amount,
+        'cloud': getattr(contract, 'cloud_amount', 0) or 0,
     }
     
     # Mapping von camelCase zu snake_case
@@ -182,6 +187,7 @@ def get_current_monthly_commission(
         'softwareCare': 'software_care',
         'apps': 'apps',
         'purchase': 'purchase',
+        'cloud': 'cloud',
     }
     
     months_since_rental_start = months_between(contract.start_date, date)
@@ -280,6 +286,7 @@ def calculate_exit_payout(
     """
     Berechnet was bei Ausscheiden heute ausbezahlt würde.
     Gibt immer 0 zurück wenn das Ergebnis negativ wäre.
+    WICHTIG: Cloud-Kosten sind NICHT in der Exit-Zahlung enthalten.
     
     Args:
         customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
@@ -300,7 +307,8 @@ def calculate_exit_payout(
     if months_remaining <= 0:
         return 0.0
     
-    monthly_commission = get_current_monthly_commission(
+    # Exit-Provision berechnen OHNE Cloud-Kosten
+    monthly_commission = _get_exit_monthly_commission(
         contract, settings, price_increases, commission_rates_list, today,
         customer_first_contract_date
     )
@@ -309,3 +317,88 @@ def calculate_exit_payout(
     
     # Niemals negative Auszahlungen
     return max(0.0, result)
+
+
+def _get_exit_monthly_commission(
+    contract: Contract,
+    settings: Settings,
+    price_increases: List[PriceIncrease],
+    commission_rates_list: List[CommissionRate],
+    date: datetime,
+    customer_first_contract_date: datetime = None
+) -> float:
+    """
+    Berechnet die monatliche Provision für Exit-Zahlung OHNE Cloud-Kosten.
+    Cloud-Kosten gehen nicht in die Exit-Zahlungen ein.
+    """
+    if contract.status.value != 'active':
+        return 0.0
+    
+    # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen - OHNE Cloud
+    amounts = {
+        'software_rental': contract.software_rental_amount,
+        'software_care': contract.software_care_amount,
+        'apps': contract.apps_amount,
+        'purchase': contract.purchase_amount,
+        # Cloud explizit NICHT enthalten für Exit-Berechnung
+    }
+    
+    # Mapping von camelCase zu snake_case
+    camel_to_snake = {
+        'softwareRental': 'software_rental',
+        'softwareCare': 'software_care',
+        'apps': 'apps',
+        'purchase': 'purchase',
+    }
+    
+    months_since_rental_start = months_between(contract.start_date, date)
+    
+    # Noch in Gründerphase - keine Provision
+    if months_since_rental_start < 0:
+        return 0.0
+    
+    # Bestandsschutz für Preiserhöhungen prüfen - basierend auf erstem Kundenvertrag
+    reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
+    
+    # Get excluded price increase IDs for this contract
+    excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
+    
+    # Preiserhöhungen anwenden
+    for price_increase in price_increases:
+        # Skip if this price increase is excluded for this contract
+        if price_increase.id in excluded_ids:
+            continue
+        
+        # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if price_increase.valid_from < contract.start_date:
+            continue
+            
+        if price_increase.valid_from <= date:
+            # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            months_at_price_increase = months_between(reference_date, price_increase.valid_from)
+            if months_at_price_increase >= price_increase.lock_in_months:
+                if price_increase.amount_increases:
+                    for amount_type, increase_percent in price_increase.amount_increases.items():
+                        # Normalisiere den Schlüssel (camelCase → snake_case)
+                        normalized_key = camel_to_snake.get(amount_type, amount_type)
+                        if normalized_key in amounts:
+                            amounts[normalized_key] *= (1 + increase_percent / 100)
+    
+    # Berechne Provisionen pro Betrag-Typ mit aktuellen Sätzen
+    total_commission = 0.0
+    commission_rates = get_commission_rates_for_date(commission_rates_list, date)
+    
+    for amount_type, amount in amounts.items():
+        # Get the commission rate for this amount type
+        commission_rate = commission_rates.get(amount_type, 0)
+        
+        # Nach Vertragsende - prüfe postContractMonths
+        if contract.end_date and date > contract.end_date:
+            months_after_end = months_between(contract.end_date, date)
+            post_contract_limit = settings.post_contract_months.get(amount_type, 0)
+            if months_after_end > post_contract_limit:
+                continue
+        
+        total_commission += amount * (commission_rate / 100)
+    
+    return total_commission

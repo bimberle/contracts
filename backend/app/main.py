@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.61"
+BACKEND_VERSION = "1.0.62"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)

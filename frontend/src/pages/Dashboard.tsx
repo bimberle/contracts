@@ -29,14 +29,14 @@ function Dashboard() {
 
   const SortHeader = ({ column, children, align = 'left' }: { column: typeof sortBy; children: React.ReactNode; align?: 'left' | 'right' }) => (
     <th
-      className={`px-6 py-3 text-${align} text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition select-none`}
+      className={`px-6 py-3 text-${align} text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none`}
       onClick={() => handleSort(column)}
     >
       <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
         {children}
-        <span className="text-gray-400">
-          {sortBy === column ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
+        {sortBy === column && (
+          <span className="text-blue-600">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+        )}
       </div>
     </th>
   );
@@ -209,22 +209,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Top Customers */}
-      {summary && summary.topCustomers.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Top Kunden</h2>
-          <div className="space-y-3">
-            {summary.topCustomers.map((customer) => (
-              <div key={customer.customerId} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                <div>
-                  <p className="font-medium text-gray-900">{customer.customerName}</p>
-                </div>
-                <p className="text-green-600 font-semibold">{formatCurrency(customer.monthlyCommission)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Top Customers - ausgeblendet */}
 
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow">
@@ -251,15 +236,15 @@ function Dashboard() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <SortHeader column="kundennummer">Kundennummer</SortHeader>
+                <SortHeader column="kundennummer">KundenNr</SortHeader>
                 <SortHeader column="name">Name</SortHeader>
                 <SortHeader column="ort">PLZ / Ort</SortHeader>
                 <SortHeader column="revenue" align="right">Mtl. Umsatz</SortHeader>
                 <SortHeader column="commission" align="right">Monatliche Provision</SortHeader>
                 <SortHeader column="netIncome" align="right">Netto-Gehalt</SortHeader>
                 <SortHeader column="exit" align="right">Exit-Auszahlung</SortHeader>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Aktionen
+                <th className="px-3 py-3 text-center text-xs font-medium text-gray-700">
+                  🔍
                 </th>
               </tr>
             </thead>
@@ -301,12 +286,13 @@ function Dashboard() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {metrics ? formatCurrency(metrics.exitPayoutIfTodayInMonths) : '—'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-center">
                         <Link
                           to={`/customers/${customer.id}`}
-                          className="text-blue-600 hover:text-blue-800 transition"
+                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition"
+                          title="Details anzeigen"
                         >
-                          Details
+                          🔍
                         </Link>
                       </td>
                     </tr>

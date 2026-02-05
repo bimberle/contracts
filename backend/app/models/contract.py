@@ -16,11 +16,12 @@ class Contract(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     customer_id = Column(String, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # Finanzielle Details - 4 Beträge
+    # Finanzielle Details - 5 Beträge
     software_rental_amount = Column(Float, default=0)  # Software Miete
     software_care_amount = Column(Float, default=0)    # Software Pflege
     apps_amount = Column(Float, default=0)             # Apps
     purchase_amount = Column(Float, default=0)         # Kauf Bestandsvertrag
+    cloud_amount = Column(Float, default=0)            # Cloudkosten
     currency = Column(String, default="EUR")
     
     # Zeitliche Details

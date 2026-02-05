@@ -16,6 +16,7 @@ class ContractBase(BaseModel):
     software_care_amount: float = 0    # Software Pflege
     apps_amount: float = 0             # Apps
     purchase_amount: float = 0         # Kauf Bestandsvertrag (Monatliche Softwarepflege Kauf)
+    cloud_amount: float = 0            # Cloudkosten
     currency: str = "EUR"
     start_date: datetime  # Mietbeginn
     end_date: Optional[datetime] = None
@@ -36,6 +37,7 @@ class ContractUpdate(BaseModel):
     software_care_amount: Optional[float] = None
     apps_amount: Optional[float] = None
     purchase_amount: Optional[float] = None
+    cloud_amount: Optional[float] = None
     currency: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None

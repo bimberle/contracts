@@ -39,6 +39,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     softwareCareAmount: number | string;
     appsAmount: number | string;
     purchaseAmount: number | string;
+    cloudAmount: number | string;
     currency: string;
     startDate: string;
     endDate: string;
@@ -50,6 +51,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     softwareCareAmount: 0,
     appsAmount: 0,
     purchaseAmount: 0,
+    cloudAmount: 0,
     currency: 'EUR',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
@@ -100,6 +102,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         softwareCareAmount: numToComma(contract.softwareCareAmount),
         appsAmount: numToComma(contract.appsAmount),
         purchaseAmount: numToComma(contract.purchaseAmount),
+        cloudAmount: numToComma(contract.cloudAmount || 0),
         currency: contract.currency,
         startDate: contract.startDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
@@ -113,6 +116,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         softwareCareAmount: '0',
         appsAmount: '0',
         purchaseAmount: '0',
+        cloudAmount: '0',
         currency: 'EUR',
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
@@ -237,7 +241,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       [name]:
         type === 'checkbox'
           ? checked
-          : ['softwareRentalAmount', 'softwareCareAmount', 'appsAmount', 'purchaseAmount'].includes(name)
+          : ['softwareRentalAmount', 'softwareCareAmount', 'appsAmount', 'purchaseAmount', 'cloudAmount'].includes(name)
           ? value // String speichern, nicht sofort parsen
           : value,
     }));
@@ -279,6 +283,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         softwareCareAmount: parseAmount(formData.softwareCareAmount),
         appsAmount: parseAmount(formData.appsAmount),
         purchaseAmount: parseAmount(formData.purchaseAmount),
+        cloudAmount: parseAmount(formData.cloudAmount),
         currency: formData.currency,
         startDate: new Date(formData.startDate + 'T12:00:00').toISOString(),
         endDate: formData.endDate ? new Date(formData.endDate + 'T12:00:00').toISOString() : null,
@@ -312,6 +317,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       softwareCare: toNum(formData.softwareCareAmount),
       apps: toNum(formData.appsAmount),
       purchase: toNum(formData.purchaseAmount),
+      cloud: toNum(formData.cloudAmount),
     };
 
     const startDate = new Date(formData.startDate);
@@ -325,6 +331,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
       softwareCare: baseAmounts.softwareCare,
       apps: baseAmounts.apps,
       purchase: baseAmounts.purchase,
+      cloud: baseAmounts.cloud,
     };
     
     // Speichere die kumulierten Erhöhungen für die Anzeige
@@ -538,6 +545,19 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     inputMode="decimal"
                     name="purchaseAmount"
                     value={displayWithComma(formData.purchaseAmount)}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cloudkosten
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    name="cloudAmount"
+                    value={displayWithComma(formData.cloudAmount)}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />

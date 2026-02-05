@@ -22,15 +22,17 @@ const normalizeAmountIncreases = (amounts: Record<string, number> | undefined): 
   softwareCare: number;
   apps: number;
   purchase: number;
+  cloud: number;
 } => {
   if (!amounts) {
-    return { softwareRental: 0, softwareCare: 0, apps: 0, purchase: 0 };
+    return { softwareRental: 0, softwareCare: 0, apps: 0, purchase: 0, cloud: 0 };
   }
   return {
     softwareRental: amounts.softwareRental ?? amounts.software_rental ?? 0,
     softwareCare: amounts.softwareCare ?? amounts.software_care ?? 0,
     apps: amounts.apps ?? 0,
     purchase: amounts.purchase ?? 0,
+    cloud: amounts.cloud ?? 0,
   };
 };
 
@@ -48,6 +50,7 @@ interface FormDataType {
     softwareCare: number | string;
     apps: number | string;
     purchase: number | string;
+    cloud: number | string;
   };
   lockInMonths: number;
   description: string;
@@ -61,6 +64,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
       softwareCare: 0,
       apps: 0,
       purchase: 0,
+      cloud: 0,
     },
     lockInMonths: 48,
     description: '',
@@ -92,6 +96,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
             softwareCare: 0,
             apps: 0,
             purchase: 0,
+            cloud: 0,
           },
           lockInMonths: 48,
           description: '',
@@ -117,6 +122,7 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
       softwareCare: parseAmount(formData.amountIncreases.softwareCare),
       apps: parseAmount(formData.amountIncreases.apps),
       purchase: parseAmount(formData.amountIncreases.purchase),
+      cloud: parseAmount(formData.amountIncreases.cloud),
     };
 
     try {
@@ -124,7 +130,8 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
         parsedAmounts.softwareRental === 0 &&
         parsedAmounts.softwareCare === 0 &&
         parsedAmounts.apps === 0 &&
-        parsedAmounts.purchase === 0
+        parsedAmounts.purchase === 0 &&
+        parsedAmounts.cloud === 0
       ) {
         setError('Bitte geben Sie mindestens eine Preiserhöhung ein.');
         setIsLoading(false);
@@ -289,6 +296,27 @@ const PriceIncreaseModal: React.FC<PriceIncreaseModalProps> = ({ isOpen, onClose
                     amountIncreases: {
                       ...formData.amountIncreases,
                       purchase: e.target.value,
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm text-gray-700 mb-1">
+                Cloudkosten
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={displayWithComma(formData.amountIncreases.cloud)}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountIncreases: {
+                      ...formData.amountIncreases,
+                      cloud: e.target.value,
                     },
                   })
                 }

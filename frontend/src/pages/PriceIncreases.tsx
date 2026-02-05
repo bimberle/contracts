@@ -5,7 +5,7 @@ import PriceIncreaseModal from '../components/PriceIncreaseModal';
 import { PriceIncrease } from '../types';
 
 // Hilfsfunktion zum Lesen von amountIncreases (unterstützt snake_case und camelCase)
-const getAmountIncrease = (pi: PriceIncrease, key: 'softwareRental' | 'softwareCare' | 'apps' | 'purchase'): number => {
+const getAmountIncrease = (pi: PriceIncrease, key: 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'cloud'): number => {
   const amounts = pi.amountIncreases as unknown as Record<string, number>;
   if (!amounts) return 0;
   
@@ -14,6 +14,7 @@ const getAmountIncrease = (pi: PriceIncrease, key: 'softwareRental' | 'softwareC
     softwareCare: 'software_care',
     apps: 'apps',
     purchase: 'purchase',
+    cloud: 'cloud',
   };
   
   return amounts[key] ?? amounts[snakeMap[key]] ?? 0;
@@ -28,7 +29,7 @@ const formatPercent = (value: number): string => {
 function PriceIncreases() {
   const { priceIncreases, loading, fetchPriceIncreases, deletePriceIncrease } = useSettingsStore();
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'validFrom' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'lockInMonths' | 'description'>('validFrom');
+  const [sortBy, setSortBy] = useState<'validFrom' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'cloud' | 'lockInMonths' | 'description'>('validFrom');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -53,6 +54,9 @@ function PriceIncreases() {
         break;
       case 'purchase':
         comparison = getAmountIncrease(a, 'purchase') - getAmountIncrease(b, 'purchase');
+        break;
+      case 'cloud':
+        comparison = getAmountIncrease(a, 'cloud') - getAmountIncrease(b, 'cloud');
         break;
       case 'lockInMonths':
         comparison = a.lockInMonths - b.lockInMonths;
@@ -134,6 +138,7 @@ function PriceIncreases() {
                   <SortHeader column="softwareCare">Software Pflege (%)</SortHeader>
                   <SortHeader column="apps">Apps (%)</SortHeader>
                   <SortHeader column="purchase">Kauf (%)</SortHeader>
+                  <SortHeader column="cloud">Cloud (%)</SortHeader>
                   <SortHeader column="lockInMonths">Bestandsschutz (Monate)</SortHeader>
                   <SortHeader column="description">Beschreibung</SortHeader>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
@@ -158,6 +163,9 @@ function PriceIncreases() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {formatPercent(getAmountIncrease(pi, 'purchase'))}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {formatPercent(getAmountIncrease(pi, 'cloud'))}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{pi.lockInMonths}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{pi.description || '—'}</td>

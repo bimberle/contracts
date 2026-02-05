@@ -380,6 +380,7 @@ function Settings() {
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Software Pflege</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Apps</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Kauf</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Cloud</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Beschreibung</th>
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase">Aktionen</th>
                     </tr>
@@ -392,6 +393,7 @@ function Settings() {
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareCare.toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.apps.toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.purchase.toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.cloud || 0).toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{rate.description || '—'}</td>
                         <td className="px-6 py-4 text-center text-sm space-x-2">
                           <button
