@@ -39,6 +39,7 @@ function CustomerDetail() {
   // Hilfsfunktion: Finde geltende Preiserhöhungen für einen Vertrag
   // WICHTIG: Bestandsschutz basiert auf dem ERSTEN Vertrag des Kunden, nicht dem aktuellen!
   // ABER: Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+  // AUSNAHME: Manuell aktivierte frühe Preiserhöhungen (includedEarlyPriceIncreaseIds)
   const getApplicablePriceIncreases = (contract: Contract): PriceIncrease[] => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
@@ -47,23 +48,31 @@ function CustomerDetail() {
     // Bestandsschutz basiert auf dem ERSTEN Kundenvertrag
     const customerFirstDate = getCustomerFirstContractDate();
     const referenceDate = customerFirstDate || contractStartDate;
+    
+    // Get manually included early price increase IDs
+    const includedEarlyIds = contract.includedEarlyPriceIncreaseIds || [];
 
     return priceIncreases.filter((increase) => {
       try {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if (validFromDate < contractStartDate) return false;
-
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
 
+        // Check if this is a manually included early price increase
+        const isManuallyIncluded = includedEarlyIds.includes(increase.id);
+
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        // UNLESS it's manually included
+        if (validFromDate < contractStartDate && !isManuallyIncluded) return false;
+
         // Bestandsschutz-Prüfung: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+        // Skip lock-in check for manually included price increases
         const monthsAtPriceIncrease = Math.floor(
           (validFromDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
-        if (monthsAtPriceIncrease < increase.lockInMonths) return false;
+        if (monthsAtPriceIncrease < increase.lockInMonths && !isManuallyIncluded) return false;
 
         // Prüfe: Hat diese Preiserhöhung überhaupt positive Werte?
         if (!increase.amountIncreases) return false;

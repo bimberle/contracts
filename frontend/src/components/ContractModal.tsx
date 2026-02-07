@@ -424,18 +424,23 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
       const validFromDate = new Date(increase.validFrom);
       
+      // Check if this is a manually included early price increase
+      const isManuallyIncluded = (formData.includedEarlyPriceIncreaseIds || []).includes(increase.id);
+      
       // Preiserhöhung muss NACH oder AM Vertragsbeginn gültig werden
-      if (validFromDate < startDate) {
+      // UNLESS it's manually included
+      if (validFromDate < startDate && !isManuallyIncluded) {
         continue;
       }
 
       if (validFromDate <= today) {
         // Karenzzeit basiert auf erstem Kundenvertrag - prüfe zum Zeitpunkt der Preiserhöhung
+        // Skip lock-in check for manually included price increases
         const monthsAtPriceIncrease = Math.floor(
           (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
 
-        if (monthsAtPriceIncrease >= increase.lockInMonths) {
+        if (monthsAtPriceIncrease >= increase.lockInMonths || isManuallyIncluded) {
           // Kaskadiert anwenden: auf den aktuellen Wert multiplizieren
           if (increase.amountIncreases.softwareRental > 0) {
             adjustedAmounts.softwareRental *= (1 + increase.amountIncreases.softwareRental / 100);
