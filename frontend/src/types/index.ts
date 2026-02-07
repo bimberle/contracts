@@ -51,6 +51,7 @@ export interface Contract {
   status: ContractStatus; // Automatisch basierend auf endDate
   notes: string;
   excludedPriceIncreaseIds: string[]; // IDs der ausgeschlossenen Preiserhöhungen
+  includedEarlyPriceIncreaseIds: string[]; // IDs der manuell aktivierten früheren Preiserhöhungen
   createdAt: ISO8601String;
   updatedAt: ISO8601String;
 }
@@ -68,6 +69,7 @@ export interface ContractCreateRequest {
   isFounderDiscount?: boolean;
   notes?: string;
   excludedPriceIncreaseIds?: string[];
+  includedEarlyPriceIncreaseIds?: string[];
 }
 
 export interface ContractUpdateRequest {
@@ -82,6 +84,7 @@ export interface ContractUpdateRequest {
   isFounderDiscount?: boolean;
   notes?: string;
   excludedPriceIncreaseIds?: string[];
+  includedEarlyPriceIncreaseIds?: string[];
 }
 
 // Price Increase (Preiserhöhung)

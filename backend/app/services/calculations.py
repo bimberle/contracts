@@ -129,20 +129,28 @@ def get_current_monthly_price(
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
     
+    # Get included early price increase IDs (manually activated)
+    included_early_ids = contract.included_early_price_increase_ids if hasattr(contract, 'included_early_price_increase_ids') else []
+    
     # Preiserhöhungen anwenden pro Betrag-Typ
     for price_increase in price_increases:
         # Skip if this price increase is excluded for this contract
         if price_increase.id in excluded_ids:
             continue
         
+        # Check if this is a manually included early price increase
+        is_manually_included = price_increase.id in included_early_ids
+        
         # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if price_increase.valid_from < contract.start_date:
+        # UNLESS it's manually included
+        if price_increase.valid_from < contract.start_date and not is_manually_included:
             continue
             
         if price_increase.valid_from <= date:
             # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            # Skip lock-in check for manually included price increases
             months_at_price_increase = months_between(reference_date, price_increase.valid_from)
-            if months_at_price_increase >= price_increase.lock_in_months:
+            if months_at_price_increase >= price_increase.lock_in_months or is_manually_included:
                 # Preiserhöhungen pro Betrag-Typ anwenden
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
@@ -202,20 +210,28 @@ def get_current_monthly_commission(
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
     
+    # Get included early price increase IDs (manually activated)
+    included_early_ids = contract.included_early_price_increase_ids if hasattr(contract, 'included_early_price_increase_ids') else []
+    
     # Preiserhöhungen anwenden
     for price_increase in price_increases:
         # Skip if this price increase is excluded for this contract
         if price_increase.id in excluded_ids:
             continue
         
+        # Check if this is a manually included early price increase
+        is_manually_included = price_increase.id in included_early_ids
+        
         # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if price_increase.valid_from < contract.start_date:
+        # UNLESS it's manually included
+        if price_increase.valid_from < contract.start_date and not is_manually_included:
             continue
             
         if price_increase.valid_from <= date:
             # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            # Skip lock-in check for manually included price increases
             months_at_price_increase = months_between(reference_date, price_increase.valid_from)
-            if months_at_price_increase >= price_increase.lock_in_months:
+            if months_at_price_increase >= price_increase.lock_in_months or is_manually_included:
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
                         # Normalisiere den Schlüssel (camelCase → snake_case)
@@ -363,20 +379,28 @@ def _get_exit_monthly_commission(
     # Get excluded price increase IDs for this contract
     excluded_ids = contract.excluded_price_increase_ids if hasattr(contract, 'excluded_price_increase_ids') else []
     
+    # Get included early price increase IDs (manually activated)
+    included_early_ids = contract.included_early_price_increase_ids if hasattr(contract, 'included_early_price_increase_ids') else []
+    
     # Preiserhöhungen anwenden
     for price_increase in price_increases:
         # Skip if this price increase is excluded for this contract
         if price_increase.id in excluded_ids:
             continue
         
+        # Check if this is a manually included early price increase
+        is_manually_included = price_increase.id in included_early_ids
+        
         # Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if price_increase.valid_from < contract.start_date:
+        # UNLESS it's manually included
+        if price_increase.valid_from < contract.start_date and not is_manually_included:
             continue
             
         if price_increase.valid_from <= date:
             # Bestandsschutz: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
+            # Skip lock-in check for manually included price increases
             months_at_price_increase = months_between(reference_date, price_increase.valid_from)
-            if months_at_price_increase >= price_increase.lock_in_months:
+            if months_at_price_increase >= price_increase.lock_in_months or is_manually_included:
                 if price_increase.amount_increases:
                     for amount_type, increase_percent in price_increase.amount_increases.items():
                         # Normalisiere den Schlüssel (camelCase → snake_case)

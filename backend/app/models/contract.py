@@ -34,6 +34,10 @@ class Contract(Base):
     # Preiserhöhungen die für diesen Vertrag nicht gelten (list of price_increase IDs)
     excluded_price_increase_ids = Column(JSON, default=[])
     
+    # Frühere Preiserhöhungen die für diesen Vertrag manuell aktiviert wurden (list of price_increase IDs)
+    # Diese werden normalerweise wegen Bestandsschutz oder Startdatum nicht angewendet
+    included_early_price_increase_ids = Column(JSON, default=[])
+    
     notes = Column(String, default="")
     
     created_at = Column(DateTime, default=datetime.utcnow)

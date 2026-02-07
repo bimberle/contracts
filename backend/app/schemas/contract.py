@@ -22,6 +22,7 @@ class ContractBase(BaseModel):
     end_date: Optional[datetime] = None
     is_founder_discount: bool = False
     excluded_price_increase_ids: List[str] = []  # Price increase IDs that don't apply to this contract
+    included_early_price_increase_ids: List[str] = []  # Early price increase IDs manually enabled for this contract
     notes: str = ""
 
 class ContractCreate(ContractBase):
@@ -43,6 +44,7 @@ class ContractUpdate(BaseModel):
     end_date: Optional[datetime] = None
     is_founder_discount: Optional[bool] = None
     excluded_price_increase_ids: Optional[List[str]] = None
+    included_early_price_increase_ids: Optional[List[str]] = None
     notes: Optional[str] = None
 
 class Contract(ContractBase):

@@ -46,6 +46,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     isFounderDiscount: boolean;
     notes: string;
     excludedPriceIncreaseIds: string[];
+    includedEarlyPriceIncreaseIds: string[];
   }>({
     softwareRentalAmount: 0,
     softwareCareAmount: 0,
@@ -58,10 +59,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
     isFounderDiscount: false,
     notes: '',
     excludedPriceIncreaseIds: [],
+    includedEarlyPriceIncreaseIds: [],
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'breakdown'>('form');
+  const [showAllPriceIncreases, setShowAllPriceIncreases] = useState(false);
 
   const createContract = useContractStore((state: any) => state.createContract);
   const updateContract = useContractStore((state: any) => state.updateContract);
@@ -109,6 +112,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         isFounderDiscount: contract.isFounderDiscount,
         notes: contract.notes,
         excludedPriceIncreaseIds: contract.excludedPriceIncreaseIds || [],
+        includedEarlyPriceIncreaseIds: contract.includedEarlyPriceIncreaseIds || [],
       });
     } else {
       setFormData({
@@ -123,8 +127,10 @@ const ContractModal: React.FC<ContractModalProps> = ({
         isFounderDiscount: false,
         notes: '',
         excludedPriceIncreaseIds: [],
+        includedEarlyPriceIncreaseIds: [],
       });
     }
+    setShowAllPriceIncreases(false);
     setError(null);
     setActiveTab('form');
     fetchPriceIncreases();
@@ -142,6 +148,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
   };
 
   // Hilfsfunktion: Finde geltende Preiserhöhungen (Schonfrist vorbei)
+  // Inklusive manuell aktivierter früher Preiserhöhungen
   const getApplicablePriceIncreases = () => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
@@ -149,23 +156,70 @@ const ContractModal: React.FC<ContractModalProps> = ({
     const today = new Date();
     // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
     const customerFirstDate = getCustomerFirstContractDate() || startDate;
+    const includedEarlyIds = formData.includedEarlyPriceIncreaseIds || [];
 
     return priceIncreases.filter((increase: any) => {
       try {
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
-        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
-        if (validFromDate < startDate) return false;
-
         // Muss gültig sein (validFrom in der Vergangenheit oder heute)
         if (validFromDate > today) return false;
+
+        // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
+        if (!increase.amountIncreases) return false;
+        
+        // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        const hasApplicableIncrease = 
+          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+
+        if (!hasApplicableIncrease) return false;
+
+        // Falls manuell aktiviert, immer anzeigen
+        if (includedEarlyIds.includes(increase.id)) return true;
+
+        // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
+        if (validFromDate < startDate) return false;
 
         // Bestandsschutz-Prüfung: War der Kunde zum Zeitpunkt der Preiserhöhung (validFrom) bereits genug Monate Kunde?
         const monthsAtPriceIncrease = Math.floor(
           (validFromDate.getTime() - customerFirstDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         );
         if (monthsAtPriceIncrease < increase.lockInMonths) return false;
+
+        return true;
+      } catch (error) {
+        console.warn(`Error processing price increase:`, error);
+        return false;
+      }
+    });
+  };
+
+  // Hilfsfunktion: Finde frühere Preiserhöhungen (vor Vertragsbeginn)
+  // Diese werden normalerweise nicht angewendet, können aber manuell aktiviert werden
+  const getEarlyPriceIncreases = () => {
+    if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
+
+    const startDate = new Date(formData.startDate);
+    const today = new Date();
+    const includedEarlyIds = formData.includedEarlyPriceIncreaseIds || [];
+
+    return priceIncreases.filter((increase: any) => {
+      try {
+        const validFromDate = new Date(increase.validFrom);
+        if (isNaN(validFromDate.getTime())) return false;
+
+        // Muss gültig sein (validFrom in der Vergangenheit oder heute)
+        if (validFromDate > today) return false;
+
+        // Nur Preiserhöhungen VOR dem Vertragsbeginn
+        if (validFromDate >= startDate) return false;
+
+        // Falls bereits manuell aktiviert, nicht hier anzeigen (wird schon in getApplicablePriceIncreases gezeigt)
+        if (includedEarlyIds.includes(increase.id)) return false;
 
         // Typ-Prüfung: Die Preiserhöhung muss für diesen Vertragstyp gelten
         if (!increase.amountIncreases) return false;
@@ -265,6 +319,24 @@ const ContractModal: React.FC<ContractModalProps> = ({
     });
   };
 
+  // Handle including/excluding early price increases (before contract start)
+  const handleEarlyPriceIncreaseToggle = (priceIncreaseId: string) => {
+    setFormData((prev: any) => {
+      const included = prev.includedEarlyPriceIncreaseIds || [];
+      if (included.includes(priceIncreaseId)) {
+        return {
+          ...prev,
+          includedEarlyPriceIncreaseIds: included.filter((id: string) => id !== priceIncreaseId),
+        };
+      } else {
+        return {
+          ...prev,
+          includedEarlyPriceIncreaseIds: [...included, priceIncreaseId],
+        };
+      }
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -290,6 +362,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         isFounderDiscount: formData.isFounderDiscount,
         notes: formData.notes,
         excludedPriceIncreaseIds: formData.excludedPriceIncreaseIds || [],
+        includedEarlyPriceIncreaseIds: formData.includedEarlyPriceIncreaseIds || [],
       };
 
       if (contract) {
@@ -629,18 +702,22 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     };
 
                     const isExcluded = (formData.excludedPriceIncreaseIds || []).includes(increase.id);
+                    const isManuallyIncluded = (formData.includedEarlyPriceIncreaseIds || []).includes(increase.id);
 
                     return (
                       <tr
                         key={increase.id || index}
                         className={`border-b border-gray-200 transition ${
-                          isExcluded ? 'bg-red-50 opacity-60' : 'bg-white hover:bg-gray-50'
+                          isExcluded ? 'bg-red-50 opacity-60' : isManuallyIncluded ? 'bg-yellow-100' : 'bg-white hover:bg-gray-50'
                         }`}
                       >
                         <td className="px-4 py-3 text-gray-900">
                           <div className="text-sm font-medium">
                             {formatDate(increase.validFrom)}
                             {increase.description && <span className="text-gray-600 ml-1">({increase.description})</span>}
+                            {isManuallyIncluded && (
+                              <span className="ml-2 text-xs bg-yellow-500 text-white px-1 py-0.5 rounded">Manuell aktiviert</span>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             {increase.amountIncreases.softwareRental > 0 && (
@@ -698,15 +775,26 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <label className="flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={!isExcluded}
-                              onChange={() => handlePriceIncreaseToggle(increase.id)}
-                              className="rounded border-gray-300 cursor-pointer w-4 h-4"
-                              title={isExcluded ? 'Preiserhöhung ist deaktiviert' : 'Preiserhöhung ist aktiv'}
-                            />
-                          </label>
+                          {isManuallyIncluded ? (
+                            <button
+                              type="button"
+                              onClick={() => handleEarlyPriceIncreaseToggle(increase.id)}
+                              className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition"
+                              title="Diese manuell aktivierte Preiserhöhung deaktivieren"
+                            >
+                              Entfernen
+                            </button>
+                          ) : (
+                            <label className="flex items-center justify-center">
+                              <input
+                                type="checkbox"
+                                checked={!isExcluded}
+                                onChange={() => handlePriceIncreaseToggle(increase.id)}
+                                className="rounded border-gray-300 cursor-pointer w-4 h-4"
+                                title={isExcluded ? 'Preiserhöhung ist deaktiviert' : 'Preiserhöhung ist aktiv'}
+                              />
+                            </label>
+                          )}
                         </td>
                       </tr>
                     );
@@ -801,6 +889,125 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-center text-gray-500">-</td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Early Price Increases Section - Toggle */}
+                  {getEarlyPriceIncreases().length > 0 && (
+                    <tr className="bg-yellow-50 border-b border-yellow-200">
+                      <td colSpan={6} className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAllPriceIncreases(!showAllPriceIncreases)}
+                          className="text-sm text-yellow-700 hover:text-yellow-900 underline flex items-center gap-1"
+                        >
+                          {showAllPriceIncreases ? (
+                            <>
+                              <span>⬆️</span>
+                              <span>Frühere Preiserhöhungen ausblenden ({getEarlyPriceIncreases().length})</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>⬇️</span>
+                              <span>Frühere Preiserhöhungen anzeigen ({getEarlyPriceIncreases().length} vor Vertragsbeginn)</span>
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Early Price Increases Rows (before contract start) */}
+                  {showAllPriceIncreases && getEarlyPriceIncreases().map((increase: any) => {
+                    // Calculate the amounts with this specific increase applied
+                    const increaseAmounts = {
+                      softwareRental: breakdown.baseAmounts.softwareRental * (increase.amountIncreases.softwareRental / 100),
+                      softwareCare: breakdown.baseAmounts.softwareCare * (increase.amountIncreases.softwareCare / 100),
+                      apps: breakdown.baseAmounts.apps * (increase.amountIncreases.apps / 100),
+                      purchase: breakdown.baseAmounts.purchase * (increase.amountIncreases.purchase / 100),
+                    };
+
+                    return (
+                      <tr
+                        key={`early-${increase.id}`}
+                        className="border-b border-gray-200 bg-yellow-50 opacity-70 hover:opacity-90 transition"
+                      >
+                        <td className="px-4 py-3 text-gray-600">
+                          <div className="text-sm font-medium">
+                            {formatDate(increase.validFrom)}
+                            {increase.description && <span className="text-gray-500 ml-1">({increase.description})</span>}
+                          </div>
+                          <div className="text-xs text-yellow-700 mt-1">
+                            <span className="inline-block mr-3 italic">
+                              ⚠️ Vor Vertragsbeginn - nicht automatisch anwendbar
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {increase.amountIncreases.softwareRental > 0 && (
+                              <span className="inline-block mr-3">SM: +{increase.amountIncreases.softwareRental.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.softwareCare > 0 && (
+                              <span className="inline-block mr-3">SP: +{increase.amountIncreases.softwareCare.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.apps > 0 && (
+                              <span className="inline-block mr-3">Apps: +{increase.amountIncreases.apps.toFixed(1)}%</span>
+                            )}
+                            {increase.amountIncreases.purchase > 0 && (
+                              <span className="inline-block">KB: +{increase.amountIncreases.purchase.toFixed(1)}%</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.softwareRental > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.softwareCare > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.apps > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {increaseAmounts.purchase > 0 ? (
+                            <>
+                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleEarlyPriceIncreaseToggle(increase.id)}
+                            className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
+                            title="Diese Preiserhöhung für diesen Vertrag aktivieren"
+                          >
+                            Aktivieren
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
