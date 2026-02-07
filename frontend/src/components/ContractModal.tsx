@@ -148,7 +148,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
   };
 
   // Hilfsfunktion: Finde geltende Preiserhöhungen (Schonfrist vorbei)
-  // Inklusive manuell aktivierter früher Preiserhöhungen
+  // Inklusive manuell aktivierter früher Preiserhöhungen UND manuell aktivierter Bestandsschutz-Preiserhöhungen
   const getApplicablePriceIncreases = () => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
@@ -178,7 +178,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
 
         if (!hasApplicableIncrease) return false;
 
-        // Falls manuell aktiviert, immer anzeigen
+        // Falls manuell aktiviert (frühzeitig oder trotz Bestandsschutz), immer anzeigen
         if (includedEarlyIds.includes(increase.id)) return true;
 
         // Preiserhöhung muss NACH dem Vertragsbeginn gültig werden
@@ -240,6 +240,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
   };
 
   // Hilfsfunktion: Finde Preiserhöhungen, deren Schonfrist noch nicht abgelaufen ist
+  // ABER: Wenn sie manuell aktiviert wurden, nicht hier anzeigen (sie erscheinen dann bei getApplicablePriceIncreases)
   const getPendingPriceIncreases = () => {
     if (!priceIncreases || !Array.isArray(priceIncreases)) return [];
 
@@ -247,9 +248,13 @@ const ContractModal: React.FC<ContractModalProps> = ({
     const today = new Date();
     // Karenzzeit basiert auf dem ERSTEN Vertrag des Kunden
     const customerFirstDate = getCustomerFirstContractDate() || startDate;
+    const includedEarlyIds = formData.includedEarlyPriceIncreaseIds || [];
 
     return priceIncreases.filter((increase: any) => {
       try {
+        // Wenn manuell aktiviert, nicht als "pending" anzeigen
+        if (includedEarlyIds.includes(increase.id)) return false;
+
         const validFromDate = new Date(increase.validFrom);
         if (isNaN(validFromDate.getTime())) return false;
 
@@ -893,7 +898,27 @@ const ContractModal: React.FC<ContractModalProps> = ({
                             '-'
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center text-gray-500">-</td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleEarlyPriceIncreaseToggle(increase.id)}
+                            className={`px-2 py-1 text-xs rounded transition ${
+                              (formData.includedEarlyPriceIncreaseIds || []).includes(increase.id)
+                                ? 'bg-red-500 text-white hover:bg-red-600'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                            title={
+                              (formData.includedEarlyPriceIncreaseIds || []).includes(increase.id)
+                                ? 'Manuell aktivierte Preiserhöhung deaktivieren'
+                                : 'Preiserhöhung trotz Bestandsschutz manuell aktivieren'
+                            }
+                          >
+                            {(formData.includedEarlyPriceIncreaseIds || []).includes(increase.id)
+                              ? 'Entfernen'
+                              : 'Aktivieren'
+                            }
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
