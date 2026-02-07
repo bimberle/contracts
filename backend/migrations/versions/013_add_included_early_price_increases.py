@@ -1,6 +1,6 @@
 """Add included_early_price_increase_ids to contracts
 
-Revision ID: 013_add_included_early_price_increases
+Revision ID: 013_add_incl_early_pi
 Revises: 012_add_cloud_amount
 Create Date: 2026-02-07
 
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = '013_add_included_early_price_increases'
+revision = '013_add_incl_early_pi'
 down_revision = '012_add_cloud_amount'
 branch_labels = None
 depends_on = None
