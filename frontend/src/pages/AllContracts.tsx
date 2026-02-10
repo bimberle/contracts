@@ -11,6 +11,8 @@ interface ContractWithCustomerInfo extends Contract {
   plz: string;
   ort: string;
   customerId: string;
+  kundennummer?: string;
+  land?: string;
 }
 
 export default function AllContracts() {
@@ -55,6 +57,8 @@ export default function AllContracts() {
           customerName2: customer?.name2 || '',
           plz: customer?.plz || '',
           ort: customer?.ort || '',
+          kundennummer: customer?.kundennummer || '',
+          land: customer?.land || '',
         };
       });
 
@@ -114,7 +118,9 @@ export default function AllContracts() {
         c.customerName.toLowerCase().includes(term) ||
         (c.customerName2 && c.customerName2.toLowerCase().includes(term)) ||
         c.ort.toLowerCase().includes(term) ||
-        c.plz.includes(term)
+        c.plz.includes(term) ||
+        (c.kundennummer && c.kundennummer.toLowerCase().includes(term)) ||
+        (c.land && c.land.toLowerCase().includes(term))
       );
     }
 

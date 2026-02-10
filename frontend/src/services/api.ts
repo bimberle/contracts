@@ -50,6 +50,28 @@ class ApiClient {
     return response.data;
   }
 
+  // ==================== System / Updates ====================
+
+  async checkForUpdates(): Promise<{
+    current_version: string;
+    update_available: boolean;
+    details?: Array<{
+      image: string;
+      local_digest: string | null;
+      hub_digest: string | null;
+      update_available: boolean;
+    }>;
+    error?: string;
+  }> {
+    const response = await this.axiosInstance.get('/system/version-check');
+    return response.data;
+  }
+
+  async triggerUpdate(): Promise<{ status: string; message: string }> {
+    const response = await this.axiosInstance.post('/system/update');
+    return response.data;
+  }
+
   // ==================== Customers ====================
 
   async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {

@@ -98,11 +98,16 @@ function Dashboard() {
   }, [customers]);
 
   const filteredCustomers = customers
-    .filter(
-      (customer) =>
-        `${customer.name} ${customer.name2}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.kundennummer.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter((customer) => {
+      const term = searchTerm.toLowerCase();
+      return (
+        `${customer.name} ${customer.name2}`.toLowerCase().includes(term) ||
+        customer.kundennummer.toLowerCase().includes(term) ||
+        (customer.ort || '').toLowerCase().includes(term) ||
+        (customer.plz || '').toLowerCase().includes(term) ||
+        (customer.land || '').toLowerCase().includes(term)
+      );
+    })
     .sort((a, b) => {
       const metricsA = customerMetrics[a.id];
       const metricsB = customerMetrics[b.id];

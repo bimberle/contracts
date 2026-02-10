@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { IconSettings } from '@tabler/icons-react';
+import { IconSettings, IconRefresh, IconDownload } from '@tabler/icons-react';
 import { useCustomerStore } from './stores/customerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import api from './services/api';
@@ -16,6 +16,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [frontendVersion, setFrontendVersion] = useState('1.0.0');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
@@ -76,6 +80,9 @@ function App() {
             fetchPriceIncreases(),
           ]);
           console.log('Initial data loaded');
+          
+          // 5. Check for updates (non-blocking)
+          checkForUpdates();
         }
 
         setIsLoading(false);
@@ -87,6 +94,45 @@ function App() {
 
     init();
   }, [fetchCustomers, fetchSettings, fetchPriceIncreases]);
+
+  const checkForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await api.checkForUpdates();
+      console.log('Update check result:', result);
+      setUpdateAvailable(result.update_available);
+    } catch (err) {
+      console.warn('Could not check for updates:', err);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!window.confirm('Möchten Sie die Anwendung jetzt aktualisieren? Die Seite wird kurz nicht verfügbar sein.')) {
+      return;
+    }
+    
+    setIsUpdating(true);
+    setUpdateMessage('Update wird gestartet...');
+    
+    try {
+      const result = await api.triggerUpdate();
+      setUpdateMessage(result.message);
+      
+      // Wait and reload the page
+      setTimeout(() => {
+        setUpdateMessage('Seite wird neu geladen...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
+      }, 25000);
+    } catch (err) {
+      console.error('Update failed:', err);
+      setUpdateMessage('Update fehlgeschlagen. Bitte manuell aktualisieren.');
+      setIsUpdating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -180,9 +226,41 @@ function App() {
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <p className="text-center text-gray-500 text-sm">
-              © 2025 Contract Management System - Version {frontendVersion}
-            </p>
+            <div className="flex items-center justify-center gap-4">
+              <p className="text-gray-500 text-sm">
+                © 2025 Contract Management System - Version {frontendVersion}
+              </p>
+              
+              {/* Update Check Button */}
+              <button
+                onClick={checkForUpdates}
+                disabled={isCheckingUpdate}
+                className="text-gray-400 hover:text-blue-600 transition"
+                title="Nach Updates suchen"
+              >
+                <IconRefresh size={16} className={isCheckingUpdate ? 'animate-spin' : ''} />
+              </button>
+              
+              {/* Update Available Badge */}
+              {updateAvailable && !isUpdating && (
+                <button
+                  onClick={handleUpdate}
+                  className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition"
+                  title="Update verfügbar - Klicken zum Aktualisieren"
+                >
+                  <IconDownload size={14} />
+                  <span>Update verfügbar</span>
+                </button>
+              )}
+              
+              {/* Update in progress */}
+              {isUpdating && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white text-sm rounded-full">
+                  <IconRefresh size={14} className="animate-spin" />
+                  <span>{updateMessage || 'Aktualisiere...'}</span>
+                </div>
+              )}
+            </div>
           </div>
         </footer>
       </div>

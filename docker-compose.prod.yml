@@ -31,6 +31,11 @@ services:
       AUTH_PASSWORD: ${AUTH_PASSWORD:-}
     ports:
       - "8000:8000"
+    volumes:
+      # Mount Docker socket for self-update capability
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount compose file for update command
+      - ./docker-compose.prod.yml:/app/docker-compose.prod.yml:ro
     depends_on:
       database:
         condition: service_healthy
