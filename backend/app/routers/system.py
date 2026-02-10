@@ -1,11 +1,9 @@
 """
-System router for version checking and updates.
+System router for version checking.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 import httpx
 import subprocess
-import os
-import asyncio
 from typing import Optional
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -104,99 +102,3 @@ async def check_for_updates():
             "error": str(e)
         }
 
-
-@router.post("/update")
-async def trigger_update():
-    """
-    Trigger an update by pulling new images and recreating containers.
-    Uses direct Docker commands instead of docker-compose.
-    """
-    try:
-        # Check if we have access to docker
-        result = subprocess.run(
-            ["docker", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        if result.returncode != 0:
-            raise HTTPException(
-                status_code=500,
-                detail="Docker is not available. Make sure the Docker socket is mounted."
-            )
-        
-        # Create update script that will run in background
-        # Uses direct Docker commands to pull and recreate containers
-        update_script = """#!/bin/bash
-exec > /tmp/update_log.txt 2>&1
-echo "=== Update started at $(date) ==="
-
-# Wait a moment for the API response to be sent
-sleep 2
-
-echo "Pulling new backend image..."
-docker pull bimberle/contracts-backend:latest
-
-echo "Pulling new frontend image..."
-docker pull bimberle/contracts-frontend:latest
-
-echo "Stopping and removing old frontend..."
-docker stop contracts_frontend || true
-docker rm contracts_frontend || true
-
-echo "Starting new frontend..."
-docker run -d \\
-    --name contracts_frontend \\
-    --network contracts_network \\
-    -p 80:80 \\
-    --restart unless-stopped \\
-    bimberle/contracts-frontend:latest
-
-echo "Stopping and removing old backend..."
-docker stop contracts_backend || true
-docker rm contracts_backend || true
-
-echo "Starting new backend..."
-docker run -d \\
-    --name contracts_backend \\
-    --network contracts_network \\
-    -p 8000:8000 \\
-    -e DATABASE_URL=postgresql://contracts_user:contracts_password@contracts_db:5432/contracts \\
-    -e SECRET_KEY=change-this-in-production \\
-    -e DEBUG=False \\
-    -e CORS_ORIGINS_STR=http://localhost:3000,http://localhost,http://localhost:80 \\
-    -v /var/run/docker.sock:/var/run/docker.sock \\
-    --restart unless-stopped \\
-    bimberle/contracts-backend:latest
-
-echo "=== Update completed at $(date) ==="
-"""
-        
-        # Write and execute the update script
-        script_path = "/tmp/update_containers.sh"
-        with open(script_path, "w") as f:
-            f.write(update_script)
-        
-        os.chmod(script_path, 0o755)
-        
-        # Run the script in background (nohup)
-        subprocess.Popen(
-            ["nohup", "bash", script_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True
-        )
-        
-        return {
-            "status": "update_started",
-            "message": "Update wird durchgeführt. Die Container werden neu gestartet.",
-            "expected_version": "latest"
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to start update: {str(e)}"
-        )

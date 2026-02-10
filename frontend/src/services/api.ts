@@ -67,11 +67,6 @@ class ApiClient {
     return response.data;
   }
 
-  async triggerUpdate(): Promise<{ status: string; message: string }> {
-    const response = await this.axiosInstance.post('/system/update');
-    return response.data;
-  }
-
   // ==================== Customers ====================
 
   async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {

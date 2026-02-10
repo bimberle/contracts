@@ -18,8 +18,6 @@ function App() {
   const [frontendVersion, setFrontendVersion] = useState('1.0.0');
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
@@ -105,69 +103,6 @@ function App() {
       console.warn('Could not check for updates:', err);
     } finally {
       setIsCheckingUpdate(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!window.confirm('Möchten Sie die Anwendung jetzt aktualisieren? Die Anwendung wird kurz nicht verfügbar sein.')) {
-      return;
-    }
-    
-    setIsUpdating(true);
-    setUpdateMessage('Update wird gestartet...');
-    
-    try {
-      const currentVersion = frontendVersion;
-      await api.triggerUpdate();
-      setUpdateMessage('Container werden aktualisiert...');
-      
-      // Poll the backend to check when it's back up with new version
-      let attempts = 0;
-      const maxAttempts = 60; // 60 * 2 seconds = 2 minutes max wait
-      
-      const pollForUpdate = async () => {
-        attempts++;
-        setUpdateMessage(`Warte auf Backend... (${attempts}/${maxAttempts})`);
-        
-        try {
-          const versionResponse = await api.getBackendVersion();
-          console.log('Backend version check:', versionResponse.version, 'current:', currentVersion);
-          
-          // If backend is responding with a different version, it's updated
-          if (versionResponse.version !== currentVersion) {
-            setUpdateMessage('Update erfolgreich! Seite wird neu geladen...');
-            setTimeout(() => {
-              window.location.reload();
-            }, 1500);
-            return;
-          }
-          
-          // Still same version, wait for container restart
-          if (attempts < maxAttempts) {
-            setTimeout(pollForUpdate, 2000);
-          } else {
-            setUpdateMessage('Timeout - bitte Seite manuell neu laden');
-            setIsUpdating(false);
-          }
-        } catch (err) {
-          // Backend is down (being restarted) - keep polling
-          console.log('Backend not available yet, retrying...', err);
-          if (attempts < maxAttempts) {
-            setTimeout(pollForUpdate, 2000);
-          } else {
-            setUpdateMessage('Backend nicht erreichbar - bitte Seite manuell neu laden');
-            setIsUpdating(false);
-          }
-        }
-      };
-      
-      // Start polling after a short delay to let the update begin
-      setTimeout(pollForUpdate, 5000);
-      
-    } catch (err) {
-      console.error('Update failed:', err);
-      setUpdateMessage('Update fehlgeschlagen. Bitte manuell aktualisieren.');
-      setIsUpdating(false);
     }
   };
 
@@ -278,39 +213,19 @@ function App() {
                 <IconRefresh size={16} className={isCheckingUpdate ? 'animate-spin' : ''} />
               </button>
               
-              {/* Update Available Badge */}
-              {updateAvailable && !isUpdating && (
-                <button
-                  onClick={handleUpdate}
-                  className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white text-sm rounded-full hover:bg-green-600 transition"
-                  title="Update verfügbar - Klicken zum Aktualisieren"
+              {/* Update Available Badge - nur Anzeige, kein automatisches Update möglich */}
+              {updateAvailable && (
+                <div
+                  className="flex items-center gap-1 px-3 py-1 bg-amber-500 text-white text-sm rounded-full cursor-help"
+                  title="Update verfügbar! Bitte manuell aktualisieren: docker-compose pull && docker-compose up -d"
                 >
                   <IconDownload size={14} />
                   <span>Update verfügbar</span>
-                </button>
+                </div>
               )}
             </div>
           </div>
         </footer>
-
-        {/* Update Progress Dialog */}
-        {isUpdating && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mb-6"></div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Update läuft...</h2>
-                <p className="text-gray-600 mb-4">{updateMessage || 'Bitte warten...'}</p>
-                <div className="bg-gray-100 rounded-lg p-4 text-left text-sm text-gray-500">
-                  <p>• Container werden heruntergeladen</p>
-                  <p>• Alte Container werden gestoppt</p>
-                  <p>• Neue Container werden gestartet</p>
-                  <p>• Seite wird automatisch neu geladen</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Router>
   );
