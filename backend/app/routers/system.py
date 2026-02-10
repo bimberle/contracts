@@ -109,8 +109,7 @@ async def check_for_updates():
 async def trigger_update():
     """
     Trigger an update by pulling new images and recreating containers.
-    This endpoint will start the update process and return immediately.
-    The containers will be recreated in the background.
+    Uses direct Docker commands instead of docker-compose.
     """
     try:
         # Check if we have access to docker
@@ -126,36 +125,51 @@ async def trigger_update():
                 detail="Docker is not available. Make sure the Docker socket is mounted."
             )
         
-        # Determine the compose file location
-        # In production, compose file is usually in /app or a mounted volume
-        compose_paths = [
-            "/app/docker-compose.prod.yml",
-            "/app/docker-compose.yml",
-            "/docker-compose.prod.yml",
-            "/docker-compose.yml",
-            "./docker-compose.prod.yml",
-            "./docker-compose.yml",
-        ]
-        
-        compose_file = None
-        for path in compose_paths:
-            if os.path.exists(path):
-                compose_file = path
-                break
-        
-        # If no compose file found, try to use docker-compose without -f flag
-        # This relies on the COMPOSE_FILE environment variable or default location
-        
         # Create update script that will run in background
+        # Uses direct Docker commands to pull and recreate containers
         update_script = """#!/bin/bash
+exec > /tmp/update_log.txt 2>&1
+echo "=== Update started at $(date) ==="
+
 # Wait a moment for the API response to be sent
 sleep 2
 
-# Pull new images
-docker-compose pull 2>&1 || docker compose pull 2>&1
+echo "Pulling new backend image..."
+docker pull bimberle/contracts-backend:latest
 
-# Recreate containers with new images
-docker-compose up -d 2>&1 || docker compose up -d 2>&1
+echo "Pulling new frontend image..."
+docker pull bimberle/contracts-frontend:latest
+
+echo "Stopping and removing old frontend..."
+docker stop contracts_frontend || true
+docker rm contracts_frontend || true
+
+echo "Starting new frontend..."
+docker run -d \\
+    --name contracts_frontend \\
+    --network contracts_network \\
+    -p 80:80 \\
+    --restart unless-stopped \\
+    bimberle/contracts-frontend:latest
+
+echo "Stopping and removing old backend..."
+docker stop contracts_backend || true
+docker rm contracts_backend || true
+
+echo "Starting new backend..."
+docker run -d \\
+    --name contracts_backend \\
+    --network contracts_network \\
+    -p 8000:8000 \\
+    -e DATABASE_URL=postgresql://contracts_user:contracts_password@contracts_db:5432/contracts \\
+    -e SECRET_KEY=change-this-in-production \\
+    -e DEBUG=False \\
+    -e CORS_ORIGINS_STR=http://localhost:3000,http://localhost,http://localhost:80 \\
+    -v /var/run/docker.sock:/var/run/docker.sock \\
+    --restart unless-stopped \\
+    bimberle/contracts-backend:latest
+
+echo "=== Update completed at $(date) ==="
 """
         
         # Write and execute the update script
@@ -175,7 +189,8 @@ docker-compose up -d 2>&1 || docker compose up -d 2>&1
         
         return {
             "status": "update_started",
-            "message": "Update process started. The application will restart shortly. Please refresh the page in about 30 seconds."
+            "message": "Update wird durchgeführt. Die Container werden neu gestartet.",
+            "expected_version": "latest"
         }
         
     except HTTPException:
