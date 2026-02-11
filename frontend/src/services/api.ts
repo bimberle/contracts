@@ -23,18 +23,31 @@ import {
 class ApiClient {
   private axiosInstance: AxiosInstance;
 
+  private getBaseUrl(): string {
+    return `${window.location.origin}/api`;
+  }
+
   constructor() {
-    // Use explicit origin to ensure requests go to the same host:port as the page
-    // This must be evaluated in the constructor, not at module load time
-    const API_URL = `${window.location.origin}/api`;
-    console.log('API Client initialized with baseURL:', API_URL);
-    
+    // Create axios instance WITHOUT baseURL - we'll add it dynamically
     this.axiosInstance = axios.create({
-      baseURL: API_URL,
       headers: {
         'Content-Type': 'application/json',
       },
     });
+
+    // Request interceptor to add the correct baseURL dynamically
+    this.axiosInstance.interceptors.request.use(
+      (config) => {
+        // Build the full URL using current window.location.origin
+        const baseUrl = this.getBaseUrl();
+        if (config.url && !config.url.startsWith('http')) {
+          config.url = `${baseUrl}${config.url}`;
+        }
+        console.log('API Request:', config.method?.toUpperCase(), config.url);
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
 
     // Error interceptor
     this.axiosInstance.interceptors.response.use(
