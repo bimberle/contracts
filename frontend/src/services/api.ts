@@ -196,7 +196,7 @@ class ApiClient {
   // ==================== Price Increases ====================
 
   async getPriceIncreases(skip: number = 0, limit: number = 100): Promise<PriceIncrease[]> {
-    const url = this.buildUrl('/price-increases/', { skip, limit });
+    const url = this.buildUrl('/price-increases', { skip, limit });
     const response = await this.axiosInstance.get<PriceIncrease[]>(url);
     return response.data;
   }
@@ -208,7 +208,7 @@ class ApiClient {
   }
 
   async createPriceIncrease(priceIncrease: PriceIncreaseCreateRequest): Promise<PriceIncrease> {
-    const url = this.buildUrl('/price-increases/');
+    const url = this.buildUrl('/price-increases');
     const response = await this.axiosInstance.post<PriceIncrease>(url, priceIncrease);
     return response.data;
   }
@@ -230,13 +230,13 @@ class ApiClient {
   // ==================== Commission Rates ====================
 
   async getCommissionRates(): Promise<CommissionRate[]> {
-    const url = this.buildUrl('/commission-rates/');
+    const url = this.buildUrl('/commission-rates');
     const response = await this.axiosInstance.get<CommissionRate[]>(url);
     return response.data;
   }
 
   async createCommissionRate(rate: CommissionRateCreateRequest): Promise<CommissionRate> {
-    const url = this.buildUrl('/commission-rates/');
+    const url = this.buildUrl('/commission-rates');
     const response = await this.axiosInstance.post<CommissionRate>(url, rate);
     return response.data;
   }

@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.78"
+BACKEND_VERSION = "1.0.79"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
@@ -67,7 +67,8 @@ initialize_database()
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
-    version="1.0.49"
+    version="1.0.49",
+    redirect_slashes=False  # Disable automatic redirects that cause port issues
 )
 
 # CORS Middleware
