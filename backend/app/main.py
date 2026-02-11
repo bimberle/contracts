@@ -11,13 +11,13 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.69"
+BACKEND_VERSION = "1.0.70"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
 
 # Latest migration revision (used to stamp alembic_version for fresh installs)
-LATEST_MIGRATION = "011_add_amount_increases_json"
+LATEST_MIGRATION = "013_add_incl_early_pi"
 
 def initialize_database():
     """
@@ -103,15 +103,10 @@ def get_version():
         "version": BACKEND_VERSION
     }
 
-@app.get("/api/auth/check")
-def auth_check():
-    """Check if authentication is required"""
-    return {"auth_required": False}
-
 from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth, system
 
 # Include routers
-app.include_router(auth.router)
+app.include_router(auth.router, prefix="/api")
 app.include_router(customers.router, prefix="/api/customers")
 app.include_router(contracts.router, prefix="/api/contracts")
 app.include_router(settings.router, prefix="/api/settings")
