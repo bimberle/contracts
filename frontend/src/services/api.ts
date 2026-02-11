@@ -39,22 +39,25 @@ class ApiClient {
     this.axiosInstance.interceptors.request.use(
       (config) => {
         const baseUrl = this.getBaseUrl();
+        const path = config.url || '';
         
-        // Build complete URL with params using URL API
-        const url = new URL(config.url || '', baseUrl);
+        // Build the full URL string manually (not using URL API which has issues with paths)
+        let fullUrl = baseUrl + (path.startsWith('/') ? path : '/' + path);
         
         // Add params to URL
-        if (config.params) {
+        if (config.params && Object.keys(config.params).length > 0) {
+          const params = new URLSearchParams();
           Object.entries(config.params).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
-              url.searchParams.append(key, String(value));
+              params.append(key, String(value));
             }
           });
+          fullUrl += (fullUrl.includes('?') ? '&' : '?') + params.toString();
           delete config.params; // Remove params since we've added them to URL
         }
         
         // Set the complete URL and clear baseURL
-        config.url = url.toString();
+        config.url = fullUrl;
         config.baseURL = '';
         
         console.log('API Request:', config.method?.toUpperCase(), config.url);
