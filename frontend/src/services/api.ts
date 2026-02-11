@@ -24,53 +24,50 @@ class ApiClient {
   private axiosInstance: AxiosInstance;
 
   private getBaseUrl(): string {
-    return `${window.location.origin}/api`;
+    // Always use the current window location origin (includes port!)
+    const origin = window.location.origin;
+    console.log('Using origin:', origin);
+    return origin;
+  }
+
+  private buildUrl(path: string, params?: Record<string, unknown>): string {
+    const origin = this.getBaseUrl();
+    // Ensure path starts with /api
+    let apiPath = path;
+    if (!apiPath.startsWith('/api')) {
+      apiPath = '/api' + (apiPath.startsWith('/') ? apiPath : '/' + apiPath);
+    }
+    
+    let fullUrl = origin + apiPath;
+    
+    // Add query params if present
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      fullUrl += '?' + searchParams.toString();
+    }
+    
+    console.log('API Request URL:', fullUrl);
+    return fullUrl;
   }
 
   constructor() {
-    // Create axios instance WITHOUT baseURL
+    // Create axios instance with NO baseURL - we'll provide full URLs
     this.axiosInstance = axios.create({
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    // Request interceptor to build the complete URL including params
-    this.axiosInstance.interceptors.request.use(
-      (config) => {
-        const baseUrl = this.getBaseUrl();
-        const path = config.url || '';
-        
-        // Build the full URL string manually (not using URL API which has issues with paths)
-        let fullUrl = baseUrl + (path.startsWith('/') ? path : '/' + path);
-        
-        // Add params to URL
-        if (config.params && Object.keys(config.params).length > 0) {
-          const params = new URLSearchParams();
-          Object.entries(config.params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              params.append(key, String(value));
-            }
-          });
-          fullUrl += (fullUrl.includes('?') ? '&' : '?') + params.toString();
-          delete config.params; // Remove params since we've added them to URL
-        }
-        
-        // Set the complete URL and clear baseURL
-        config.url = fullUrl;
-        config.baseURL = '';
-        
-        console.log('API Request:', config.method?.toUpperCase(), config.url);
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Error interceptor
+    // Error interceptor only - URL building is done in buildUrl method
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        console.error('API Error:', error.message);
+        console.error('API Error:', error.message, 'URL:', error.config?.url);
         return Promise.reject(error);
       }
     );
@@ -79,7 +76,8 @@ class ApiClient {
   // ==================== Version ====================
 
   async getBackendVersion(): Promise<{ service: string; version: string }> {
-    const response = await this.axiosInstance.get<{ service: string; version: string }>('/version');
+    const url = this.buildUrl('/version');
+    const response = await this.axiosInstance.get<{ service: string; version: string }>(url);
     return response.data;
   }
 
@@ -96,126 +94,122 @@ class ApiClient {
     }>;
     error?: string;
   }> {
-    const response = await this.axiosInstance.get('/system/version-check');
+    const url = this.buildUrl('/system/version-check');
+    const response = await this.axiosInstance.get(url);
     return response.data;
   }
 
   // ==================== Customers ====================
 
   async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {
-    const response = await this.axiosInstance.get<Customer[]>('/customers', {
-      params: { skip, limit },
-    });
+    const url = this.buildUrl('/customers', { skip, limit });
+    const response = await this.axiosInstance.get<Customer[]>(url);
     return response.data;
   }
 
   async getCustomer(customerId: string): Promise<Customer> {
-    const response = await this.axiosInstance.get<Customer>(`/customers/${customerId}`);
+    const url = this.buildUrl(`/customers/${customerId}`);
+    const response = await this.axiosInstance.get<Customer>(url);
     return response.data;
   }
 
   async createCustomer(customer: CustomerCreateRequest): Promise<Customer> {
-    const response = await this.axiosInstance.post<Customer>('/customers', customer);
+    const url = this.buildUrl('/customers');
+    const response = await this.axiosInstance.post<Customer>(url, customer);
     return response.data;
   }
 
   async updateCustomer(customerId: string, customer: CustomerUpdateRequest): Promise<Customer> {
-    const response = await this.axiosInstance.put<Customer>(
-      `/customers/${customerId}`,
-      customer
-    );
+    const url = this.buildUrl(`/customers/${customerId}`);
+    const response = await this.axiosInstance.put<Customer>(url, customer);
     return response.data;
   }
 
   async deleteCustomer(customerId: string): Promise<void> {
-    await this.axiosInstance.delete(`/customers/${customerId}`);
+    const url = this.buildUrl(`/customers/${customerId}`);
+    await this.axiosInstance.delete(url);
   }
 
   async getCustomerMetrics(customerId: string): Promise<CalculatedMetrics> {
-    const response = await this.axiosInstance.get<ApiResponse<CalculatedMetrics>>(
-      `/customers/${customerId}/metrics`
-    );
+    const url = this.buildUrl(`/customers/${customerId}/metrics`);
+    const response = await this.axiosInstance.get<ApiResponse<CalculatedMetrics>>(url);
     return response.data.data!;
   }
 
   // ==================== Contracts ====================
 
   async getContracts(skip: number = 0, limit: number = 100): Promise<Contract[]> {
-    const response = await this.axiosInstance.get<Contract[]>('/contracts', {
-      params: { skip, limit },
-    });
+    const url = this.buildUrl('/contracts', { skip, limit });
+    const response = await this.axiosInstance.get<Contract[]>(url);
     return response.data;
   }
 
   async getContractsByCustomer(customerId: string): Promise<Contract[]> {
-    const response = await this.axiosInstance.get<Contract[]>(
-      `/contracts/customer/${customerId}`
-    );
+    const url = this.buildUrl(`/contracts/customer/${customerId}`);
+    const response = await this.axiosInstance.get<Contract[]>(url);
     return response.data;
   }
 
   async getContract(contractId: string): Promise<Contract> {
-    const response = await this.axiosInstance.get<Contract>(`/contracts/${contractId}`);
+    const url = this.buildUrl(`/contracts/${contractId}`);
+    const response = await this.axiosInstance.get<Contract>(url);
     return response.data;
   }
 
   async createContract(contract: ContractCreateRequest): Promise<Contract> {
-    const response = await this.axiosInstance.post<Contract>('/contracts', contract);
+    const url = this.buildUrl('/contracts');
+    const response = await this.axiosInstance.post<Contract>(url, contract);
     return response.data;
   }
 
   async updateContract(contractId: string, contract: ContractUpdateRequest): Promise<Contract> {
-    const response = await this.axiosInstance.put<Contract>(
-      `/contracts/${contractId}`,
-      contract
-    );
+    const url = this.buildUrl(`/contracts/${contractId}`);
+    const response = await this.axiosInstance.put<Contract>(url, contract);
     return response.data;
   }
 
   async deleteContract(contractId: string): Promise<void> {
-    await this.axiosInstance.delete(`/contracts/${contractId}`);
+    const url = this.buildUrl(`/contracts/${contractId}`);
+    await this.axiosInstance.delete(url);
   }
 
   async getContractMetrics(contractId: string) {
-    const response = await this.axiosInstance.get<ApiResponse<any>>(
-      `/contracts/${contractId}/metrics`
-    );
+    const url = this.buildUrl(`/contracts/${contractId}/metrics`);
+    const response = await this.axiosInstance.get<ApiResponse<any>>(url);
     return response.data.data!;
   }
 
   // ==================== Settings ====================
 
   async getSettings(): Promise<Settings> {
-    const response = await this.axiosInstance.get<Settings>('/settings');
+    const url = this.buildUrl('/settings');
+    const response = await this.axiosInstance.get<Settings>(url);
     return response.data;
   }
 
   async updateSettings(settings: SettingsUpdateRequest): Promise<Settings> {
-    const response = await this.axiosInstance.put<Settings>('/settings', settings);
+    const url = this.buildUrl('/settings');
+    const response = await this.axiosInstance.put<Settings>(url, settings);
     return response.data;
   }
 
   // ==================== Price Increases ====================
 
   async getPriceIncreases(skip: number = 0, limit: number = 100): Promise<PriceIncrease[]> {
-    const response = await this.axiosInstance.get<PriceIncrease[]>('/price-increases/', {
-      params: { skip, limit },
-    });
+    const url = this.buildUrl('/price-increases/', { skip, limit });
+    const response = await this.axiosInstance.get<PriceIncrease[]>(url);
     return response.data;
   }
 
   async getPriceIncrease(priceIncreaseId: string): Promise<PriceIncrease> {
-    const response = await this.axiosInstance.get<PriceIncrease>(
-      `/price-increases/${priceIncreaseId}`
-    );
+    const url = this.buildUrl(`/price-increases/${priceIncreaseId}`);
+    const response = await this.axiosInstance.get<PriceIncrease>(url);
     return response.data;
   }
 
   async createPriceIncrease(priceIncrease: PriceIncreaseCreateRequest): Promise<PriceIncrease> {
-    const response = await this.axiosInstance.post<PriceIncrease>(
-      '/price-increases/',
-      priceIncrease
-    );
+    const url = this.buildUrl('/price-increases/');
+    const response = await this.axiosInstance.post<PriceIncrease>(url, priceIncrease);
     return response.data;
   }
 
@@ -223,29 +217,27 @@ class ApiClient {
     priceIncreaseId: string,
     priceIncrease: PriceIncreaseUpdateRequest
   ): Promise<PriceIncrease> {
-    const response = await this.axiosInstance.put<PriceIncrease>(
-      `/price-increases/${priceIncreaseId}`,
-      priceIncrease
-    );
+    const url = this.buildUrl(`/price-increases/${priceIncreaseId}`);
+    const response = await this.axiosInstance.put<PriceIncrease>(url, priceIncrease);
     return response.data;
   }
 
   async deletePriceIncrease(priceIncreaseId: string): Promise<void> {
-    await this.axiosInstance.delete(`/price-increases/${priceIncreaseId}`);
+    const url = this.buildUrl(`/price-increases/${priceIncreaseId}`);
+    await this.axiosInstance.delete(url);
   }
 
   // ==================== Commission Rates ====================
 
   async getCommissionRates(): Promise<CommissionRate[]> {
-    const response = await this.axiosInstance.get<CommissionRate[]>('/commission-rates/');
+    const url = this.buildUrl('/commission-rates/');
+    const response = await this.axiosInstance.get<CommissionRate[]>(url);
     return response.data;
   }
 
   async createCommissionRate(rate: CommissionRateCreateRequest): Promise<CommissionRate> {
-    const response = await this.axiosInstance.post<CommissionRate>(
-      '/commission-rates/',
-      rate
-    );
+    const url = this.buildUrl('/commission-rates/');
+    const response = await this.axiosInstance.post<CommissionRate>(url, rate);
     return response.data;
   }
 
@@ -253,50 +245,47 @@ class ApiClient {
     rateId: string,
     rate: CommissionRateUpdateRequest
   ): Promise<CommissionRate> {
-    const response = await this.axiosInstance.put<CommissionRate>(
-      `/commission-rates/${rateId}`,
-      rate
-    );
+    const url = this.buildUrl(`/commission-rates/${rateId}`);
+    const response = await this.axiosInstance.put<CommissionRate>(url, rate);
     return response.data;
   }
 
   async deleteCommissionRate(rateId: string): Promise<void> {
-    await this.axiosInstance.delete(`/commission-rates/${rateId}`);
+    const url = this.buildUrl(`/commission-rates/${rateId}`);
+    await this.axiosInstance.delete(url);
   }
 
   // ==================== Analytics ====================
 
   async getDashboard(): Promise<DashboardSummary> {
-    const response = await this.axiosInstance.get<ApiResponse<DashboardSummary>>(
-      '/analytics/dashboard'
-    );
+    const url = this.buildUrl('/analytics/dashboard');
+    const response = await this.axiosInstance.get<ApiResponse<DashboardSummary>>(url);
     return response.data.data!;
   }
 
   async getForecast(months: number = 12): Promise<Forecast> {
-    const response = await this.axiosInstance.get<ApiResponse<Forecast>>(
-      '/analytics/forecast',
-      { params: { months } }
-    );
+    const url = this.buildUrl('/analytics/forecast', { months });
+    const response = await this.axiosInstance.get<ApiResponse<Forecast>>(url);
     return response.data.data!;
   }
 
   async getCustomerAnalytics(customerId: string) {
-    const response = await this.axiosInstance.get<ApiResponse<any>>(
-      `/analytics/customer/${customerId}`
-    );
+    const url = this.buildUrl(`/analytics/customer/${customerId}`);
+    const response = await this.axiosInstance.get<ApiResponse<any>>(url);
     return response.data.data!;
   }
 
   // ==================== Authentication ====================
 
   async login(password: string): Promise<{ token: string; message: string }> {
-    const response = await this.axiosInstance.post('/auth/login', { password });
+    const url = this.buildUrl('/auth/login');
+    const response = await this.axiosInstance.post(url, { password });
     return response.data;
   }
 
   async checkAuth(): Promise<{ auth_required: boolean }> {
-    const response = await this.axiosInstance.get('/auth/check');
+    const url = this.buildUrl('/auth/check');
+    const response = await this.axiosInstance.get(url);
     return response.data;
   }
 
@@ -312,7 +301,8 @@ class ApiClient {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.axiosInstance.get('/health');
+      const url = this.buildUrl('/health');
+      const response = await this.axiosInstance.get(url);
       return response.status === 200;
     } catch {
       return false;
