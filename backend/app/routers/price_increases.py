@@ -11,7 +11,7 @@ from app.schemas.price_increase import (
 
 router = APIRouter(tags=["price-increases"])
 
-@router.get("/", response_model=List[PriceIncreaseSchema])
+@router.get("", response_model=List[PriceIncreaseSchema])
 def list_price_increases(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Ruft alle Preiserhöhungen auf"""
     price_increases = (
@@ -35,7 +35,7 @@ def get_price_increase(price_increase_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Preiserhöhung nicht gefunden")
     return price_increase
 
-@router.post("/", response_model=PriceIncreaseSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PriceIncreaseSchema, status_code=status.HTTP_201_CREATED)
 def create_price_increase(price_increase: PriceIncreaseCreate, db: Session = Depends(get_db)):
     """Erstellt eine neue Preiserhöhung"""
     db_price_increase = PriceIncrease(**price_increase.dict())

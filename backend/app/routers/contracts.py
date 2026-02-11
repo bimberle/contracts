@@ -13,7 +13,7 @@ from datetime import datetime
 
 router = APIRouter(tags=["contracts"])
 
-@router.get("/", response_model=List[ContractSchema])
+@router.get("", response_model=List[ContractSchema])
 def list_contracts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Ruft alle Verträge auf"""
     contracts = db.query(Contract).offset(skip).limit(limit).all()
@@ -38,7 +38,7 @@ def get_contract(contract_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
     return contract
 
-@router.post("/", response_model=ContractSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ContractSchema, status_code=status.HTTP_201_CREATED)
 def create_contract(contract: ContractCreate, db: Session = Depends(get_db)):
     """Erstellt einen neuen Vertrag"""
     # Prüfe ob Kunde existiert

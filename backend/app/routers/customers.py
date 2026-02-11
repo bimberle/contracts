@@ -13,7 +13,7 @@ from datetime import datetime
 
 router = APIRouter(tags=["customers"])
 
-@router.get("/", response_model=List[CustomerSchema])
+@router.get("", response_model=List[CustomerSchema])
 def list_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Ruft alle Kunden auf"""
     customers = db.query(Customer).offset(skip).limit(limit).all()
@@ -27,7 +27,7 @@ def get_customer(customer_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
     return customer
 
-@router.post("/", response_model=CustomerSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CustomerSchema, status_code=status.HTTP_201_CREATED)
 def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     """Erstellt einen neuen Kunden"""
     # Prüfe ob Kundennummer schon existiert

@@ -7,7 +7,7 @@ from datetime import datetime
 
 router = APIRouter(tags=["settings"])
 
-@router.get("/", response_model=SettingsSchema)
+@router.get("", response_model=SettingsSchema)
 def get_settings(db: Session = Depends(get_db)):
     """Ruft die aktuellen Einstellungen auf"""
     settings = db.query(Settings).filter(Settings.id == "default").first()
@@ -27,7 +27,7 @@ def get_settings(db: Session = Depends(get_db)):
     
     return settings
 
-@router.put("/", response_model=SettingsSchema)
+@router.put("", response_model=SettingsSchema)
 def update_settings(settings_update: SettingsUpdate, db: Session = Depends(get_db)):
     """Aktualisiert die Einstellungen"""
     db_settings = db.query(Settings).filter(Settings.id == "default").first()

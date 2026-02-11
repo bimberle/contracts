@@ -7,7 +7,7 @@ from app.schemas.commission_rate import CommissionRate, CommissionRateCreate, Co
 
 router = APIRouter(prefix="/api/commission-rates", tags=["commission-rates"])
 
-@router.get("/", response_model=list[CommissionRate])
+@router.get("", response_model=list[CommissionRate])
 async def get_commission_rates(db: Session = Depends(get_db)):
     """Get all commission rates, ordered by valid_from (newest first)"""
     rates = db.query(CommissionRateModel).order_by(
@@ -23,7 +23,7 @@ async def get_commission_rate(rate_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Commission rate not found")
     return rate
 
-@router.post("/", response_model=CommissionRate)
+@router.post("", response_model=CommissionRate)
 async def create_commission_rate(rate: CommissionRateCreate, db: Session = Depends(get_db)):
     """Create a new commission rate"""
     # Check if a rate already exists for this date (or later)
