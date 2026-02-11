@@ -20,14 +20,15 @@ import {
   CommissionRateUpdateRequest,
 } from '../types';
 
-// Use explicit origin to ensure requests go to the same host:port as the page
-const API_URL = `${window.location.origin}/api`;
-
 class ApiClient {
   private axiosInstance: AxiosInstance;
 
   constructor() {
+    // Use explicit origin to ensure requests go to the same host:port as the page
+    // This must be evaluated in the constructor, not at module load time
+    const API_URL = `${window.location.origin}/api`;
     console.log('API Client initialized with baseURL:', API_URL);
+    
     this.axiosInstance = axios.create({
       baseURL: API_URL,
       headers: {
