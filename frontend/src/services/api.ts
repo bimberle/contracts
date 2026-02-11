@@ -28,19 +28,36 @@ class ApiClient {
   }
 
   constructor() {
-    // Create axios instance WITHOUT baseURL - we'll set it dynamically per request
+    // Create axios instance WITHOUT baseURL
     this.axiosInstance = axios.create({
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    // Request interceptor to set the correct baseURL dynamically
+    // Request interceptor to build the complete URL including params
     this.axiosInstance.interceptors.request.use(
       (config) => {
-        // Set baseURL dynamically - this ensures params are appended correctly
-        config.baseURL = this.getBaseUrl();
-        console.log('API Request:', config.method?.toUpperCase(), config.baseURL + config.url);
+        const baseUrl = this.getBaseUrl();
+        
+        // Build complete URL with params using URL API
+        const url = new URL(config.url || '', baseUrl);
+        
+        // Add params to URL
+        if (config.params) {
+          Object.entries(config.params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              url.searchParams.append(key, String(value));
+            }
+          });
+          delete config.params; // Remove params since we've added them to URL
+        }
+        
+        // Set the complete URL and clear baseURL
+        config.url = url.toString();
+        config.baseURL = '';
+        
+        console.log('API Request:', config.method?.toUpperCase(), config.url);
         return config;
       },
       (error) => Promise.reject(error)
