@@ -26,7 +26,7 @@ function App() {
     // Initialize app: check health, auth, and load data
     const init = async () => {
       try {
-        // 0. Log versions
+        // 0. Log versions (only in dev)
         const version = import.meta.env.VITE_APP_VERSION || '1.0.0';
         setFrontendVersion(version);
         console.log('📦 Frontend version:', version);
@@ -39,45 +39,35 @@ function App() {
         }
 
         // 1. Check API health
-        console.log('Checking API health...');
         const isHealthy = await api.healthCheck();
         if (!isHealthy) {
           throw new Error('API is not healthy');
         }
-        console.log('API is healthy');
 
         // 2. Check if authentication is required
-        console.log('Checking auth requirement...');
         const authStatus = await api.checkAuth();
-        console.log('Auth status:', authStatus);
 
         // 3. Handle authentication
         const savedToken = localStorage.getItem('auth_token');
         const authRequired = authStatus.auth_required;
 
         if (authRequired && !savedToken) {
-          console.log('Auth required but no token - showing login');
           setIsAuthenticated(false);
         } else {
           // Either auth not required, or user has a token
           if (savedToken) {
-            console.log('Using saved token');
             api.setAuthToken(savedToken);
-          } else if (!authRequired) {
-            console.log('Auth not required - proceeding without token');
           }
           setIsAuthenticated(true);
         }
 
         // 4. Load initial data (only if authenticated)
         if (!authRequired || savedToken) {
-          console.log('Loading initial data...');
           await Promise.all([
             fetchCustomers(),
             fetchSettings(),
             fetchPriceIncreases(),
           ]);
-          console.log('Initial data loaded');
           
           // 5. Check for updates (non-blocking)
           checkForUpdates();
@@ -97,10 +87,9 @@ function App() {
     setIsCheckingUpdate(true);
     try {
       const result = await api.checkForUpdates();
-      console.log('Update check result:', result);
       setUpdateAvailable(result.update_available);
     } catch (err) {
-      console.warn('Could not check for updates:', err);
+      // Silently ignore update check errors
     } finally {
       setIsCheckingUpdate(false);
     }

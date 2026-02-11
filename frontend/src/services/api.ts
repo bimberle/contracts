@@ -25,9 +25,7 @@ class ApiClient {
 
   private getBaseUrl(): string {
     // Always use the current window location origin (includes port!)
-    const origin = window.location.origin;
-    console.log('Using origin:', origin);
-    return origin;
+    return window.location.origin;
   }
 
   private buildUrl(path: string, params?: Record<string, unknown>): string {
@@ -51,7 +49,6 @@ class ApiClient {
       fullUrl += '?' + searchParams.toString();
     }
     
-    console.log('API Request URL:', fullUrl);
     return fullUrl;
   }
 
@@ -67,7 +64,6 @@ class ApiClient {
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        console.error('API Error:', error.message, 'URL:', error.config?.url);
         return Promise.reject(error);
       }
     );
