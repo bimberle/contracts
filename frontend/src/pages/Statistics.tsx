@@ -61,6 +61,12 @@ function Statistics() {
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-3">
+            <div className="text-gray-500 text-xs font-medium">Ø Provision/Kunde</div>
+            <div className="text-lg font-bold text-purple-600 mt-1">
+              {formatCurrency(summary.totalCustomers > 0 ? summary.totalMonthlyCommission / summary.totalCustomers : 0)}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-3">
             <div className="text-gray-500 text-xs font-medium">Ø Provision/Vertrag</div>
             <div className="text-lg font-bold text-purple-600 mt-1">
               {formatCurrency(summary.totalActiveContracts > 0 ? summary.totalMonthlyCommission / summary.totalActiveContracts : 0)}
@@ -84,7 +90,7 @@ function Statistics() {
       {/* Loading Skeleton für KPI Cards */}
       {loading && !summary && (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {[...Array(7)].map((_, i) => (
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="bg-white rounded-lg shadow p-3 animate-pulse">
               <div className="h-3 bg-gray-200 rounded w-16 mb-2"></div>
               <div className="h-5 bg-gray-200 rounded w-12"></div>
