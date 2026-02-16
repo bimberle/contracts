@@ -135,7 +135,7 @@ function App() {
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-8">
                 <Link to="/" className="text-xl font-bold text-blue-600">
-                  📋 Dashboard
+                  📋 Kunden
                 </Link>
                 <div className="hidden md:flex space-x-6">
                   <Link
@@ -174,7 +174,7 @@ function App() {
         </nav>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <main className="max-w-7xl mx-auto py-4 px-2 sm:px-4 lg:px-6">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
@@ -185,8 +185,8 @@ function App() {
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 mt-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <footer className="bg-white border-t border-gray-200 mt-8">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-4">
             <div className="flex items-center justify-center gap-4">
               <p className="text-gray-500 text-sm">
                 © 2025 Contract Management System - Version {frontendVersion}

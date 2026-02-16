@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
 import { Contract, Customer, ContractMetrics } from '../types';
 import ContractModal from '../components/ContractModal';
+import PullToRefresh from '../components/PullToRefresh';
 
 interface ContractWithCustomerInfo extends Contract {
   customerName: string;
@@ -38,7 +39,7 @@ export default function AllContracts() {
     loadAllContracts();
   }, []);
 
-  const loadAllContracts = async () => {
+  const loadAllContracts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -88,13 +89,19 @@ export default function AllContracts() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Pull-to-Refresh Handler
+  const handleRefresh = useCallback(async () => {
+    await loadAllContracts();
+  }, [loadAllContracts]);
 
   useEffect(() => {
     let filtered = contracts;
 
     // Filter by amount types - wenn ALLE Filter aktiv sind, zeige alle Verträge
-    // Ansonsten zeige nur Verträge, die mindestens einen ausgewählten Typ mit > 0 haben
+    // Ansonsten zeige nur Verträge, die mindestens einen ausgewählten Typ mit !== 0 haben
+    // Verwende !== 0 statt > 0, damit auch negative Beträge berücksichtigt werden
     const allFiltersActive = amountTypeFilters.softwareRental && 
                               amountTypeFilters.softwareCare && 
                               amountTypeFilters.apps && 
@@ -103,11 +110,11 @@ export default function AllContracts() {
     
     if (!allFiltersActive) {
       filtered = filtered.filter((c) => {
-        if (amountTypeFilters.softwareRental && c.softwareRentalAmount > 0) return true;
-        if (amountTypeFilters.softwareCare && c.softwareCareAmount > 0) return true;
-        if (amountTypeFilters.apps && c.appsAmount > 0) return true;
-        if (amountTypeFilters.purchase && c.purchaseAmount > 0) return true;
-        if (amountTypeFilters.cloud && (c.cloudAmount || 0) > 0) return true;
+        if (amountTypeFilters.softwareRental && c.softwareRentalAmount !== 0) return true;
+        if (amountTypeFilters.softwareCare && c.softwareCareAmount !== 0) return true;
+        if (amountTypeFilters.apps && c.appsAmount !== 0) return true;
+        if (amountTypeFilters.purchase && c.purchaseAmount !== 0) return true;
+        if (amountTypeFilters.cloud && (c.cloudAmount || 0) !== 0) return true;
         return false;
       });
     }
@@ -337,57 +344,50 @@ export default function AllContracts() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Alle Verträge</h1>
-          <p className="text-gray-600 mt-2">Übersicht aller Kundenverträge mit Kosten und Provisionen</p>
-        </div>
+    <PullToRefresh onRefresh={handleRefresh}>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+        <h1 className="text-2xl font-bold text-gray-900">Verträge</h1>
         <button
           onClick={handleExportToExcel}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 whitespace-nowrap"
           title="Als Excel exportieren"
         >
           📊 Excel
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-gray-600 text-sm font-medium mb-2">Anzahl Verträge</p>
-          <p className="text-3xl font-bold text-gray-900">{filteredContracts.length}</p>
-          <p className="text-gray-500 text-xs mt-2">von {contracts.length} Verträgen</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <p className="text-gray-600 text-xs font-medium mb-1">Verträge</p>
+          <p className="text-xl font-bold text-gray-900">{filteredContracts.length}<span className="text-sm text-gray-500 font-normal">/{contracts.length}</span></p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-gray-600 text-sm font-medium mb-2">Monatliche Kosten</p>
-          <p className="text-3xl font-bold text-purple-600">{formatCurrency(totalRevenue)}</p>
-          <div className="text-xs text-gray-500 mt-2">brutto</div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <p className="text-gray-600 text-xs font-medium mb-1">Mtl. Umsatz</p>
+          <p className="text-xl font-bold text-purple-600">{formatCurrency(totalRevenue)}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-gray-600 text-sm font-medium mb-2">Meine Provision</p>
-          <p className="text-3xl font-bold text-green-600">{formatCurrency(totalCommission)}</p>
-          <div className="text-xs text-gray-500 mt-2">netto</div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <p className="text-gray-600 text-xs font-medium mb-1">Ø Umsatz/Vertrag</p>
+          <p className="text-xl font-bold text-purple-600">{formatCurrency(filteredContracts.length > 0 ? totalRevenue / filteredContracts.length : 0)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <p className="text-gray-600 text-xs font-medium mb-1">Ø Provision/Vertrag</p>
+          <p className="text-xl font-bold text-green-600">{formatCurrency(filteredContracts.length > 0 ? totalCommission / filteredContracts.length : 0)}</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Suchen</label>
-            <input
-              type="text"
-              placeholder="Kunde, Ort..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
+        <input
+          type="text"
+          placeholder="Kunde, Ort..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
 
         {/* Amount Type Filters */}
-        <div className="border-t border-gray-200 pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">Nach Betragstypen filtern</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="border-t border-gray-200 pt-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -559,5 +559,6 @@ export default function AllContracts() {
         }}
       />
     </div>
+    </PullToRefresh>
   );
 }

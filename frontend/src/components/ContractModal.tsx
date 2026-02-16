@@ -170,11 +170,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
         if (!increase.amountIncreases) return false;
         
         // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        // Verwende != 0 statt > 0, damit auch negative Beträge berücksichtigt werden
         const hasApplicableIncrease = 
-          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
-          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
-          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
-          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+          (toNum(formData.softwareRentalAmount) !== 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) !== 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) !== 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) !== 0 && (increase.amountIncreases.purchase ?? 0) > 0);
 
         if (!hasApplicableIncrease) return false;
 
@@ -225,11 +226,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
         if (!increase.amountIncreases) return false;
         
         // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        // Verwende != 0 statt > 0, damit auch negative Beträge berücksichtigt werden
         const hasApplicableIncrease = 
-          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
-          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
-          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
-          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+          (toNum(formData.softwareRentalAmount) !== 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) !== 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) !== 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) !== 0 && (increase.amountIncreases.purchase ?? 0) > 0);
 
         return hasApplicableIncrease;
       } catch (error) {
@@ -275,11 +277,12 @@ const ContractModal: React.FC<ContractModalProps> = ({
         if (!increase.amountIncreases) return false;
         
         // Schaue, ob für diesen Vertrag überhaupt eine Erhöhung existiert
+        // Verwende != 0 statt > 0, damit auch negative Beträge berücksichtigt werden
         const hasApplicableIncrease = 
-          (toNum(formData.softwareRentalAmount) > 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
-          (toNum(formData.softwareCareAmount) > 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
-          (toNum(formData.appsAmount) > 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
-          (toNum(formData.purchaseAmount) > 0 && (increase.amountIncreases.purchase ?? 0) > 0);
+          (toNum(formData.softwareRentalAmount) !== 0 && (increase.amountIncreases.softwareRental ?? 0) > 0) ||
+          (toNum(formData.softwareCareAmount) !== 0 && (increase.amountIncreases.softwareCare ?? 0) > 0) ||
+          (toNum(formData.appsAmount) !== 0 && (increase.amountIncreases.apps ?? 0) > 0) ||
+          (toNum(formData.purchaseAmount) !== 0 && (increase.amountIncreases.purchase ?? 0) > 0);
 
         return hasApplicableIncrease;
       } catch (error) {
@@ -745,9 +748,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900">
-                          {increaseAmounts.softwareRental > 0 ? (
+                          {increaseAmounts.softwareRental !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.softwareRental >= 0 ? 'text-green-700' : 'text-red-700'}`}>{increaseAmounts.softwareRental >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareRental)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -755,9 +758,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900">
-                          {increaseAmounts.softwareCare > 0 ? (
+                          {increaseAmounts.softwareCare !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.softwareCare >= 0 ? 'text-green-700' : 'text-red-700'}`}>{increaseAmounts.softwareCare >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareCare)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -765,9 +768,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900">
-                          {increaseAmounts.apps > 0 ? (
+                          {increaseAmounts.apps !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.apps >= 0 ? 'text-green-700' : 'text-red-700'}`}>{increaseAmounts.apps >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.apps)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -775,9 +778,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900">
-                          {increaseAmounts.purchase > 0 ? (
+                          {increaseAmounts.purchase !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-green-700">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.purchase >= 0 ? 'text-green-700' : 'text-red-700'}`}>{increaseAmounts.purchase >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.purchase)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -859,9 +862,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.softwareRental > 0 ? (
+                          {increaseAmounts.softwareRental !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className="text-sm font-medium text-gray-500">{increaseAmounts.softwareRental >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareRental)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -869,9 +872,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.softwareCare > 0 ? (
+                          {increaseAmounts.softwareCare !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className="text-sm font-medium text-gray-500">{increaseAmounts.softwareCare >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareCare)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -879,9 +882,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.apps > 0 ? (
+                          {increaseAmounts.apps !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className="text-sm font-medium text-gray-500">{increaseAmounts.apps >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.apps)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -889,9 +892,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.purchase > 0 ? (
+                          {increaseAmounts.purchase !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-gray-500">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className="text-sm font-medium text-gray-500">{increaseAmounts.purchase >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.purchase)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -989,9 +992,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.softwareRental > 0 ? (
+                          {increaseAmounts.softwareRental !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.softwareRental)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.softwareRental >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>{increaseAmounts.softwareRental >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareRental)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareRental.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -999,9 +1002,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.softwareCare > 0 ? (
+                          {increaseAmounts.softwareCare !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.softwareCare)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.softwareCare >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>{increaseAmounts.softwareCare >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.softwareCare)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.softwareCare.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -1009,9 +1012,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.apps > 0 ? (
+                          {increaseAmounts.apps !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.apps)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.apps >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>{increaseAmounts.apps >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.apps)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.apps.toFixed(1)}%</div>
                             </>
                           ) : (
@@ -1019,9 +1022,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                           )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600">
-                          {increaseAmounts.purchase > 0 ? (
+                          {increaseAmounts.purchase !== 0 ? (
                             <>
-                              <div className="text-sm font-medium text-yellow-600">+{formatCurrency(increaseAmounts.purchase)}</div>
+                              <div className={`text-sm font-medium ${increaseAmounts.purchase >= 0 ? 'text-yellow-600' : 'text-red-600'}`}>{increaseAmounts.purchase >= 0 ? '+' : ''}{formatCurrency(increaseAmounts.purchase)}</div>
                               <div className="text-xs text-gray-500">+{increase.amountIncreases.purchase.toFixed(1)}%</div>
                             </>
                           ) : (

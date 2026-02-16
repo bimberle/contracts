@@ -36,8 +36,130 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent overscroll bounce on iOS */
+  overscroll-behavior-y: contain;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* ========================================
+   iPad Pro & Tablet Optimierungen
+   ======================================== */
+
+/* Bessere Touch-Ziele für Tablets */
+@media (hover: none) and (pointer: coarse) {
+  /* Alle Buttons & interaktive Elemente: Mindesthöhe 44px (Apple HIG) */
+  button, 
+  a, 
+  input[type="submit"], 
+  input[type="button"],
+  .touch-target {
+    min-height: 44px;
+  }
+
+  /* Größere Datumsfelder für Touch */
+  input[type="date"] {
+    min-height: 48px;
+    font-size: 16px !important; /* Verhindert iOS Zoom */
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+
+  /* Alle Inputs: Mindestgröße */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Verhindert iOS Zoom */
+    min-height: 44px;
+  }
+
+  /* Tabellenzeilen: Größere Klickbereiche */
+  table tbody tr {
+    min-height: 54px;
+  }
+
+  table tbody td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  /* Größere Checkboxen für Touch */
+  input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+  }
+}
+
+/* iPad Pro Landscape (1024px - 1366px) */
+@media screen and (min-width: 768px) and (max-width: 1366px) {
+  /* Modals: Maximale Breite anpassen */
+  .modal-content {
+    max-width: 90vw !important;
+    max-height: 85vh !important;
+  }
+
+  /* Tabellen: Horizontales Scrollen verbessern */
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+
+  /* Grid-Layouts: 2 Spalten statt 4 */
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* iPad Portrait (768px - 834px) */
+@media screen and (min-width: 768px) and (max-width: 834px) {
+  /* Noch kompaktere Layouts */
+  .grid-cols-4,
+  .md\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Kleinere Schrift für Tabellen */
+  table {
+    font-size: 14px;
+  }
+
+  /* Padding anpassen */
+  .px-6 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Pull-to-Refresh Animation */
+@keyframes pullRefreshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pull-refresh-spinner {
+  animation: pullRefreshSpin 1s linear infinite;
+}
+
+/* Pull-to-Refresh Indicator */
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  transition: all 0.3s ease;
+}
+
+/* Überschreiben der table overflow für iPad */
+@media (max-width: 1200px) {
+  .overflow-x-auto table {
+    min-width: 700px;
+  }
 }

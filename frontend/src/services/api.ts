@@ -60,11 +60,35 @@ class ApiClient {
       },
     });
 
-    // Error interceptor only - URL building is done in buildUrl method
+    // Error interceptor - extract meaningful error messages from backend responses
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        return Promise.reject(error);
+        // Versuche die Fehlermeldung vom Backend zu extrahieren
+        let errorMessage = 'Ein unbekannter Fehler ist aufgetreten';
+        
+        if (error.response?.data) {
+          const data = error.response.data as Record<string, unknown>;
+          // FastAPI gibt Fehler als { "detail": "..." } zurück
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.message === 'string') {
+            errorMessage = data.message;
+          } else if (typeof data.error === 'string') {
+            errorMessage = data.error;
+          } else {
+            // Fallback: Status-Text verwenden
+            errorMessage = `Fehler ${error.response.status}: ${error.response.statusText}`;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        // Erstelle einen neuen Error mit der extrahierten Meldung
+        const enhancedError = new Error(errorMessage);
+        (enhancedError as any).originalError = error;
+        (enhancedError as any).status = error.response?.status;
+        return Promise.reject(enhancedError);
       }
     );
   }

@@ -24,7 +24,6 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
 
   const createCustomer = useCustomerStore((state) => state.createCustomer);
   const updateCustomer = useCustomerStore((state) => state.updateCustomer);
-  const customers = useCustomerStore((state) => state.customers);
 
   useEffect(() => {
     if (customer) {
@@ -76,17 +75,8 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, customer
     setIsLoading(true);
 
     try {
-      // Prüfe Kundennummer auf Eindeutigkeit (beim Erstellen oder bei Änderung)
-      if (!customer || customer.kundennummer !== formData.kundennummer) {
-        const isDuplicate = customers.some(
-          (c) => c.kundennummer === formData.kundennummer && c.id !== customer?.id
-        );
-        if (isDuplicate) {
-          setError('Diese Kundennummer existiert bereits. Bitte wählen Sie eine eindeutige Nummer.');
-          setIsLoading(false);
-          return;
-        }
-      }
+      // Die Prüfung auf Duplikate erfolgt im Backend - dort ist die Datenbank immer aktuell
+      // (Die lokale Prüfung wurde entfernt, da der Store veraltete Daten haben kann)
 
       if (customer) {
         await updateCustomer(customer.id, formData as CustomerUpdateRequest);

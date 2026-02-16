@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Customer, Contract, CalculatedMetrics, PriceIncrease, ContractMetrics } from '../types';
 import api from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatting';
 import ContractModal from '../components/ContractModal';
 import CustomerModal from '../components/CustomerModal';
+import PullToRefresh from '../components/PullToRefresh';
 
 function CustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -90,11 +91,12 @@ function CustomerDetail() {
         }
 
         // Jetzt: Schaue, ob für DIESEN Vertrag eine gültige Erhöhung existiert
+        // Verwende !== 0 statt > 0, damit auch negative Beträge berücksichtigt werden
         const hasApplicableIncrease = 
-          (contract.softwareRentalAmount && contract.softwareRentalAmount > 0 && hasSoftwareRentalIncrease) ||
-          (contract.softwareCareAmount && contract.softwareCareAmount > 0 && hasSoftwareCareIncrease) ||
-          (contract.appsAmount && contract.appsAmount > 0 && hasAppsIncrease) ||
-          (contract.purchaseAmount && contract.purchaseAmount > 0 && hasPurchaseIncrease);
+          (contract.softwareRentalAmount && contract.softwareRentalAmount !== 0 && hasSoftwareRentalIncrease) ||
+          (contract.softwareCareAmount && contract.softwareCareAmount !== 0 && hasSoftwareCareIncrease) ||
+          (contract.appsAmount && contract.appsAmount !== 0 && hasAppsIncrease) ||
+          (contract.purchaseAmount && contract.purchaseAmount !== 0 && hasPurchaseIncrease);
 
         return hasApplicableIncrease;
       } catch (error) {
@@ -152,7 +154,7 @@ function CustomerDetail() {
     };
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!customerId) return;
     try {
       setLoading(true);
@@ -200,12 +202,17 @@ function CustomerDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
+
+  // Pull-to-Refresh Handler
+  const handleRefresh = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!customerId) return;
     loadData();
-  }, [customerId]);
+  }, [customerId, loadData]);
 
   const handleCustomerEditSuccess = () => {
     loadData();
@@ -251,26 +258,27 @@ function CustomerDetail() {
   }
 
   return (
-    <div className="space-y-8">
+    <PullToRefresh onRefresh={handleRefresh}>
+    <div className="space-y-4">
       {/* Header */}
       <div>
         <button
           onClick={() => navigate('/')}
-          className="text-blue-600 hover:text-blue-800 mb-4"
+          className="text-blue-600 hover:text-blue-800 mb-2 text-sm"
         >
-          ← Zurück zum Dashboard
+          ← Zurück
         </button>
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900">{customer.name} {customer.name2}</h1>
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-2xl font-bold text-gray-900">{customer.name} {customer.name2}</h1>
                 <button
                   onClick={() => setIsCustomerModalOpen(true)}
-                  className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                  className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
                   title="Kundendaten bearbeiten"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
@@ -280,16 +288,16 @@ function CustomerDetail() {
                       deleteCustomer();
                     }
                   }}
-                  className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
+                  className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
                   title="Kunden löschen"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
-              <p className="text-gray-600 mt-2">Kundennummer: {customer.kundennummer}</p>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm">Kundennummer: {customer.kundennummer}</p>
+              <p className="text-gray-600 text-sm">
                 {customer.plz} {customer.ort}, {customer.land}
               </p>
             </div>
@@ -586,6 +594,7 @@ function CustomerDetail() {
         />
       )}
     </div>
+    </PullToRefresh>
   );
 }
 
