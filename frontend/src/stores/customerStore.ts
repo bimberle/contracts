@@ -27,7 +27,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   selectedCustomer: null,
   selectedCustomerMetrics: null,
 
-  fetchCustomers: async (skip = 0, limit = 100) => {
+  fetchCustomers: async (skip = 0, limit = 10000) => {
     set({ loading: true, error: null });
     try {
       const customers = await api.getCustomers(skip, limit);

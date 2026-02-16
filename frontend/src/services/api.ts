@@ -121,7 +121,7 @@ class ApiClient {
 
   // ==================== Customers ====================
 
-  async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {
+  async getCustomers(skip: number = 0, limit: number = 10000): Promise<Customer[]> {
     const url = this.buildUrl('/customers', { skip, limit });
     const response = await this.axiosInstance.get<Customer[]>(url);
     return response.data;

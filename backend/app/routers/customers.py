@@ -14,7 +14,7 @@ from datetime import datetime
 router = APIRouter(tags=["customers"])
 
 @router.get("", response_model=List[CustomerSchema])
-def list_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_customers(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
     """Ruft alle Kunden auf"""
     customers = db.query(Customer).offset(skip).limit(limit).all()
     return customers
