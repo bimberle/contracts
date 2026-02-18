@@ -18,6 +18,8 @@ import {
   PriceIncreaseUpdateRequest,
   CommissionRateCreateRequest,
   CommissionRateUpdateRequest,
+  ContractSearchParams,
+  ContractSearchResponse,
 } from '../types';
 
 class ApiClient {
@@ -197,6 +199,24 @@ class ApiClient {
     const url = this.buildUrl(`/contracts/${contractId}/metrics`);
     const response = await this.axiosInstance.get<ApiResponse<any>>(url);
     return response.data.data!;
+  }
+
+  async searchContracts(params: ContractSearchParams = {}): Promise<ContractSearchResponse> {
+    const queryParams: Record<string, unknown> = {};
+    if (params.search !== undefined) queryParams.search = params.search;
+    if (params.sortBy !== undefined) queryParams.sort_by = params.sortBy;
+    if (params.sortDirection !== undefined) queryParams.sort_direction = params.sortDirection;
+    if (params.softwareRental !== undefined) queryParams.software_rental = params.softwareRental;
+    if (params.softwareCare !== undefined) queryParams.software_care = params.softwareCare;
+    if (params.apps !== undefined) queryParams.apps = params.apps;
+    if (params.purchase !== undefined) queryParams.purchase = params.purchase;
+    if (params.cloud !== undefined) queryParams.cloud = params.cloud;
+    if (params.skip !== undefined) queryParams.skip = params.skip;
+    if (params.limit !== undefined) queryParams.limit = params.limit;
+    
+    const url = this.buildUrl('/contracts/search', queryParams);
+    const response = await this.axiosInstance.get<ContractSearchResponse>(url);
+    return response.data;
   }
 
   // ==================== Settings ====================

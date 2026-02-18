@@ -1,31 +1,24 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
-import { Contract, Customer, ContractMetrics } from '../types';
+import { ContractWithDetails } from '../types';
 import ContractModal from '../components/ContractModal';
 import PullToRefresh from '../components/PullToRefresh';
 
-interface ContractWithCustomerInfo extends Contract {
-  customerName: string;
-  customerName2?: string;
-  plz: string;
-  ort: string;
-  customerId: string;
-  kundennummer?: string;
-  land?: string;
-}
-
 export default function AllContracts() {
-  const [contracts, setContracts] = useState<ContractWithCustomerInfo[]>([]);
-  const [filteredContracts, setFilteredContracts] = useState<ContractWithCustomerInfo[]>([]);
-  const [contractMetrics, setContractMetrics] = useState<Record<string, ContractMetrics>>({});
+  const [contracts, setContracts] = useState<ContractWithDetails[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalCommission, setTotalCommission] = useState(0);
+  const [totalExitPayout, setTotalExitPayout] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'customer' | 'plz' | 'status' | 'softwareRental' | 'softwareCare' | 'apps' | 'purchase' | 'cloud' | 'total' | 'commission' | 'exit'>('customer');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<string>('customer');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedContract, setSelectedContract] = useState<ContractWithCustomerInfo | null>(null);
+  const [selectedContract, setSelectedContract] = useState<ContractWithDetails | null>(null);
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [amountTypeFilters, setAmountTypeFilters] = useState({
     softwareRental: true,
@@ -34,173 +27,72 @@ export default function AllContracts() {
     purchase: true,
     cloud: true,
   });
-
+  
+  // Debounce search term
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   useEffect(() => {
-    loadAllContracts();
-  }, []);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
 
-  const loadAllContracts = useCallback(async () => {
+  const loadContracts = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const customersData = await api.getCustomers(0, 1000);
-      const customers: Customer[] = Array.isArray(customersData) ? customersData : [];
-
-      const contractsData = await api.getContracts(0, 1000);
-      const allContracts: Contract[] = Array.isArray(contractsData) ? contractsData : [];
-
-      const contractsWithInfo: ContractWithCustomerInfo[] = allContracts.map((contract) => {
-        const customer = customers.find((c) => c.id === contract.customerId);
-        return {
-          ...contract,
-          customerName: customer?.name || 'Unbekannt',
-          customerName2: customer?.name2 || '',
-          plz: customer?.plz || '',
-          ort: customer?.ort || '',
-          kundennummer: customer?.kundennummer || '',
-          land: customer?.land || '',
-        };
+      const result = await api.searchContracts({
+        search: debouncedSearchTerm,
+        sortBy,
+        sortDirection,
+        softwareRental: amountTypeFilters.softwareRental,
+        softwareCare: amountTypeFilters.softwareCare,
+        apps: amountTypeFilters.apps,
+        purchase: amountTypeFilters.purchase,
+        cloud: amountTypeFilters.cloud,
       });
 
-      setContracts(contractsWithInfo);
-
-      // Lade Metriken für jeden Vertrag
-      const metricsMap: Record<string, ContractMetrics> = {};
-      const metricsPromises = contractsWithInfo.map(contract =>
-        api.getContractMetrics(contract.id)
-          .then(m => {
-            metricsMap[contract.id] = m;
-          })
-          .catch((err: any) => {
-            // Nur 404-Fehler silenzieren (Vertrag wurde gelöscht), andere Fehler loggen
-            if (err.response?.status === 404) {
-              console.debug(`Vertrag ${contract.id} nicht mehr vorhanden (wurde gelöscht)`);
-            } else {
-              console.warn(`Fehler beim Laden der Metriken für Vertrag ${contract.id}:`, err);
-            }
-          })
-      );
-      await Promise.all(metricsPromises);
-      setContractMetrics(metricsMap);
+      setContracts(result.contracts);
+      setTotalCount(result.total);
+      setTotalRevenue(result.totalRevenue);
+      setTotalCommission(result.totalCommission);
+      setTotalExitPayout(result.totalExitPayout);
     } catch (err) {
       console.error('Failed to load contracts:', err);
       setError('Fehler beim Laden der Verträge');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [debouncedSearchTerm, sortBy, sortDirection, amountTypeFilters]);
+
+  // Initial load and reload on filter changes
+  useEffect(() => {
+    loadContracts();
+  }, [loadContracts]);
 
   // Pull-to-Refresh Handler
   const handleRefresh = useCallback(async () => {
-    await loadAllContracts();
-  }, [loadAllContracts]);
-
-  useEffect(() => {
-    let filtered = contracts;
-
-    // Filter by amount types - wenn ALLE Filter aktiv sind, zeige alle Verträge
-    // Ansonsten zeige nur Verträge, die mindestens einen ausgewählten Typ mit !== 0 haben
-    // Verwende !== 0 statt > 0, damit auch negative Beträge berücksichtigt werden
-    const allFiltersActive = amountTypeFilters.softwareRental && 
-                              amountTypeFilters.softwareCare && 
-                              amountTypeFilters.apps && 
-                              amountTypeFilters.purchase &&
-                              amountTypeFilters.cloud;
-    
-    if (!allFiltersActive) {
-      filtered = filtered.filter((c) => {
-        if (amountTypeFilters.softwareRental && c.softwareRentalAmount !== 0) return true;
-        if (amountTypeFilters.softwareCare && c.softwareCareAmount !== 0) return true;
-        if (amountTypeFilters.apps && c.appsAmount !== 0) return true;
-        if (amountTypeFilters.purchase && c.purchaseAmount !== 0) return true;
-        if (amountTypeFilters.cloud && (c.cloudAmount || 0) !== 0) return true;
-        return false;
-      });
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((c) =>
-        c.customerName.toLowerCase().includes(term) ||
-        (c.customerName2 && c.customerName2.toLowerCase().includes(term)) ||
-        c.ort.toLowerCase().includes(term) ||
-        c.plz.includes(term) ||
-        (c.kundennummer && c.kundennummer.toLowerCase().includes(term)) ||
-        (c.land && c.land.toLowerCase().includes(term))
-      );
-    }
-
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'customer':
-          comparison = a.customerName.localeCompare(b.customerName);
-          break;
-        case 'plz':
-          comparison = (a.plz || '').localeCompare(b.plz || '');
-          break;
-        case 'status':
-          comparison = a.status.localeCompare(b.status);
-          break;
-        case 'softwareRental':
-          comparison = (a.softwareRentalAmount || 0) - (b.softwareRentalAmount || 0);
-          break;
-        case 'softwareCare':
-          comparison = (a.softwareCareAmount || 0) - (b.softwareCareAmount || 0);
-          break;
-        case 'apps':
-          comparison = (a.appsAmount || 0) - (b.appsAmount || 0);
-          break;
-        case 'purchase':
-          comparison = (a.purchaseAmount || 0) - (b.purchaseAmount || 0);
-          break;
-        case 'cloud':
-          comparison = (a.cloudAmount || 0) - (b.cloudAmount || 0);
-          break;
-        case 'total':
-          comparison = getTotalAmount(a) - getTotalAmount(b);
-          break;
-        case 'commission':
-          const commA = contractMetrics[a.id]?.currentMonthlyCommission || 0;
-          const commB = contractMetrics[b.id]?.currentMonthlyCommission || 0;
-          comparison = commA - commB;
-          break;
-        case 'exit':
-          const exitA = contractMetrics[a.id]?.exitPayout || 0;
-          const exitB = contractMetrics[b.id]?.exitPayout || 0;
-          comparison = exitA - exitB;
-          break;
-        default:
-          comparison = 0;
-      }
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-
-    setFilteredContracts(filtered);
-  }, [contracts, searchTerm, sortBy, sortDirection, amountTypeFilters, contractMetrics]);
-
-  const getTotalAmount = (contract: Contract): number => {
-    return (contract.softwareRentalAmount || 0) +
-      (contract.softwareCareAmount || 0) +
-      (contract.appsAmount || 0) +
-      (contract.purchaseAmount || 0) +
-      (contract.cloudAmount || 0);
-  };
-
-  // Verwende echte Metriken statt statischer Berechnung
-  const getCommission = (contract: Contract): number => {
-    return contractMetrics[contract.id]?.currentMonthlyCommission || 0;
-  };
+    await loadContracts();
+  }, [loadContracts]);
 
   // Vertrag löschen
-  const handleDeleteContract = async (contract: ContractWithCustomerInfo) => {
+  const handleDeleteContract = async (contract: ContractWithDetails) => {
     if (!confirm(`Vertrag von "${contract.customerName}" wirklich löschen?`)) {
       return;
     }
     try {
       await api.deleteContract(contract.id);
-      loadAllContracts();
+      loadContracts();
     } catch (err) {
       console.error('Fehler beim Löschen des Vertrags:', err);
       alert('Fehler beim Löschen des Vertrags');
@@ -249,7 +141,7 @@ export default function AllContracts() {
     }).format(value);
   };
 
-  const handleEditContract = (contract: ContractWithCustomerInfo) => {
+  const handleEditContract = (contract: ContractWithDetails) => {
     setSelectedContract(contract);
     setIsContractModalOpen(true);
   };
@@ -260,9 +152,8 @@ export default function AllContracts() {
   };
 
   const handleExportToExcel = () => {
-    // Prepare data for export - verwende echte Metriken
-    const exportData: Array<Record<string, unknown>> = filteredContracts.map((contract) => {
-      const metrics = contractMetrics[contract.id];
+    // Prepare data for export - alle Daten kommen vom Backend
+    const exportData: Array<Record<string, unknown>> = contracts.map((contract) => {
       return {
         'Kundenname': contract.customerName,
         'Name 2': contract.customerName2 || '',
@@ -273,9 +164,9 @@ export default function AllContracts() {
         'Software Pflege': contract.softwareCareAmount || 0,
         'Apps': contract.appsAmount || 0,
         'Bestand': contract.purchaseAmount || 0,
-        'Gesamtbetrag': metrics?.currentMonthlyPrice || getTotalAmount(contract),
-        'Provision': metrics?.currentMonthlyCommission || 0,
-        'Exit-Zahlung': metrics?.exitPayout || 0,
+        'Gesamtbetrag': contract.currentMonthlyPrice,
+        'Provision': contract.currentMonthlyCommission,
+        'Exit-Zahlung': contract.exitPayout,
         'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
       };
     });
@@ -293,7 +184,7 @@ export default function AllContracts() {
       'Bestand': 0,
       'Gesamtbetrag': totalRevenue,
       'Provision': totalCommission,
-      'Exit-Zahlung': filteredContracts.reduce((sum, c) => sum + (contractMetrics[c.id]?.exitPayout || 0), 0),
+      'Exit-Zahlung': totalExitPayout,
       'Startdatum': '',
     });
 
@@ -326,14 +217,6 @@ export default function AllContracts() {
     XLSX.writeFile(workbook, filename);
   };
 
-  // Verwende echte Metriken für die Summen
-  const totalRevenue = filteredContracts.reduce((sum, c) => {
-    const metrics = contractMetrics[c.id];
-    // Verwende aktuelle Preise mit Erhöhungen falls verfügbar
-    return sum + (metrics?.currentMonthlyPrice || getTotalAmount(c));
-  }, 0);
-  const totalCommission = filteredContracts.reduce((sum, c) => sum + getCommission(c), 0);
-
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -356,11 +239,10 @@ export default function AllContracts() {
           📊 Excel
         </button>
       </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-xs font-medium mb-1">Verträge</p>
-          <p className="text-xl font-bold text-gray-900">{filteredContracts.length}<span className="text-sm text-gray-500 font-normal">/{contracts.length}</span></p>
+          <p className="text-xl font-bold text-gray-900">{contracts.length}<span className="text-sm text-gray-500 font-normal">/{totalCount}</span></p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-xs font-medium mb-1">Mtl. Umsatz</p>
@@ -368,11 +250,11 @@ export default function AllContracts() {
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-xs font-medium mb-1">Ø Umsatz/Vertrag</p>
-          <p className="text-xl font-bold text-purple-600">{formatCurrency(filteredContracts.length > 0 ? totalRevenue / filteredContracts.length : 0)}</p>
+          <p className="text-xl font-bold text-purple-600">{formatCurrency(contracts.length > 0 ? totalRevenue / contracts.length : 0)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-xs font-medium mb-1">Ø Provision/Vertrag</p>
-          <p className="text-xl font-bold text-green-600">{formatCurrency(filteredContracts.length > 0 ? totalCommission / filteredContracts.length : 0)}</p>
+          <p className="text-xl font-bold text-green-600">{formatCurrency(contracts.length > 0 ? totalCommission / contracts.length : 0)}</p>
         </div>
       </div>
 
@@ -439,7 +321,7 @@ export default function AllContracts() {
 
       {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">{error}</div>}
 
-      {filteredContracts.length === 0 ? (
+      {contracts.length === 0 ? (
         <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
           <p className="text-gray-500">Keine Verträge gefunden</p>
         </div>
@@ -463,7 +345,7 @@ export default function AllContracts() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredContracts.map((contract) => (
+                {contracts.map((contract) => (
                   <tr key={contract.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 text-sm">
                       <Link
@@ -494,15 +376,13 @@ export default function AllContracts() {
                       {formatCurrency(contract.cloudAmount || 0)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-purple-600">
-                      {formatCurrency(contractMetrics[contract.id]?.currentMonthlyPrice || getTotalAmount(contract))}
+                      {formatCurrency(contract.currentMonthlyPrice)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
-                      {formatCurrency(getCommission(contract))}
+                      {formatCurrency(contract.currentMonthlyCommission)}
                     </td>
                     <td className="px-6 py-4 text-sm text-right font-semibold text-orange-600">
-                      {contractMetrics[contract.id]?.exitPayout !== undefined
-                        ? formatCurrency(contractMetrics[contract.id].exitPayout)
-                        : '—'}
+                      {formatCurrency(contract.exitPayout)}
                     </td>
                     <td className="px-3 py-4 text-sm text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
@@ -538,9 +418,9 @@ export default function AllContracts() {
       )}
 
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-between items-center">
-        <p className="text-sm text-gray-600">{filteredContracts.length} von {contracts.length} Verträgen</p>
+        <p className="text-sm text-gray-600">{contracts.length} von {totalCount} Verträgen</p>
         <button
-          onClick={loadAllContracts}
+          onClick={loadContracts}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
         >
           Aktualisieren
@@ -551,11 +431,15 @@ export default function AllContracts() {
       <ContractModal
         isOpen={isContractModalOpen}
         onClose={handleCloseModal}
-        contract={selectedContract}
+        contract={selectedContract ? {
+          ...selectedContract,
+          currency: selectedContract.currency as 'EUR' | 'CHF',
+          status: selectedContract.status as 'active' | 'inactive' | 'completed'
+        } : null}
         customerId={selectedContract?.customerId || ''}
         onSuccess={() => {
           handleCloseModal();
-          loadAllContracts();
+          loadContracts();
         }}
       />
     </div>

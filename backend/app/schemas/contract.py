@@ -69,3 +69,58 @@ class ContractMetrics(BaseModel):
     earned_commission_to_date: float
     projected_monthly_commission: float
     exit_payout: float
+
+
+# Contract with Customer Info and Metrics (for search results)
+class ContractWithDetails(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True
+    )
+    
+    # Contract fields
+    id: str
+    customer_id: str
+    software_rental_amount: float
+    software_care_amount: float
+    apps_amount: float
+    purchase_amount: float
+    cloud_amount: float
+    currency: str
+    start_date: datetime
+    end_date: Optional[datetime]
+    is_founder_discount: bool
+    excluded_price_increase_ids: List[str]
+    included_early_price_increase_ids: List[str]
+    notes: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    
+    # Customer info
+    customer_name: str
+    customer_name2: Optional[str] = None
+    plz: str
+    ort: str
+    kundennummer: Optional[str] = None
+    land: Optional[str] = None
+    
+    # Metrics
+    current_monthly_price: float
+    current_monthly_commission: float
+    exit_payout: float
+    months_running: int
+
+
+class ContractSearchResponse(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True
+    )
+    
+    contracts: List[ContractWithDetails]
+    total: int
+    total_revenue: float
+    total_commission: float
+    total_exit_payout: float

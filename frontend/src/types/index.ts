@@ -228,6 +228,62 @@ export interface ContractMetrics {
   exitPayout: number;
 }
 
+// Contract with customer info and metrics (for search results)
+export interface ContractWithDetails {
+  id: string;
+  customerId: string;
+  softwareRentalAmount: number;
+  softwareCareAmount: number;
+  appsAmount: number;
+  purchaseAmount: number;
+  cloudAmount: number;
+  currency: string;
+  startDate: string;
+  endDate: string | null;
+  isFounderDiscount: boolean;
+  excludedPriceIncreaseIds: string[];
+  includedEarlyPriceIncreaseIds: string[];
+  notes: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  // Customer info
+  customerName: string;
+  customerName2?: string;
+  plz: string;
+  ort: string;
+  kundennummer?: string;
+  land?: string;
+  // Metrics
+  currentMonthlyPrice: number;
+  currentMonthlyCommission: number;
+  exitPayout: number;
+  monthsRunning: number;
+}
+
+// Contract Search Response
+export interface ContractSearchResponse {
+  contracts: ContractWithDetails[];
+  total: number;
+  totalRevenue: number;
+  totalCommission: number;
+  totalExitPayout: number;
+}
+
+// Contract Search Params
+export interface ContractSearchParams {
+  search?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  softwareRental?: boolean;
+  softwareCare?: boolean;
+  apps?: boolean;
+  purchase?: boolean;
+  cloud?: boolean;
+  skip?: number;
+  limit?: number;
+}
+
 // API Response Wrapper
 export interface ApiResponse<T> {
   status: 'success' | 'error';
