@@ -118,6 +118,7 @@ def search_contracts(
             "start_date": contract.start_date,
             "end_date": contract.end_date,
             "is_founder_discount": contract.is_founder_discount,
+            "number_of_seats": contract.number_of_seats or 1,
             "excluded_price_increase_ids": contract.excluded_price_increase_ids or [],
             "included_early_price_increase_ids": contract.included_early_price_increase_ids or [],
             "notes": contract.notes or "",
@@ -133,7 +134,10 @@ def search_contracts(
             "current_monthly_price": metrics["current_monthly_price"],
             "current_monthly_commission": metrics["current_monthly_commission"],
             "exit_payout": metrics["exit_payout"],
-            "months_running": metrics["months_running"]
+            "months_running": metrics["months_running"],
+            "is_in_founder_period": metrics.get("is_in_founder_period", False),
+            "is_future_contract": metrics.get("is_future_contract", False),
+            "active_from_date": metrics.get("active_from_date")
         })
     
     # Sortierung

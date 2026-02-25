@@ -79,29 +79,24 @@ function Dashboard() {
     setIsCustomerModalOpen(false);
   };
 
-  // Load metrics for all customers
+  // Load all customers with metrics in one optimized call
   useEffect(() => {
-    const loadAllMetrics = async () => {
-      if (customers.length === 0) return;
-
-      const metrics: Record<string, CalculatedMetrics> = {};
-      for (const customer of customers) {
-        try {
-          const customerMetrics = await api.getCustomerMetrics(customer.id);
-          metrics[customer.id] = customerMetrics;
-        } catch (err: any) {
-          // Nur 404-Fehler silenzieren (Kunde wurde gelöscht), andere Fehler loggen
-          if (err.response?.status === 404) {
-            console.debug(`Kunde ${customer.id} nicht mehr vorhanden (wurde gelöscht)`);
-          } else {
-            console.error(`Fehler beim Laden der Metriken für Kunde ${customer.id}:`, err);
-          }
+    const loadAllCustomersWithMetrics = async () => {
+      try {
+        const customersWithMetrics = await api.getCustomersWithMetrics();
+        const metrics: Record<string, CalculatedMetrics> = {};
+        for (const item of customersWithMetrics) {
+          metrics[item.customer.id] = item.metrics;
         }
+        setCustomerMetrics(metrics);
+      } catch (err: unknown) {
+        console.error('Fehler beim Laden der Kundenmetriken:', err);
       }
-      setCustomerMetrics(metrics);
     };
 
-    loadAllMetrics();
+    if (customers.length > 0) {
+      loadAllCustomersWithMetrics();
+    }
   }, [customers]);
 
   // Suche erst ab 3 Zeichen - oder wenn leer alle anzeigen
@@ -179,9 +174,9 @@ function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="space-y-4">
-      {/* Header mit Button rechts */}
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col h-[calc(100vh-120px)]">
+      {/* Header mit Button rechts - fixed */}
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold text-gray-900">Kunden</h1>
         <button
           onClick={() => setIsCustomerModalOpen(true)}
@@ -192,8 +187,8 @@ function Dashboard() {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex gap-2">
             <input
               type="text"
@@ -235,9 +230,9 @@ function Dashboard() {
           )}
         </div>
 
-        <div className="overflow-x-auto table-container">
+        <div className="overflow-auto flex-1 min-h-0">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
                 <SortHeader column="kundennummer">KundenNr</SortHeader>
                 <SortHeader column="name">Name</SortHeader>
@@ -246,15 +241,12 @@ function Dashboard() {
                 <SortHeader column="commission" align="right">Monatliche Provision</SortHeader>
                 <SortHeader column="netIncome" align="right">Netto-Gehalt</SortHeader>
                 <SortHeader column="exit" align="right">Exit-Auszahlung</SortHeader>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-700">
-                  🔍
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Keine Kunden gefunden
                   </td>
                 </tr>
@@ -288,15 +280,6 @@ function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {metrics ? formatCurrency(metrics.exitPayoutIfTodayInMonths) : '—'}
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap text-sm text-center">
-                        <Link
-                          to={`/customers/${customer.id}`}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition"
-                          title="Details anzeigen"
-                        >
-                          🔍
-                        </Link>
                       </td>
                     </tr>
                   );

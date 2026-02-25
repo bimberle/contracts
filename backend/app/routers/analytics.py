@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database import get_db
 from app.models.contract import Contract
 from app.models.customer import Customer
@@ -16,8 +16,17 @@ from datetime import datetime
 router = APIRouter(tags=["analytics"])
 
 @router.get("/dashboard", response_model=dict)
-def get_dashboard(db: Session = Depends(get_db)):
-    """Ruft die Dashboard-Übersicht auf"""
+def get_dashboard(
+    exit_date: Optional[str] = Query(None, description="Stichtag für Exit-Berechnung im Format YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """
+    Ruft die Dashboard-Übersicht auf.
+    
+    Args:
+        exit_date: Optionales Datum für Exit-Zahlungs-Berechnung. 
+                   Wenn nicht angegeben, wird das aktuelle Datum verwendet.
+    """
     customers = db.query(Customer).all()
     settings = db.query(Settings).filter(Settings.id == "default").first()
     price_increases = db.query(PriceIncrease).all()
@@ -25,6 +34,16 @@ def get_dashboard(db: Session = Depends(get_db)):
     
     if not settings:
         raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
+    
+    # Bestimme das Datum für Exit-Berechnungen
+    today = datetime.utcnow()
+    exit_calculation_date = today
+    
+    if exit_date:
+        try:
+            exit_calculation_date = datetime.strptime(exit_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Ungültiges Datumsformat. Erwartet: YYYY-MM-DD")
     
     total_monthly_revenue = 0.0
     total_monthly_commission = 0.0
@@ -35,18 +54,31 @@ def get_dashboard(db: Session = Depends(get_db)):
     
     for customer in customers:
         contracts = db.query(Contract).filter(Contract.customer_id == customer.id).all()
+        
+        # Metriken für aktuelle Werte (Provision etc.) mit heutigem Datum
         metrics = calculate_customer_metrics(
             customer_id=customer.id,
             contracts=contracts,
             settings=settings,
             price_increases=price_increases,
             commission_rates=commission_rates,
-            today=datetime.utcnow()
+            today=today
+        )
+        
+        # Metriken für Exit-Zahlungen mit dem gewählten Stichtag
+        exit_metrics = calculate_customer_metrics(
+            customer_id=customer.id,
+            contracts=contracts,
+            settings=settings,
+            price_increases=price_increases,
+            commission_rates=commission_rates,
+            today=exit_calculation_date
         )
         
         total_monthly_revenue += metrics["total_monthly_revenue"]
         total_monthly_commission += metrics["total_monthly_commission"]
-        total_exit_payout += metrics.get("exit_payout_if_today_in_months", 0.0)
+        # Exit-Zahlungen verwenden das gewählte Stichtag-Datum
+        total_exit_payout += exit_metrics.get("exit_payout_if_today_in_months", 0.0)
         total_active_contracts += metrics["active_contracts"]
         
         if metrics["total_monthly_commission"] > 0:

@@ -99,13 +99,36 @@ export default function AllContracts() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, contract: ContractWithDetails) => {
+    // Prüfe ob Existenzgründer-Periode oder Zukunftsvertrag
+    const isFounderOrFuture = contract.isInFounderPeriod || contract.isFutureContract;
+    
+    if (isFounderOrFuture) {
+      const activeDate = contract.activeFromDate 
+        ? new Date(contract.activeFromDate).toLocaleDateString('de-DE')
+        : 'unbekannt';
+      return (
+        <span 
+          className="px-3 py-1 bg-gray-200 text-gray-600 text-sm rounded-full font-medium inline-flex items-center gap-1 cursor-help"
+          title={`Vertrag wird aktiv ab: ${activeDate}`}
+        >
+          {contract.isInFounderPeriod ? 'Existenz' : 'Zukünftig'}
+          <span className="text-xs">ⓘ</span>
+        </span>
+      );
+    }
+    
     const badges: Record<string, JSX.Element> = {
       active: <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">Aktiv</span>,
       inactive: <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full font-medium">Inaktiv</span>,
       completed: <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">Abgeschlossen</span>,
     };
     return badges[status] || status;
+  };
+  
+  // Helper: Prüft ob ein Vertrag inaktiv ist (Existenzgründer oder Zukunft)
+  const isContractInactive = (contract: ContractWithDetails): boolean => {
+    return contract.isInFounderPeriod || contract.isFutureContract;
   };
 
   // Sortier-Handler für Spaltenköpfe
@@ -345,43 +368,60 @@ export default function AllContracts() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {contracts.map((contract) => (
-                  <tr key={contract.id} className="hover:bg-gray-50 transition">
+                {contracts.map((contract) => {
+                  const inactive = isContractInactive(contract);
+                  const rowTextClass = inactive ? 'text-gray-400' : 'text-gray-900';
+                  const activeDate = contract.activeFromDate 
+                    ? new Date(contract.activeFromDate).toLocaleDateString('de-DE')
+                    : null;
+                  
+                  return (
+                  <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''}`}>
                     <td className="px-6 py-4 text-sm">
-                      <Link
-                        to={`/customers/${contract.customerId}`}
-                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {contract.customerName}
-                      </Link>
-                      {contract.customerName2 && <div className="text-gray-500 text-xs">{contract.customerName2}</div>}
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/customers/${contract.customerId}`}
+                          className={`font-medium ${inactive ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
+                        >
+                          {contract.customerName}
+                        </Link>
+                        {inactive && activeDate && (
+                          <span 
+                            className="text-gray-400 cursor-help" 
+                            title={`Aktiv ab: ${activeDate}`}
+                          >
+                            ⓘ
+                          </span>
+                        )}
+                      </div>
+                      {contract.customerName2 && <div className={`${inactive ? 'text-gray-400' : 'text-gray-500'} text-xs`}>{contract.customerName2}</div>}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className={`px-6 py-4 text-sm ${inactive ? 'text-gray-400' : 'text-gray-600'}`}>
                       <div>{contract.plz}</div>
-                      <div className="text-xs text-gray-500">{contract.ort}</div>
+                      <div className={`text-xs ${inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contract.ort}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.softwareRentalAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.softwareCareAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.appsAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.purchaseAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.cloudAmount || 0)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-purple-600">
+                    <td className={`px-6 py-4 text-sm text-right font-semibold ${inactive ? 'text-gray-400' : 'text-purple-600'}`}>
                       {formatCurrency(contract.currentMonthlyPrice)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-green-600">
+                    <td className={`px-6 py-4 text-sm text-right font-semibold ${inactive ? 'text-gray-400' : 'text-green-600'}`}>
                       {formatCurrency(contract.currentMonthlyCommission)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-orange-600">
+                    <td className={`px-6 py-4 text-sm text-right font-semibold ${inactive ? 'text-gray-400' : 'text-orange-600'}`}>
                       {formatCurrency(contract.exitPayout)}
                     </td>
                     <td className="px-3 py-4 text-sm text-center whitespace-nowrap">
@@ -410,7 +450,8 @@ export default function AllContracts() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

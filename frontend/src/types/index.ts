@@ -48,6 +48,7 @@ export interface Contract {
   startDate: ISO8601String; // Mietbeginn
   endDate: ISO8601String | null; // null = unbegrenzt
   isFounderDiscount: boolean;
+  numberOfSeats: number; // Anzahl Arbeitsplätze für Exit-Zahlungen Staffel
   status: ContractStatus; // Automatisch basierend auf endDate
   notes: string;
   excludedPriceIncreaseIds: string[]; // IDs der ausgeschlossenen Preiserhöhungen
@@ -67,6 +68,7 @@ export interface ContractCreateRequest {
   startDate: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
+  numberOfSeats?: number;
   notes?: string;
   excludedPriceIncreaseIds?: string[];
   includedEarlyPriceIncreaseIds?: string[];
@@ -82,6 +84,7 @@ export interface ContractUpdateRequest {
   startDate?: ISO8601String; // Mietbeginn
   endDate?: ISO8601String | null;
   isFounderDiscount?: boolean;
+  numberOfSeats?: number;
   notes?: string;
   excludedPriceIncreaseIds?: string[];
   includedEarlyPriceIncreaseIds?: string[];
@@ -178,11 +181,35 @@ export interface PostContractMonths {
   purchase: number;
 }
 
+// Exit Payout Tier (Staffel nach Arbeitsplätzen)
+export interface ExitPayoutTier {
+  minSeats: number;
+  maxSeats: number;
+  months: number;
+}
+
+// Exit Payout Type Config
+export interface ExitPayoutTypeConfig {
+  enabled: boolean;
+  additionalMonths: number;
+}
+
+// Exit Payout By Type
+export interface ExitPayoutByType {
+  softwareRental: ExitPayoutTypeConfig;
+  softwareCare: ExitPayoutTypeConfig;
+  apps: ExitPayoutTypeConfig;
+  purchase: ExitPayoutTypeConfig;
+  cloud: ExitPayoutTypeConfig;
+}
+
 export interface Settings {
   id: string; // Immer 'default'
   founderDelayMonths: number; // Standard: 12
   postContractMonths: PostContractMonths;
   minContractMonthsForPayout: number; // Standard: 60
+  exitPayoutTiers: ExitPayoutTier[]; // Staffel nach Arbeitsplätzen
+  exitPayoutByType: ExitPayoutByType; // Konfiguration pro Vertragstyp
   personalTaxRate: number; // Persönlicher Steuersatz in %
   updatedAt: ISO8601String;
 }
@@ -191,6 +218,8 @@ export interface SettingsUpdateRequest {
   founderDelayMonths?: number;
   postContractMonths?: Partial<PostContractMonths>;
   minContractMonthsForPayout?: number;
+  exitPayoutTiers?: ExitPayoutTier[];
+  exitPayoutByType?: Partial<ExitPayoutByType>;
   personalTaxRate?: number;
 }
 
@@ -241,6 +270,7 @@ export interface ContractWithDetails {
   startDate: string;
   endDate: string | null;
   isFounderDiscount: boolean;
+  numberOfSeats: number;
   excludedPriceIncreaseIds: string[];
   includedEarlyPriceIncreaseIds: string[];
   notes: string;
@@ -259,6 +289,10 @@ export interface ContractWithDetails {
   currentMonthlyCommission: number;
   exitPayout: number;
   monthsRunning: number;
+  // Status-Infos für Existenzgründer/Zukunftsverträge
+  isInFounderPeriod: boolean;      // Ob in Existenzgründer-Phase
+  isFutureContract: boolean;       // Ob Vertragsstart in der Zukunft
+  activeFromDate: string | null;   // Ab wann aktiv (für founder/future)
 }
 
 // Contract Search Response

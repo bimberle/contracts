@@ -54,9 +54,17 @@ export default function CommissionRateModal({
   useEffect(() => {
     if (isOpen) {
       if (commissionRate) {
+        // Konvertiere snake_case vom Backend zu camelCase für Frontend
+        const rates = commissionRate.rates || {};
         setFormData({
           validFrom: commissionRate.validFrom.split('T')[0],
-          rates: commissionRate.rates,
+          rates: {
+            softwareRental: rates.software_rental || rates.softwareRental || 20,
+            softwareCare: rates.software_care || rates.softwareCare || 20,
+            apps: rates.apps || 20,
+            purchase: rates.purchase || 10,
+            cloud: rates.cloud || 10,
+          },
           description: commissionRate.description || '',
         });
       } else {
@@ -110,8 +118,8 @@ export default function CommissionRateModal({
       const payload = {
         validFrom: new Date(formData.validFrom + 'T12:00:00').toISOString(),
         rates: {
-          softwareRental: parseRate(formData.rates.softwareRental),
-          softwareCare: parseRate(formData.rates.softwareCare),
+          software_rental: parseRate(formData.rates.softwareRental),
+          software_care: parseRate(formData.rates.softwareCare),
           apps: parseRate(formData.rates.apps),
           purchase: parseRate(formData.rates.purchase),
           cloud: parseRate(formData.rates.cloud),

@@ -163,10 +163,10 @@ function App() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 hover:text-red-600 transition text-lg"
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-700 rounded-lg transition text-sm font-medium"
                   title="Abmelden"
                 >
-                  ⏻
+                  Abmelden
                 </button>
               </div>
             </div>

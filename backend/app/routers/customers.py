@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict
 from app.database import get_db
 from app.models.customer import Customer
 from app.models.contract import Contract
@@ -12,6 +12,56 @@ from app.services.metrics import calculate_customer_metrics
 from datetime import datetime
 
 router = APIRouter(tags=["customers"])
+
+
+@router.get("/with-metrics")
+def list_customers_with_metrics(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):
+    """
+    Ruft alle Kunden mit ihren berechneten Metriken in einem einzigen Aufruf auf.
+    Optimiert für Dashboard-Anzeige.
+    """
+    customers = db.query(Customer).offset(skip).limit(limit).all()
+    settings = db.query(Settings).filter(Settings.id == "default").first()
+    price_increases = db.query(PriceIncrease).all()
+    commission_rates = db.query(CommissionRate).order_by(CommissionRate.valid_from).all()
+    today = datetime.utcnow()
+    
+    if not settings:
+        raise HTTPException(status_code=500, detail="Einstellungen nicht konfiguriert")
+    
+    # Lade alle Verträge auf einmal
+    all_contracts = db.query(Contract).all()
+    
+    # Gruppiere Verträge nach Kunde
+    contracts_by_customer: Dict[str, List[Contract]] = {}
+    for contract in all_contracts:
+        if contract.customer_id not in contracts_by_customer:
+            contracts_by_customer[contract.customer_id] = []
+        contracts_by_customer[contract.customer_id].append(contract)
+    
+    result = []
+    for customer in customers:
+        customer_contracts = contracts_by_customer.get(customer.id, [])
+        
+        metrics_dict = calculate_customer_metrics(
+            customer_id=customer.id,
+            contracts=customer_contracts,
+            settings=settings,
+            price_increases=price_increases,
+            commission_rates=commission_rates,
+            today=today
+        )
+        
+        result.append({
+            "customer": CustomerSchema.model_validate(customer),
+            "metrics": CalculatedMetrics(**metrics_dict)
+        })
+    
+    return {
+        "status": "success",
+        "data": result
+    }
+
 
 @router.get("", response_model=List[CustomerSchema])
 def list_customers(skip: int = 0, limit: int = 10000, db: Session = Depends(get_db)):

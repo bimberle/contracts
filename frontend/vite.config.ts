@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify('1.0.87'),
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify('1.0.88'),
   },
   server: {
     host: '0.0.0.0',

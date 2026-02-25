@@ -79,6 +79,8 @@ function Settings() {
         founderDelayMonths: formData.founderDelayMonths,
         postContractMonths: formData.postContractMonths,
         minContractMonthsForPayout: formData.minContractMonthsForPayout,
+        exitPayoutTiers: formData.exitPayoutTiers,
+        exitPayoutByType: formData.exitPayoutByType,
         personalTaxRate: formData.personalTaxRate,
       };
       await updateSettings(updateData);
@@ -214,24 +216,6 @@ function Settings() {
               />
               <p className="text-sm text-gray-500 mt-2">
                 Neue Mietverträge starten dieser Anzahl Monate später
-              </p>
-            </div>
-
-            {/* Min Contract Months */}
-            <div className="border-t pt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimale Vertragslaufzeit für volle Auszahlung (Monate)
-              </label>
-              <input
-                type="number"
-                value={formData.minContractMonthsForPayout}
-                onChange={(e) =>
-                  handleSettingsChange('minContractMonthsForPayout', parseInt(e.target.value))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-              <p className="text-sm text-gray-500 mt-2">
-                Verträge unter dieser Dauer werden bei Ausscheiden mit Restprovision ausgezahlt
               </p>
             </div>
 
@@ -389,10 +373,10 @@ function Settings() {
                     {commissionRates.map((rate) => (
                       <tr key={rate.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatDate(rate.validFrom)}</td>
-                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareRental.toFixed(2)}%</td>
-                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.softwareCare.toFixed(2)}%</td>
-                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.apps.toFixed(2)}%</td>
-                        <td className="px-6 py-4 text-sm text-right text-gray-600">{rate.rates.purchase.toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.softwareRental || 0).toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.softwareCare || 0).toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.apps || 0).toFixed(2)}%</td>
+                        <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.purchase || 0).toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-right text-gray-600">{(rate.rates.cloud || 0).toFixed(2)}%</td>
                         <td className="px-6 py-4 text-sm text-gray-600">{rate.description || '—'}</td>
                         <td className="px-6 py-4 text-center text-sm space-x-2">
@@ -428,8 +412,152 @@ function Settings() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-gray-900">Exit-Zahlungen</h2>
             
-            {/* Exit Payout Months */}
+            {/* Exit Payout Tiers - Arbeitsplätze-Staffel */}
             <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Staffel nach Arbeitsplätzen</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Je nach Anzahl der Arbeitsplätze werden unterschiedlich viele Monate für die Exit-Zahlung berechnet.
+              </p>
+              
+              {/* Staffel-Tabelle */}
+              <div className="space-y-2 mb-4">
+                {(formData.exitPayoutTiers || []).map((tier, index) => (
+                  <div key={index} className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
+                    <span className="text-sm text-gray-600 w-6">{index + 1}.</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.minSeats}
+                      onChange={(e) => {
+                        const newTiers = [...(formData.exitPayoutTiers || [])];
+                        newTiers[index] = { ...tier, minSeats: parseInt(e.target.value) || 1 };
+                        setFormData({ ...formData, exitPayoutTiers: newTiers });
+                      }}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="Von"
+                    />
+                    <span className="text-sm text-gray-500">bis</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.maxSeats}
+                      onChange={(e) => {
+                        const newTiers = [...(formData.exitPayoutTiers || [])];
+                        newTiers[index] = { ...tier, maxSeats: parseInt(e.target.value) || 1 };
+                        setFormData({ ...formData, exitPayoutTiers: newTiers });
+                      }}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="Bis"
+                    />
+                    <span className="text-sm text-gray-500">Arbeitsplätze →</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.months}
+                      onChange={(e) => {
+                        const newTiers = [...(formData.exitPayoutTiers || [])];
+                        newTiers[index] = { ...tier, months: parseInt(e.target.value) || 1 };
+                        setFormData({ ...formData, exitPayoutTiers: newTiers });
+                      }}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="Monate"
+                    />
+                    <span className="text-sm text-gray-500">Monate</span>
+                    <button
+                      onClick={() => {
+                        const newTiers = (formData.exitPayoutTiers || []).filter((_, i) => i !== index);
+                        setFormData({ ...formData, exitPayoutTiers: newTiers });
+                      }}
+                      className="ml-auto px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                      title="Staffel löschen"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => {
+                  const lastTier = (formData.exitPayoutTiers || []).slice(-1)[0];
+                  const newTier = {
+                    minSeats: lastTier ? lastTier.maxSeats + 1 : 1,
+                    maxSeats: lastTier ? lastTier.maxSeats + 10 : 10,
+                    months: 48
+                  };
+                  setFormData({ 
+                    ...formData, 
+                    exitPayoutTiers: [...(formData.exitPayoutTiers || []), newTier] 
+                  });
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium"
+              >
+                + Neue Staffel
+              </button>
+            </div>
+            
+            {/* Exit Payout by Type */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Exit-Zahlungen pro Vertragstyp</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Aktiviere/Deaktiviere Exit-Zahlungen für jeden Vertragstyp und konfiguriere zusätzliche Monate.
+              </p>
+              
+              <div className="space-y-3">
+                {[
+                  { key: 'softwareRental', label: 'Software Miete' },
+                  { key: 'softwareCare', label: 'Software Pflege' },
+                  { key: 'apps', label: 'Apps' },
+                  { key: 'purchase', label: 'Kauf Bestandsvertrag' },
+                  { key: 'cloud', label: 'Cloud' }
+                ].map(({ key, label }) => {
+                  const config = formData.exitPayoutByType?.[key as keyof typeof formData.exitPayoutByType] || { enabled: false, additionalMonths: 0 };
+                  return (
+                    <div key={key} className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                      <label className="flex items-center gap-2 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={config.enabled}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              exitPayoutByType: {
+                                ...formData.exitPayoutByType,
+                                [key]: { ...config, enabled: e.target.checked }
+                              }
+                            });
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{label}</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">+ zusätzliche Monate:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={config.additionalMonths}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              exitPayoutByType: {
+                                ...formData.exitPayoutByType,
+                                [key]: { ...config, additionalMonths: parseInt(e.target.value) || 0 }
+                              }
+                            });
+                          }}
+                          disabled={!config.enabled}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100 disabled:text-gray-400"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Exit Payout Months */}
+            <div className="border-t pt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Zahlungsmonate nach Vertragsende</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Nach Vertragsende wird noch X Monate lang Provision gezahlt
@@ -491,24 +619,6 @@ function Settings() {
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Min Contract Months for Payout */}
-            <div className="border-t pt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimale Vertragslaufzeit für volle Auszahlung (Monate)
-              </label>
-              <input
-                type="number"
-                value={formData.minContractMonthsForPayout}
-                onChange={(e) =>
-                  handleSettingsChange('minContractMonthsForPayout', parseInt(e.target.value))
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-              <p className="text-sm text-gray-500 mt-2">
-                Verträge unter dieser Dauer werden bei Ausscheiden mit Restprovision ausgezahlt
-              </p>
             </div>
 
             <div className="border-t pt-6">

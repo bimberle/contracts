@@ -21,6 +21,7 @@ class ContractBase(BaseModel):
     start_date: datetime  # Mietbeginn
     end_date: Optional[datetime] = None
     is_founder_discount: bool = False
+    number_of_seats: int = 1  # Anzahl Arbeitsplätze für Exit-Zahlungen Staffel
     excluded_price_increase_ids: List[str] = []  # Price increase IDs that don't apply to this contract
     included_early_price_increase_ids: List[str] = []  # Early price increase IDs manually enabled for this contract
     notes: str = ""
@@ -43,6 +44,7 @@ class ContractUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     is_founder_discount: Optional[bool] = None
+    number_of_seats: Optional[int] = None
     excluded_price_increase_ids: Optional[List[str]] = None
     included_early_price_increase_ids: Optional[List[str]] = None
     notes: Optional[str] = None
@@ -90,6 +92,7 @@ class ContractWithDetails(BaseModel):
     currency: str
     start_date: datetime
     end_date: Optional[datetime]
+    number_of_seats: int
     is_founder_discount: bool
     excluded_price_increase_ids: List[str]
     included_early_price_increase_ids: List[str]
@@ -111,6 +114,11 @@ class ContractWithDetails(BaseModel):
     current_monthly_commission: float
     exit_payout: float
     months_running: int
+    
+    # Zusätzliche Status-Infos
+    is_in_founder_period: bool = False  # Ob in Existenzgründer-Phase
+    is_future_contract: bool = False    # Ob Vertragsstart in der Zukunft
+    active_from_date: Optional[datetime] = None  # Ab wann aktiv (für founder/future)
 
 
 class ContractSearchResponse(BaseModel):

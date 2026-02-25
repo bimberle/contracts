@@ -10,17 +10,19 @@ function Statistics() {
   const [activeTab, setActiveTab] = useState<'forecast' | 'contracts'>('forecast');
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exitDate, setExitDate] = useState<string>(''); // Stichtag für Exit-Zahlungen
 
   const loadSummary = useCallback(async () => {
     try {
-      const dashboardData = await api.getDashboard();
+      // Lade Dashboard mit optionalem Exit-Stichtag
+      const dashboardData = await api.getDashboard(exitDate || undefined);
       setSummary(dashboardData);
     } catch (err) {
       console.error('Fehler beim Laden der Übersicht:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [exitDate]);
 
   useEffect(() => {
     loadSummary();
@@ -79,10 +81,22 @@ function Statistics() {
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-3">
-            <div className="text-gray-500 text-xs font-medium">Exit-Zahlung</div>
+            <div className="text-gray-500 text-xs font-medium flex items-center gap-1">
+              Exit-Zahlung
+              <span className="text-gray-400 text-xs cursor-help" title="Stichtag für Exit-Berechnung wählen">
+                📅
+              </span>
+            </div>
             <div className="text-lg font-bold text-green-600 mt-1">
               {formatCurrency(summary.totalExitPayoutNet)}
             </div>
+            <input
+              type="date"
+              value={exitDate}
+              onChange={(e) => setExitDate(e.target.value)}
+              className="mt-1 w-full text-xs border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              title="Stichtag für Exit-Berechnung"
+            />
           </div>
         </div>
       )}

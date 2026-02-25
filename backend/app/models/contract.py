@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime, Boolean, ForeignKey, Enum, JSON
+from sqlalchemy import Column, String, Float, DateTime, Boolean, ForeignKey, Enum, JSON, Integer
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
@@ -9,6 +9,7 @@ class ContractStatus(str, enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     COMPLETED = "completed"
+    FOUNDER = "founder"  # Existenzgründer-Phase
 
 class Contract(Base):
     __tablename__ = "contracts"
@@ -31,6 +32,9 @@ class Contract(Base):
     # Existenzgründer-Flag
     is_founder_discount = Column(Boolean, default=False)
     
+    # Anzahl Arbeitsplätze (für Exit-Zahlungen Staffel)
+    number_of_seats = Column(Integer, default=1)
+    
     # Preiserhöhungen die für diesen Vertrag nicht gelten (list of price_increase IDs)
     excluded_price_increase_ids = Column(JSON, default=[])
     
@@ -51,9 +55,16 @@ class Contract(Base):
     
     @property
     def status(self):
-        """Status wird automatisch basierend auf end_date berechnet"""
+        """Status wird automatisch basierend auf end_date und start_date berechnet"""
+        # Vertrag beendet
         if self.end_date and datetime.utcnow() > self.end_date:
             return ContractStatus.COMPLETED
+        # Vertragsstart in der Zukunft oder Existenzgründer in Karenzzeit
+        if self.start_date and datetime.utcnow() < self.start_date:
+            if self.is_founder_discount:
+                return ContractStatus.FOUNDER
+            # Vertrag in der Zukunft ohne Existenzgründer ist noch nicht aktiv
+            return ContractStatus.INACTIVE
         return ContractStatus.ACTIVE
 
 

@@ -9,7 +9,8 @@ from app.services.calculations import (
     get_current_monthly_commission,
     get_current_monthly_price,
     calculate_earnings_to_date,
-    calculate_exit_payout
+    calculate_exit_payout,
+    get_effective_status
 )
 
 
@@ -124,6 +125,13 @@ def calculate_contract_metrics(
     )
     months_running = months_between(contract.start_date, today)
     is_in_founder_period = months_running < 0
+    
+    # Prüfe ob der Vertrag in der Zukunft liegt
+    is_future_contract = contract.start_date > today
+    
+    # Bestimme den effektiven Status und das aktiv-ab Datum
+    effective_status, active_from_date = get_effective_status(contract, settings, today)
+    
     current_monthly_commission = get_current_monthly_commission(
         contract, settings, price_increases, commission_rates, today,
         customer_first_contract_date
@@ -145,6 +153,8 @@ def calculate_contract_metrics(
         "current_monthly_price": round(current_monthly_price, 2),
         "months_running": max(0, months_running),
         "is_in_founder_period": is_in_founder_period,
+        "is_future_contract": is_future_contract,
+        "active_from_date": active_from_date,
         "current_monthly_commission": round(current_monthly_commission, 2),
         "earned_commission_to_date": round(earned_commission_to_date, 2),
         "projected_monthly_commission": round(current_monthly_commission, 2),

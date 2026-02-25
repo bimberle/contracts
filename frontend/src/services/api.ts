@@ -129,6 +129,12 @@ class ApiClient {
     return response.data;
   }
 
+  async getCustomersWithMetrics(skip: number = 0, limit: number = 10000): Promise<Array<{customer: Customer; metrics: CalculatedMetrics}>> {
+    const url = this.buildUrl('/customers/with-metrics', { skip, limit });
+    const response = await this.axiosInstance.get<ApiResponse<Array<{customer: Customer; metrics: CalculatedMetrics}>>>(url);
+    return response.data.data || [];
+  }
+
   async getCustomer(customerId: string): Promise<Customer> {
     const url = this.buildUrl(`/customers/${customerId}`);
     const response = await this.axiosInstance.get<Customer>(url);
@@ -297,8 +303,12 @@ class ApiClient {
 
   // ==================== Analytics ====================
 
-  async getDashboard(): Promise<DashboardSummary> {
-    const url = this.buildUrl('/analytics/dashboard');
+  async getDashboard(exitDate?: string): Promise<DashboardSummary> {
+    const params: Record<string, string> = {};
+    if (exitDate) {
+      params.exit_date = exitDate;
+    }
+    const url = this.buildUrl('/analytics/dashboard', params);
     const response = await this.axiosInstance.get<ApiResponse<DashboardSummary>>(url);
     return response.data.data!;
   }

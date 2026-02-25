@@ -1,10 +1,10 @@
 from datetime import datetime, date as date_type
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 from app.models.contract import Contract
 from app.models.settings import Settings
 from app.models.price_increase import PriceIncrease
 from app.models.commission_rate import CommissionRate
-from app.utils.date_utils import months_between
+from app.utils.date_utils import months_between, add_months
 
 
 def _to_date(d: Union[datetime, date_type]) -> date_type:
@@ -12,6 +12,44 @@ def _to_date(d: Union[datetime, date_type]) -> date_type:
     if isinstance(d, datetime):
         return d.date()
     return d
+
+
+def get_effective_status(
+    contract: Contract,
+    settings: Settings,
+    today: datetime
+) -> Tuple[str, datetime | None]:
+    """
+    Berechnet den effektiven Status eines Vertrags unter Berücksichtigung:
+    - Existenzgründer-Schutz (founder_delay_months)
+    - Vertragsstart in der Zukunft
+    - Vertragsende
+    
+    Returns:
+        Tuple[status, active_from_date]:
+        - status: 'active', 'inactive', 'completed', 'founder'
+        - active_from_date: Ab wann der Vertrag aktiv wird (für Existenzgründer/Zukunft)
+    """
+    # Vertrag beendet
+    if contract.end_date and today > contract.end_date:
+        return ('completed', None)
+    
+    # Berechne das effektive Startdatum
+    effective_start = contract.start_date
+    
+    # Vertragsstart in der Zukunft
+    if today < contract.start_date:
+        return ('inactive', contract.start_date)
+    
+    # Existenzgründer-Schutz
+    if contract.is_founder_discount:
+        founder_delay = settings.founder_delay_months if settings else 12
+        founder_end_date = add_months(contract.start_date, founder_delay)
+        
+        if today < founder_end_date:
+            return ('founder', founder_end_date)
+    
+    return ('active', None)
 
 
 def get_commission_rates_for_date(
@@ -291,6 +329,33 @@ def calculate_earnings_to_date(
     
     return total
 
+def get_exit_payout_months(settings: Settings, number_of_seats: int) -> int:
+    """
+    Ermittelt die Anzahl der Exit-Zahlungs-Monate basierend auf der Arbeitsplätze-Staffel.
+    
+    Args:
+        settings: Settings mit exit_payout_tiers
+        number_of_seats: Anzahl der Arbeitsplätze im Vertrag
+    
+    Returns:
+        Anzahl der Monate für Exit-Zahlung
+    """
+    tiers = settings.exit_payout_tiers if settings.exit_payout_tiers else []
+    
+    # Fallback auf min_contract_months_for_payout wenn keine Staffeln definiert
+    if not tiers:
+        return settings.min_contract_months_for_payout
+    
+    for tier in tiers:
+        min_seats = tier.get('min_seats', 1)
+        max_seats = tier.get('max_seats', 999999)
+        if min_seats <= number_of_seats <= max_seats:
+            return tier.get('months', settings.min_contract_months_for_payout)
+    
+    # Fallback auf höchste Staffel
+    return settings.min_contract_months_for_payout
+
+
 def calculate_exit_payout(
     contract: Contract,
     settings: Settings,
@@ -302,7 +367,11 @@ def calculate_exit_payout(
     """
     Berechnet was bei Ausscheiden heute ausbezahlt würde.
     Gibt immer 0 zurück wenn das Ergebnis negativ wäre.
-    WICHTIG: Cloud-Kosten sind NICHT in der Exit-Zahlung enthalten.
+    
+    Berücksichtigt:
+    - Arbeitsplätze-Staffel (exit_payout_tiers)
+    - Exit-Zahlungen pro Vertragstyp (exit_payout_by_type)
+    - Cloud und Software-Pflege können ausgeschlossen sein
     
     Args:
         customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
@@ -313,17 +382,21 @@ def calculate_exit_payout(
     if contract.status.value == 'completed' or (contract.end_date and contract.end_date < today):
         return 0.0
     
+    # Ermittle die Exit-Payout-Monate basierend auf Arbeitsplätzen
+    number_of_seats = getattr(contract, 'number_of_seats', 1) or 1
+    min_months = get_exit_payout_months(settings, number_of_seats)
+    
     # Mindestdauer erfüllt, kein Ausgleich
-    if months_running >= settings.min_contract_months_for_payout:
+    if months_running >= min_months:
         return 0.0
     
-    months_remaining = settings.min_contract_months_for_payout - months_running
+    months_remaining = min_months - months_running
     
     # Negative Restmonate bedeuten, dass bereits überzahlt wurde -> 0
     if months_remaining <= 0:
         return 0.0
     
-    # Exit-Provision berechnen OHNE Cloud-Kosten
+    # Exit-Provision berechnen mit Berücksichtigung der Typ-Konfiguration
     monthly_commission = _get_exit_monthly_commission(
         contract, settings, price_increases, commission_rates_list, today,
         customer_first_contract_date
@@ -344,20 +417,43 @@ def _get_exit_monthly_commission(
     customer_first_contract_date: datetime = None
 ) -> float:
     """
-    Berechnet die monatliche Provision für Exit-Zahlung OHNE Cloud-Kosten.
-    Cloud-Kosten gehen nicht in die Exit-Zahlungen ein.
+    Berechnet die monatliche Provision für Exit-Zahlung.
+    Berücksichtigt exit_payout_by_type - nur Typen mit enabled=True werden einbezogen.
     """
     if contract.status.value != 'active':
         return 0.0
     
-    # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen - OHNE Cloud
-    amounts = {
+    # Get exit payout configuration per type
+    exit_config = settings.exit_payout_by_type if settings.exit_payout_by_type else {
+        "software_rental": {"enabled": True, "additional_months": 12},
+        "software_care": {"enabled": False, "additional_months": 0},
+        "apps": {"enabled": True, "additional_months": 12},
+        "purchase": {"enabled": True, "additional_months": 12},
+        "cloud": {"enabled": False, "additional_months": 0}
+    }
+    
+    # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen
+    # Nur Typen einbeziehen, die für Exit-Zahlungen aktiviert sind
+    amounts = {}
+    
+    type_mapping = {
         'software_rental': contract.software_rental_amount,
         'software_care': contract.software_care_amount,
         'apps': contract.apps_amount,
         'purchase': contract.purchase_amount,
-        # Cloud explizit NICHT enthalten für Exit-Berechnung
+        'cloud': getattr(contract, 'cloud_amount', 0) or 0,
     }
+    
+    for amount_type, amount in type_mapping.items():
+        type_config = exit_config.get(amount_type, {"enabled": False, "additional_months": 0})
+        # Handle both dict and object formats
+        if isinstance(type_config, dict):
+            is_enabled = type_config.get('enabled', False)
+        else:
+            is_enabled = getattr(type_config, 'enabled', False)
+        
+        if is_enabled:
+            amounts[amount_type] = amount
     
     # Mapping von camelCase zu snake_case
     camel_to_snake = {
@@ -365,6 +461,7 @@ def _get_exit_monthly_commission(
         'softwareCare': 'software_care',
         'apps': 'apps',
         'purchase': 'purchase',
+        'cloud': 'cloud',
     }
     
     months_since_rental_start = months_between(contract.start_date, date)

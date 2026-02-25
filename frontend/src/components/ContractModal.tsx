@@ -44,6 +44,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     startDate: string;
     endDate: string;
     isFounderDiscount: boolean;
+    numberOfSeats: number;
     notes: string;
     excludedPriceIncreaseIds: string[];
     includedEarlyPriceIncreaseIds: string[];
@@ -57,6 +58,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     isFounderDiscount: false,
+    numberOfSeats: 1,
     notes: '',
     excludedPriceIncreaseIds: [],
     includedEarlyPriceIncreaseIds: [],
@@ -110,6 +112,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         startDate: contract.startDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
         isFounderDiscount: contract.isFounderDiscount,
+        numberOfSeats: contract.numberOfSeats || 1,
         notes: contract.notes,
         excludedPriceIncreaseIds: contract.excludedPriceIncreaseIds || [],
         includedEarlyPriceIncreaseIds: contract.includedEarlyPriceIncreaseIds || [],
@@ -125,6 +128,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
         isFounderDiscount: false,
+        numberOfSeats: 1,
         notes: '',
         excludedPriceIncreaseIds: [],
         includedEarlyPriceIncreaseIds: [],
@@ -368,6 +372,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         startDate: new Date(formData.startDate + 'T12:00:00').toISOString(),
         endDate: formData.endDate ? new Date(formData.endDate + 'T12:00:00').toISOString() : null,
         isFounderDiscount: formData.isFounderDiscount,
+        numberOfSeats: formData.numberOfSeats,
         notes: formData.notes,
         excludedPriceIncreaseIds: formData.excludedPriceIncreaseIds || [],
         includedEarlyPriceIncreaseIds: formData.includedEarlyPriceIncreaseIds || [],
@@ -662,6 +667,21 @@ const ContractModal: React.FC<ContractModalProps> = ({
                 />
                 <span className="text-sm font-medium text-gray-700">Existenzgründer-Rabatt</span>
               </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Anzahl Arbeitsplätze
+              </label>
+              <input
+                type="number"
+                name="numberOfSeats"
+                min="1"
+                value={formData.numberOfSeats}
+                onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 1 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">Beeinflusst die Staffel der Exit-Zahlungen</p>
             </div>
 
             <div>
