@@ -25,6 +25,25 @@ from app.utils.date_utils import months_between as mb
 router = APIRouter(tags=["tests"])
 
 
+def get_contract_description(contract: Contract) -> str:
+    """Generiert eine Beschreibung für einen Vertrag basierend auf seinen Beträgen"""
+    parts = []
+    if contract.software_rental_amount > 0:
+        parts.append(f"Miete: {contract.software_rental_amount:.0f}€")
+    if contract.software_care_amount > 0:
+        parts.append(f"Pflege: {contract.software_care_amount:.0f}€")
+    if contract.apps_amount > 0:
+        parts.append(f"Apps: {contract.apps_amount:.0f}€")
+    if contract.purchase_amount > 0:
+        parts.append(f"Kauf: {contract.purchase_amount:.0f}€")
+    if contract.cloud_amount and contract.cloud_amount > 0:
+        parts.append(f"Cloud: {contract.cloud_amount:.0f}€")
+    
+    if parts:
+        return ", ".join(parts[:2])  # Max 2 Teile für Übersicht
+    return f"Vertrag {contract.id[:8]}"
+
+
 def get_first_contract_date(customer_id: str, db: Session) -> datetime:
     """Holt das Startdatum des ersten Vertrags eines Kunden"""
     first_contract = db.query(Contract).filter(
@@ -160,7 +179,7 @@ def test_price_increases(
             
             contract_info = {
                 "contract_id": contract.id,
-                "contract_title": contract.title,
+                "contract_title": get_contract_description(contract),
                 "customer_name": f"{customer.name} {customer.name2 or ''}".strip() if customer else "Unbekannt",
                 "start_date": contract.start_date.isoformat(),
                 "base_price": round(base_price, 2),
@@ -259,11 +278,11 @@ def test_founder_protection(
         
         tests.append({
             "category": "Existenzgründer-Schutz",
-            "name": f"Vertrag: {contract.title}",
+            "name": f"Vertrag: {get_contract_description(contract)}",
             "status": status,
             "description": f"Existenzgründer-Rabatt aktiv",
             "contract_id": contract.id,
-            "contract_title": contract.title,
+            "contract_title": get_contract_description(contract),
             "customer_name": None,  # Wird im Frontend über contract geholt
             "calculations": [
                 {
@@ -387,11 +406,11 @@ def test_commission_calculation(
         
         tests.append({
             "category": "Provisionsberechnung",
-            "name": f"Vertrag: {contract.title}",
+            "name": f"Vertrag: {get_contract_description(contract)}",
             "status": "passed",
             "description": f"Provision: {monthly_commission:.2f} € / Monat",
             "contract_id": contract.id,
-            "contract_title": contract.title,
+            "contract_title": get_contract_description(contract),
             "customer_name": f"{customer.name} {customer.name2 or ''}".strip() if customer else "Unbekannt",
             "calculations": calculations
         })
@@ -503,11 +522,11 @@ def test_exit_payouts(
         
         tests.append({
             "category": "Exit-Auszahlung",
-            "name": f"Vertrag: {contract.title}",
+            "name": f"Vertrag: {get_contract_description(contract)}",
             "status": status,
             "description": f"Exit: {exit_payout:.2f} € (Laufzeit: {months_running} Mon.)",
             "contract_id": contract.id,
-            "contract_title": contract.title,
+            "contract_title": get_contract_description(contract),
             "customer_name": f"{customer.name} {customer.name2 or ''}".strip() if customer else "Unbekannt",
             "calculations": calculations
         })

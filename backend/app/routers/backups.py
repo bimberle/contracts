@@ -95,7 +95,8 @@ def get_backup_history():
         for entry in history_entries:
             history_map[entry.filename] = {
                 "customer_count": entry.customer_count,
-                "contract_count": entry.contract_count
+                "contract_count": entry.contract_count,
+                "app_version": getattr(entry, 'app_version', None)
             }
         prod_db.close()
     except Exception as e:
@@ -124,6 +125,7 @@ def get_backup_history():
             "fileSizeFormatted": backup_service.format_file_size(size),
             "customerCount": meta.get("customer_count"),
             "contractCount": meta.get("contract_count"),
+            "appVersion": meta.get("app_version"),
             "status": "success",
             "errorMessage": None,
             "createdAt": backup["created"].isoformat()
@@ -188,6 +190,8 @@ def create_backup(request: CreateBackupRequest = None):
         
         # Speichere Backup-Historie in der PROD-Datenbank
         try:
+            from app.main import BACKEND_VERSION
+            
             # Verwende die PROD-DB für die Historie (nicht die aktive)
             prod_session_local = get_session_local_for_database("contracts")
             prod_db = prod_session_local()
@@ -201,6 +205,7 @@ def create_backup(request: CreateBackupRequest = None):
                 file_size=file_size,
                 customer_count=customer_count,
                 contract_count=contract_count,
+                app_version=BACKEND_VERSION,
                 status="success"
             )
             prod_db.add(history_entry)

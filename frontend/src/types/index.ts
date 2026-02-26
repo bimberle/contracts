@@ -405,6 +405,7 @@ export interface BackupHistoryItem {
   fileSizeFormatted: string | null;
   customerCount: number | null;
   contractCount: number | null;
+  appVersion: string | null;
   status: string;
   errorMessage: string | null;
   createdAt: string;

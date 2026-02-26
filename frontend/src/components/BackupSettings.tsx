@@ -316,6 +316,7 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Datum</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Kunden</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Verträge</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Version</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Größe</th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
@@ -335,6 +336,9 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 text-right">
                       {backup.contractCount != null ? backup.contractCount : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                      {backup.appVersion ? `v${backup.appVersion}` : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{backup.fileSizeFormatted}</td>
                     <td className="px-6 py-4">

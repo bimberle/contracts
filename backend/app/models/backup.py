@@ -47,6 +47,7 @@ class BackupHistory(Base):
     # Statistiken zum Zeitpunkt des Backups
     customer_count = Column(Integer, nullable=True)  # Anzahl Kunden im Backup
     contract_count = Column(Integer, nullable=True)  # Anzahl Verträge im Backup
+    app_version = Column(String, nullable=True)  # Programmversion beim Backup
     
     status = Column(String, default="success")  # "success", "failed"
     error_message = Column(String, nullable=True)
