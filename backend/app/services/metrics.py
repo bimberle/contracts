@@ -54,7 +54,11 @@ def calculate_customer_metrics(
     customer_first_contract_date = get_customer_first_contract_date(contracts)
     
     for contract in contracts:
-        if contract.status.value == 'active':
+        # Bestimme den effektiven Status
+        effective_status, _ = get_effective_status(contract, settings, today)
+        
+        # Nur effektiv aktive Verträge zählen für Umsatz
+        if effective_status == 'active':
             active_contracts += 1
             # Berechne Gesamtpreis = Summe aller 4 Beträge (ohne Erhöhungen)
             total_monthly_rental += (
@@ -69,7 +73,9 @@ def calculate_customer_metrics(
                 contract, price_increases, today, customer_first_contract_date
             )
             total_monthly_revenue += current_price
-            
+        
+        # Provision wird durch get_current_monthly_commission korrekt berechnet
+        # (gibt 0 zurück wenn nicht effektiv aktiv)
         monthly_commission = get_current_monthly_commission(
             contract, settings, price_increases, commission_rates, today,
             customer_first_contract_date
@@ -120,22 +126,30 @@ def calculate_contract_metrics(
     """
     from app.utils.date_utils import months_between
     
-    current_monthly_price = get_current_monthly_price(
-        contract, price_increases, today, customer_first_contract_date
-    )
+    # Bestimme den effektiven Status und das aktiv-ab Datum ZUERST
+    effective_status, active_from_date = get_effective_status(contract, settings, today)
+    
     months_running = months_between(contract.start_date, today)
-    is_in_founder_period = months_running < 0
     
     # Prüfe ob der Vertrag in der Zukunft liegt
     is_future_contract = contract.start_date > today
     
-    # Bestimme den effektiven Status und das aktiv-ab Datum
-    effective_status, active_from_date = get_effective_status(contract, settings, today)
+    # is_in_founder_period basiert auf dem effektiven Status
+    is_in_founder_period = effective_status == 'founder'
     
-    current_monthly_commission = get_current_monthly_commission(
-        contract, settings, price_increases, commission_rates, today,
-        customer_first_contract_date
-    )
+    # Wenn in Gründerphase, sind Preis und Provision 0
+    if effective_status == 'founder' or effective_status == 'inactive':
+        current_monthly_price = 0.0
+        current_monthly_commission = 0.0
+    else:
+        current_monthly_price = get_current_monthly_price(
+            contract, price_increases, today, customer_first_contract_date
+        )
+        current_monthly_commission = get_current_monthly_commission(
+            contract, settings, price_increases, commission_rates, today,
+            customer_first_contract_date
+        )
+    
     earned_commission_to_date = calculate_earnings_to_date(
         contract, settings, price_increases, commission_rates, today,
         customer_first_contract_date
@@ -150,6 +164,7 @@ def calculate_contract_metrics(
     
     return {
         "contract_id": contract.id,
+        "effective_status": effective_status,
         "current_monthly_price": round(current_monthly_price, 2),
         "months_running": max(0, months_running),
         "is_in_founder_period": is_in_founder_period,

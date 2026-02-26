@@ -122,7 +122,7 @@ def search_contracts(
             "excluded_price_increase_ids": contract.excluded_price_increase_ids or [],
             "included_early_price_increase_ids": contract.included_early_price_increase_ids or [],
             "notes": contract.notes or "",
-            "status": contract.status.value if hasattr(contract.status, 'value') else contract.status,
+            "status": metrics.get("effective_status", contract.status.value if hasattr(contract.status, 'value') else contract.status),
             "created_at": contract.created_at,
             "updated_at": contract.updated_at,
             "customer_name": customer.name,
