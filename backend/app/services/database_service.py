@@ -138,6 +138,7 @@ def switch_database(db_id: str) -> Tuple[bool, str]:
 def create_database_config(name: str, color: str = "#3B82F6") -> Tuple[bool, str, Optional[dict]]:
     """Erstellt eine neue Datenbank-Konfiguration"""
     from app.services.backup_service import create_database, database_exists
+    from app.database import Base, get_engine_for_database
     import uuid
     
     config = _load_config()
@@ -157,6 +158,15 @@ def create_database_config(name: str, color: str = "#3B82F6") -> Tuple[bool, str
         success, msg = create_database(db_name)
         if not success:
             return False, f"Fehler beim Erstellen der DB: {msg}", None
+    
+    # Erstelle Schema in der neuen Datenbank
+    try:
+        new_engine = get_engine_for_database(db_name)
+        Base.metadata.create_all(bind=new_engine)
+        logger.info(f"Schema created in database '{db_name}'")
+    except Exception as e:
+        logger.error(f"Failed to create schema in new database: {e}")
+        return False, f"Fehler beim Erstellen des Schemas: {e}", None
     
     # Füge zur Konfiguration hinzu
     new_db = {
@@ -230,10 +240,11 @@ def delete_database_config(db_id: str) -> Tuple[bool, str]:
 
 def initialize_demo_database():
     """
-    Initialisiert die Demo-Datenbank mit Testdaten.
+    Initialisiert die Demo-Datenbank mit Schema.
     Wird beim Start aufgerufen, wenn die Demo-DB noch nicht existiert.
     """
     from app.services.backup_service import database_exists, create_database
+    from app.database import Base, get_engine_for_database
     
     config = _load_config()
     
@@ -247,11 +258,21 @@ def initialize_demo_database():
     if not demo_db:
         return
     
+    db_name = demo_db["db_name"]
+    
     # Erstelle Demo-DB falls nicht vorhanden
-    if not database_exists(demo_db["db_name"]):
-        success, msg = create_database(demo_db["db_name"])
+    if not database_exists(db_name):
+        success, msg = create_database(db_name)
         if success:
-            logger.info("Demo database created")
-            # TODO: Füge Demo-Daten hinzu
+            logger.info(f"Demo database '{db_name}' created")
         else:
             logger.error(f"Failed to create demo database: {msg}")
+            return
+    
+    # Erstelle Tabellen in der Demo-DB
+    try:
+        demo_engine = get_engine_for_database(db_name)
+        Base.metadata.create_all(bind=demo_engine)
+        logger.info(f"Schema created in demo database '{db_name}'")
+    except Exception as e:
+        logger.error(f"Failed to create schema in demo database: {e}")
