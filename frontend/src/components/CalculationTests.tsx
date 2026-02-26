@@ -9,8 +9,11 @@ interface TestCalculation {
 }
 
 interface TestResult {
+  test_id: string;
   category: string;
   name: string;
+  test_description: string;
+  expected: string;
   status: 'passed' | 'warning' | 'info';
   description: string;
   contract_id: string | null;
@@ -217,6 +220,7 @@ export default function CalculationTests() {
                       <span className="text-lg font-bold">{getStatusIcon(test.status)}</span>
                       <div>
                         <div className="font-medium">
+                          <span className="font-mono text-xs bg-white bg-opacity-40 px-1.5 py-0.5 rounded mr-2">{test.test_id}</span>
                           <span className="text-xs uppercase opacity-60 mr-2">{test.category}</span>
                           {test.name}
                         </div>
@@ -238,15 +242,27 @@ export default function CalculationTests() {
                   </div>
 
                   {/* Details */}
-                  {isExpanded && test.calculations.length > 0 && (
+                  {isExpanded && (
                     <div className="bg-white bg-opacity-50 p-4 border-t space-y-3">
+                      {/* Test Description & Expected */}
+                      <div className="bg-white rounded p-3 border border-gray-200 space-y-2">
+                        <div>
+                          <span className="font-medium text-gray-700">Was wird getestet:</span>
+                          <p className="text-sm text-gray-600 mt-1">{test.test_description}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Erwartung:</span>
+                          <p className="text-sm text-gray-600 mt-1">{test.expected}</p>
+                        </div>
+                      </div>
+
                       {test.customer_name && (
                         <div className="text-sm">
                           <span className="font-medium">Kunde:</span> {test.customer_name}
                         </div>
                       )}
                       
-                      {test.calculations.map((calc, calcIndex) => (
+                      {test.calculations.length > 0 && test.calculations.map((calc, calcIndex) => (
                         <div key={calcIndex} className="bg-white rounded p-3 border border-gray-200">
                           <div className="flex justify-between items-start">
                             <span className="font-medium text-gray-700">{calc.label}</span>
