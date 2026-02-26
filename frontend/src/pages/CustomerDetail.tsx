@@ -458,12 +458,14 @@ function CustomerDetail() {
                           className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
                             contract.status === 'active'
                               ? 'bg-green-100 text-green-800'
+                              : contract.status === 'founder'
+                              ? 'bg-purple-100 text-purple-800'
                               : contract.status === 'inactive'
                               ? 'bg-yellow-100 text-yellow-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {contract.status === 'active' ? 'Aktiv' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
+                          {contract.status === 'active' ? 'Aktiv' : contract.status === 'founder' ? 'Existenzgründer' : contract.status === 'inactive' ? 'Inaktiv' : 'Abgeschlossen'}
                         </span>
                       </div>
                       <div>
@@ -472,7 +474,7 @@ function CustomerDetail() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Monatspreis</p>
-                        <p className="text-lg font-bold text-gray-900">{formatCurrency(metricsForContract?.currentMonthlyPrice || amounts.totalAmount)}</p>
+                        <p className="text-lg font-bold text-gray-900">{formatCurrency(metricsForContract?.currentMonthlyPrice ?? amounts.totalAmount)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Meine Provision</p>

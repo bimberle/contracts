@@ -33,7 +33,7 @@ export interface CustomerUpdateRequest {
 }
 
 // Contract (Vertrag)
-export type ContractStatus = 'active' | 'inactive' | 'completed';
+export type ContractStatus = 'active' | 'inactive' | 'completed' | 'founder';
 export type Currency = 'EUR' | 'CHF';
 
 export interface Contract {

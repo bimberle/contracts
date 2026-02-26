@@ -122,6 +122,7 @@ export default function AllContracts() {
       active: <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">Aktiv</span>,
       inactive: <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full font-medium">Inaktiv</span>,
       completed: <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">Abgeschlossen</span>,
+      founder: <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full font-medium">Existenzgründer</span>,
     };
     return badges[status] || status;
   };
