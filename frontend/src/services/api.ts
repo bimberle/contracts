@@ -448,6 +448,14 @@ class ApiClient {
   getBackupDownloadUrl(filename: string): string {
     return this.buildUrl(`/backups/download/${filename}`);
   }
+
+  // ==================== Tests ====================
+
+  async runCalculationTests(): Promise<any> {
+    const url = this.buildUrl('/tests/run');
+    const response = await this.axiosInstance.post(url);
+    return response.data.data;
+  }
 }
 
 export default new ApiClient();

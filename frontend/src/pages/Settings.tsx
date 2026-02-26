@@ -6,6 +6,7 @@ import PriceIncreaseModal from '../components/PriceIncreaseModal';
 import CommissionRateModal from '../components/CommissionRateModal';
 import DatabaseSettings from '../components/DatabaseSettings';
 import BackupSettings from '../components/BackupSettings';
+import CalculationTests from '../components/CalculationTests';
 
 function Settings() {
   const { settings, loading, error, fetchSettings, updateSettings, fetchPriceIncreases, priceIncreases, deletePriceIncrease } = useSettingsStore();
@@ -13,7 +14,7 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'databases' | 'backup'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'databases' | 'backup' | 'tests'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
@@ -212,6 +213,16 @@ function Settings() {
             }`}
           >
             Backup
+          </button>
+          <button
+            onClick={() => setActiveTab('tests')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'tests'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Tests
           </button>
         </div>
       </div>
@@ -663,6 +674,11 @@ function Settings() {
         {/* Tab 6: Backup */}
         {activeTab === 'backup' && (
           <BackupSettings onBackupRestored={() => window.location.reload()} />
+        )}
+
+        {/* Tab 7: Tests */}
+        {activeTab === 'tests' && (
+          <CalculationTests />
         )}
       </div>
 

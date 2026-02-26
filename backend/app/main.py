@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.99"
+BACKEND_VERSION = "1.1.0"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
@@ -122,7 +122,7 @@ def get_version():
         "version": BACKEND_VERSION
     }
 
-from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth, system, databases, backups
+from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth, system, databases, backups, tests
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -134,4 +134,5 @@ app.include_router(commission_rates.router)
 app.include_router(analytics.router, prefix="/api/analytics")
 app.include_router(databases.router, prefix="/api/databases")
 app.include_router(backups.router, prefix="/api/backups")
+app.include_router(tests.router, prefix="/api/tests")
 app.include_router(system.router)
