@@ -81,7 +81,26 @@ def update_backup_config(request: BackupConfigUpdate):
 @router.get("/history", response_model=dict)
 def get_backup_history():
     """Listet alle vorhandenen Backups auf"""
+    from app.database import get_session_local_for_database
+    from app.models.backup import BackupHistory
+    
     backups = backup_service.list_backups()
+    
+    # Lade gespeicherte Metadaten aus der PROD-DB
+    history_map = {}
+    try:
+        prod_session_local = get_session_local_for_database("contracts")
+        prod_db = prod_session_local()
+        history_entries = prod_db.query(BackupHistory).all()
+        for entry in history_entries:
+            history_map[entry.filename] = {
+                "customer_count": entry.customer_count,
+                "contract_count": entry.contract_count
+            }
+        prod_db.close()
+    except Exception as e:
+        # Falls DB-Abfrage fehlschlägt, weiter ohne Metadaten
+        pass
     
     result = []
     total_size = 0
@@ -94,12 +113,17 @@ def get_backup_history():
         filename = backup["filename"]
         db_name = filename.rsplit("_", 2)[0] if "_" in filename else "unknown"
         
+        # Hole Metadaten aus der DB
+        meta = history_map.get(filename, {})
+        
         result.append({
             "id": filename,  # Verwende Dateiname als ID
             "filename": filename,
             "databaseName": db_name,
             "fileSize": size,
             "fileSizeFormatted": backup_service.format_file_size(size),
+            "customerCount": meta.get("customer_count"),
+            "contractCount": meta.get("contract_count"),
             "status": "success",
             "errorMessage": None,
             "createdAt": backup["created"].isoformat()
@@ -119,6 +143,10 @@ def get_backup_history():
 def create_backup(request: CreateBackupRequest = None):
     """Erstellt ein manuelles Backup"""
     global _backup_config
+    from app.database import get_session_local_for_database
+    from app.models.customer import Customer
+    from app.models.contract import Contract
+    from app.models.backup import BackupHistory
     
     # Hole die aktive oder angegebene Datenbank
     if request and request.database_id:
@@ -139,11 +167,48 @@ def create_backup(request: CreateBackupRequest = None):
             detail=f"Datenbank '{db_name}' existiert nicht in PostgreSQL. Bitte zuerst zur PROD-Datenbank wechseln oder die Demo-Datenbank initialisieren."
         )
     
+    # Zähle Kunden und Verträge vor dem Backup
+    customer_count = 0
+    contract_count = 0
+    try:
+        session_local = get_session_local_for_database(db_name)
+        db_session = session_local()
+        customer_count = db_session.query(Customer).count()
+        contract_count = db_session.query(Contract).count()
+        db_session.close()
+    except Exception as e:
+        # Falls Zählung fehlschlägt, weiter mit 0
+        pass
+    
     success, result, filepath = backup_service.create_backup(db_name)
     
     if success:
         _backup_config["last_backup_at"] = datetime.now()
         _backup_config["last_backup_status"] = "success"
+        
+        # Speichere Backup-Historie in der PROD-Datenbank
+        try:
+            # Verwende die PROD-DB für die Historie (nicht die aktive)
+            prod_session_local = get_session_local_for_database("contracts")
+            prod_db = prod_session_local()
+            
+            # Hole Dateigröße
+            file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else 0
+            
+            history_entry = BackupHistory(
+                filename=result,
+                database_name=db_name,
+                file_size=file_size,
+                customer_count=customer_count,
+                contract_count=contract_count,
+                status="success"
+            )
+            prod_db.add(history_entry)
+            prod_db.commit()
+            prod_db.close()
+        except Exception as e:
+            # Historie-Speicherung sollte Backup nicht fehlschlagen lassen
+            pass
         
         # Cleanup alte Backups
         backup_service.cleanup_old_backups(_backup_config["max_backups"], db_name)
@@ -153,7 +218,9 @@ def create_backup(request: CreateBackupRequest = None):
             "message": "Backup erstellt",
             "data": {
                 "filename": result,
-                "databaseName": db_name
+                "databaseName": db_name,
+                "customerCount": customer_count,
+                "contractCount": contract_count
             }
         }
     else:

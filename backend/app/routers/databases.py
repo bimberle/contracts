@@ -129,10 +129,11 @@ def switch_database(request: SwitchDatabaseRequest):
 @router.post("/demo-data", response_model=dict)
 def create_demo_data_endpoint():
     """Erstellt Demo-Daten in der aktuellen Datenbank"""
-    from app.database import SessionLocal
+    from app.database import get_session_local_for_database
     from app.services.demo_data import create_demo_data
     
-    db = SessionLocal()
+    session_local = get_session_local_for_database()
+    db = session_local()
     try:
         result = create_demo_data(db)
         return {
@@ -148,10 +149,11 @@ def create_demo_data_endpoint():
 @router.delete("/demo-data", response_model=dict)
 def clear_demo_data_endpoint():
     """Löscht alle Daten in der aktuellen Datenbank (Vorsicht!)"""
-    from app.database import SessionLocal
+    from app.database import get_session_local_for_database
     from app.services.demo_data import clear_demo_data
     
-    db = SessionLocal()
+    session_local = get_session_local_for_database()
+    db = session_local()
     try:
         result = clear_demo_data(db)
         return {

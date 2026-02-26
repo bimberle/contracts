@@ -44,6 +44,10 @@ class BackupHistory(Base):
     database_name = Column(String, nullable=False)  # Von welcher DB
     file_size = Column(Integer, nullable=True)  # Größe in Bytes
     
+    # Statistiken zum Zeitpunkt des Backups
+    customer_count = Column(Integer, nullable=True)  # Anzahl Kunden im Backup
+    contract_count = Column(Integer, nullable=True)  # Anzahl Verträge im Backup
+    
     status = Column(String, default="success")  # "success", "failed"
     error_message = Column(String, nullable=True)
     

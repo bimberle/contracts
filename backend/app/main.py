@@ -11,13 +11,13 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.92"
+BACKEND_VERSION = "1.0.95"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
 
 # Latest migration revision (used to stamp alembic_version for fresh installs)
-LATEST_MIGRATION = "013_add_incl_early_pi"
+LATEST_MIGRATION = "016_add_backup_history_counts"
 
 def initialize_database():
     """

@@ -164,6 +164,9 @@ def create_database_config(name: str, color: str = "#3B82F6") -> Tuple[bool, str
         new_engine = get_engine_for_database(db_name)
         Base.metadata.create_all(bind=new_engine)
         logger.info(f"Schema created in database '{db_name}'")
+        
+        # Erstelle Default-Settings in der neuen DB
+        _initialize_default_settings(db_name)
     except Exception as e:
         logger.error(f"Failed to create schema in new database: {e}")
         return False, f"Fehler beim Erstellen des Schemas: {e}", None
@@ -274,5 +277,35 @@ def initialize_demo_database():
         demo_engine = get_engine_for_database(db_name)
         Base.metadata.create_all(bind=demo_engine)
         logger.info(f"Schema created in demo database '{db_name}'")
+        
+        # Erstelle Default-Settings in der neuen DB
+        _initialize_default_settings(db_name)
     except Exception as e:
         logger.error(f"Failed to create schema in demo database: {e}")
+
+
+def _initialize_default_settings(db_name: str):
+    """Erstellt Default-Settings in einer Datenbank, falls noch nicht vorhanden"""
+    from app.database import get_session_local_for_database
+    from app.models.settings import Settings
+    
+    session_local = get_session_local_for_database(db_name)
+    db = session_local()
+    try:
+        settings = db.query(Settings).filter(Settings.id == "default").first()
+        if not settings:
+            settings = Settings(
+                id="default",
+                founder_delay_months=12,
+                post_contract_months={"software_rental": 12, "software_care": 12, "apps": 12, "purchase": 12},
+                min_contract_months_for_payout=60,
+                personal_tax_rate=42.0,
+                chf_to_eur_rate=0.95
+            )
+            db.add(settings)
+            db.commit()
+            logger.info(f"Default settings created in database '{db_name}'")
+    except Exception as e:
+        logger.error(f"Failed to create default settings in '{db_name}': {e}")
+    finally:
+        db.close()

@@ -138,6 +138,7 @@ def restore_backup(backup_filename: str, target_db_name: str) -> Tuple[bool, str
             "-d", target_db_name,
             "-c",  # Clean (drop objects before recreating)
             "--if-exists",
+            "--no-comments",  # Skip comments that may contain incompatible settings
             backup_path
         ]
         
@@ -145,9 +146,30 @@ def restore_backup(backup_filename: str, target_db_name: str) -> Tuple[bool, str
         result = subprocess.run(cmd, env=env, capture_output=True, text=True)
         
         # pg_restore kann Warnungen ausgeben, die nicht kritisch sind
+        # Ignoriere bekannte harmlose Fehler wie transaction_timeout
         if result.returncode != 0 and "ERROR" in result.stderr:
-            logger.error(f"Restore failed: {result.stderr}")
-            return False, result.stderr
+            # Prüfe ob es nur harmlose Fehler sind
+            stderr_lines = result.stderr.strip().split('\n')
+            critical_errors = []
+            ignorable_patterns = [
+                "transaction_timeout",
+                "idle_session_timeout", 
+                "statement_timeout",
+                "does not exist, skipping",
+                "already exists"
+            ]
+            
+            for line in stderr_lines:
+                if "ERROR" in line:
+                    is_ignorable = any(pattern in line for pattern in ignorable_patterns)
+                    if not is_ignorable:
+                        critical_errors.append(line)
+            
+            if critical_errors:
+                logger.error(f"Restore failed with critical errors: {critical_errors}")
+                return False, "\n".join(critical_errors)
+            else:
+                logger.warning(f"Restore completed with ignorable warnings: {result.stderr}")
         
         logger.info(f"Restore completed for {target_db_name}")
         return True, "Backup erfolgreich wiederhergestellt"

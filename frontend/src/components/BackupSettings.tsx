@@ -15,6 +15,7 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [restoringBackup, setRestoringBackup] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [databaseFilter, setDatabaseFilter] = useState<string>('all');
 
   // Restore Modal State
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
@@ -281,7 +282,24 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">Backup-Historie</h3>
-          <span className="text-sm text-gray-500">{history.length} Backups</span>
+          <div className="flex items-center gap-4">
+            <select
+              value={databaseFilter}
+              onChange={(e) => setDatabaseFilter(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Alle Datenbanken</option>
+              {databases.map((db) => (
+                <option key={db.id} value={db.dbName}>{db.name}</option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-500">
+              {databaseFilter === 'all' 
+                ? `${history.length} Backups` 
+                : `${history.filter(b => b.databaseName === databaseFilter).length} von ${history.length} Backups`
+              }
+            </span>
+          </div>
         </div>
 
         {history.length === 0 ? (
@@ -296,17 +314,27 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Dateiname</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Datenbank</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Datum</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Kunden</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Verträge</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Größe</th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {history.map((backup) => (
+                {history
+                  .filter(backup => databaseFilter === 'all' || backup.databaseName === databaseFilter)
+                  .map((backup) => (
                   <tr key={backup.filename} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{backup.databaseName}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {backup.createdAt ? new Date(backup.createdAt).toLocaleString('de-DE') : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 text-right">
+                      {backup.customerCount != null ? backup.customerCount : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 text-right">
+                      {backup.contractCount != null ? backup.contractCount : '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{backup.fileSizeFormatted}</td>
                     <td className="px-6 py-4">

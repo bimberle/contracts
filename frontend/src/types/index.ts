@@ -403,6 +403,8 @@ export interface BackupHistoryItem {
   databaseName: string;
   fileSize: number | null;
   fileSizeFormatted: string | null;
+  customerCount: number | null;
+  contractCount: number | null;
   status: string;
   errorMessage: string | null;
   createdAt: string;
