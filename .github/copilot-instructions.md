@@ -857,6 +857,12 @@ return monthlyCommission * monthsRemaining
    - **pg_restore Fehler**: Harmlose Fehler (fehlende Spalten, unbekannte Parameter) ignorieren
    - **Migration-Design**: Immer prüfen ob Tabelle/Spalte existiert bevor Änderungen
    - **Grund**: Alte Backups haben evtl. weniger Spalten → INSERT muss trotzdem funktionieren
+10. **Test-Pflicht bei Logik-Änderungen** (WICHTIG): Bei JEDER Änderung an der Berechnungslogik:
+    - **Prüfen**: Gibt es bereits einen Test in `/backend/app/routers/tests.py`?
+    - **Ausführen**: Tests via `curl -X POST http://localhost:8000/api/tests/run` laufen lassen
+    - **Verifizieren**: Prüfen ob der Test passed/warning zeigt
+    - **Erweitern**: Falls kein passender Test existiert, einen neuen Test anlegen
+    - **Test-Kategorien**: Preiserhöhungen, Existenzgründer, Provisionen, Exit-Auszahlung, Summen pro Kunde, Gesamtsummen, Monatsberechnungen
 
 ---
 

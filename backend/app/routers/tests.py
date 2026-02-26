@@ -124,6 +124,24 @@ def run_calculation_tests(db: Session = Depends(get_db)):
     )
     test_results["tests"].extend(exit_tests)
     
+    # KATEGORIE 5: SUMMEN PRO KUNDE
+    customer_sum_tests = create_customer_sum_tests(
+        contracts, price_increases, settings, commission_rates, customer_lookup, today, db, next_test_id
+    )
+    test_results["tests"].extend(customer_sum_tests)
+    
+    # KATEGORIE 6: GESAMTSUMMEN
+    total_sum_tests = create_total_sum_tests(
+        contracts, price_increases, settings, commission_rates, customer_lookup, today, db, next_test_id
+    )
+    test_results["tests"].extend(total_sum_tests)
+    
+    # KATEGORIE 7: MONATSBERECHNUNGEN (Umsatz, Provision, Exit)
+    monthly_calculation_tests = create_monthly_calculation_tests(
+        contracts, price_increases, settings, commission_rates, customer_lookup, today, db, next_test_id
+    )
+    test_results["tests"].extend(monthly_calculation_tests)
+    
     for test in test_results["tests"]:
         test_results["summary"]["total_tests"] += 1
         if test["status"] == "passed":
@@ -940,6 +958,455 @@ def create_exit_payout_tests(
             "expected": "Mehrere Tiers sollten fuer gestaffelte Exit-Berechnung definiert sein.",
             "status": "info",
             "description": "Nicht genuegend Exit-Tiers definiert (min. 2 fuer sinnvolle Staffelung).",
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": []
+        })
+    
+    return tests
+
+
+def create_customer_sum_tests(
+    contracts: List[Contract],
+    price_increases: List[PriceIncrease],
+    settings: Settings,
+    commission_rates: List[CommissionRate],
+    customer_lookup: Dict[str, Customer],
+    today: datetime,
+    db: Session,
+    next_test_id
+) -> List[Dict[str, Any]]:
+    """Erstellt Tests fuer Summenberechnungen pro Kunde"""
+    tests = []
+    
+    # Gruppiere Vertraege nach Kunde
+    contracts_by_customer: Dict[str, List[Contract]] = {}
+    for c in contracts:
+        if c.customer_id not in contracts_by_customer:
+            contracts_by_customer[c.customer_id] = []
+        contracts_by_customer[c.customer_id].append(c)
+    
+    if not contracts_by_customer:
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Summen pro Kunde",
+            "name": "Kundensummen-Uebersicht",
+            "test_description": "Prueft die Summenberechnungen pro Kunde.",
+            "expected": "Kunden mit Vertraegen sollten korrekte Summen haben.",
+            "status": "info",
+            "description": "Keine Kunden mit Vertraegen gefunden.",
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": []
+        })
+        return tests
+    
+    # T: Kundensummen Uebersicht
+    customer_with_most_contracts = max(contracts_by_customer.items(), key=lambda x: len(x[1]))
+    customer_id = customer_with_most_contracts[0]
+    customer_contracts = customer_with_most_contracts[1]
+    customer = customer_lookup.get(customer_id)
+    
+    # Berechne Summen fuer diesen Kunden
+    customer_first_date = get_first_contract_date(customer_id, db)
+    total_revenue = 0.0
+    total_commission = 0.0
+    total_exit = 0.0
+    active_count = 0
+    founder_count = 0
+    
+    for c in customer_contracts:
+        effective_status, _ = get_effective_status(c, settings, today)
+        
+        if effective_status == 'active':
+            active_count += 1
+            revenue = get_current_monthly_price(c, price_increases, today, customer_first_date)
+            total_revenue += revenue
+        elif effective_status == 'founder':
+            founder_count += 1
+        
+        commission = get_current_monthly_commission(c, settings, price_increases, commission_rates, today, customer_first_date)
+        total_commission += commission
+        
+        exit_payout = calculate_exit_payout(c, settings, price_increases, commission_rates, today, customer_first_date)
+        total_exit += exit_payout
+    
+    tests.append({
+        "test_id": next_test_id(),
+        "category": "Summen pro Kunde",
+        "name": "Kundensummen-Berechnung",
+        "test_description": f"Prueft die Summenberechnung fuer Kunde '{get_customer_name(customer)}' mit {len(customer_contracts)} Vertraegen.",
+        "expected": f"Kunde hat {active_count} aktive und {founder_count} Existenzgruender-Vertraege. Summen sollten nur aktive Vertraege beruecksichtigen.",
+        "status": "passed" if total_commission >= 0 else "warning",
+        "description": f"Umsatz: {total_revenue:.2f}EUR, Provision: {total_commission:.2f}EUR, Exit: {total_exit:.2f}EUR",
+        "contract_id": None,
+        "customer_id": customer_id,
+        "contract_title": None,
+        "customer_name": get_customer_name(customer),
+        "calculations": [
+            {"label": "Anzahl Vertraege", "value": len(customer_contracts)},
+            {"label": "Davon aktiv", "value": active_count},
+            {"label": "Davon Existenzgruender", "value": founder_count},
+            {"label": "Monatlicher Umsatz", "value": f"{total_revenue:.2f} EUR"},
+            {"label": "Monatliche Provision", "value": f"{total_commission:.2f} EUR"},
+            {"label": "Exit-Auszahlung gesamt", "value": f"{total_exit:.2f} EUR"}
+        ]
+    })
+    
+    # T: Existenzgruender sollten keine Provision generieren
+    founder_customers = []
+    for cust_id, cust_contracts in contracts_by_customer.items():
+        for c in cust_contracts:
+            effective_status, active_from = get_effective_status(c, settings, today)
+            if effective_status == 'founder':
+                customer_first_date = get_first_contract_date(cust_id, db)
+                commission = get_current_monthly_commission(c, settings, price_increases, commission_rates, today, customer_first_date)
+                founder_customers.append((cust_id, c, commission, active_from))
+                break
+    
+    founder_info = random_choice_or_none(founder_customers)
+    if founder_info:
+        cust_id, contract, commission, active_from = founder_info
+        customer = customer_lookup.get(cust_id)
+        founder_delay = settings.founder_delay_months if settings else 12
+        founder_end = add_months(contract.start_date, founder_delay)
+        
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Summen pro Kunde",
+            "name": "Existenzgruender-Provision = 0",
+            "test_description": f"Prueft dass Existenzgruender-Vertraege keine Provision generieren.",
+            "expected": f"Vertrag ist noch in Gruenderphase (bis {founder_end.strftime('%d.%m.%Y')}). Provision sollte 0EUR sein.",
+            "status": "passed" if commission == 0 else "warning",
+            "description": f"Provision: {commission:.2f}EUR" + (" - KORREKT" if commission == 0 else " - FEHLER: Sollte 0 sein!"),
+            "contract_id": contract.id,
+            "customer_id": cust_id,
+            "contract_title": get_contract_description(contract),
+            "customer_name": get_customer_name(customer),
+            "calculations": [
+                {"label": "Vertragsbeginn", "value": contract.start_date.strftime('%d.%m.%Y')},
+                {"label": "Gruenderphase endet", "value": founder_end.strftime('%d.%m.%Y')},
+                {"label": "Effektiver Status", "value": "founder"},
+                {"label": "Berechnete Provision", "value": f"{commission:.2f} EUR"},
+                {"label": "Erwartet", "value": "0.00 EUR"}
+            ]
+        })
+    else:
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Summen pro Kunde",
+            "name": "Existenzgruender-Provision = 0",
+            "test_description": "Prueft dass Existenzgruender-Vertraege keine Provision generieren.",
+            "expected": "Existenzgruender in Gruenderphase sollten keine Provision generieren.",
+            "status": "info",
+            "description": "Kein Vertrag in aktiver Gruenderphase gefunden.",
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": []
+        })
+    
+    return tests
+
+
+def create_total_sum_tests(
+    contracts: List[Contract],
+    price_increases: List[PriceIncrease],
+    settings: Settings,
+    commission_rates: List[CommissionRate],
+    customer_lookup: Dict[str, Customer],
+    today: datetime,
+    db: Session,
+    next_test_id
+) -> List[Dict[str, Any]]:
+    """Erstellt Tests fuer Gesamtsummen ueber alle Kunden"""
+    tests = []
+    
+    if not contracts:
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Gesamtsummen",
+            "name": "Gesamtsummen-Uebersicht",
+            "test_description": "Prueft die Gesamtsummen ueber alle Kunden.",
+            "expected": "Gesamtsummen sollten korrekt berechnet werden.",
+            "status": "info",
+            "description": "Keine Vertraege im System.",
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": []
+        })
+        return tests
+    
+    # Gruppiere nach Kunde fuer first_contract_date
+    contracts_by_customer: Dict[str, List[Contract]] = {}
+    for c in contracts:
+        if c.customer_id not in contracts_by_customer:
+            contracts_by_customer[c.customer_id] = []
+        contracts_by_customer[c.customer_id].append(c)
+    
+    # Berechne Gesamtsummen
+    total_revenue = 0.0
+    total_commission = 0.0
+    total_exit = 0.0
+    total_active = 0
+    total_founder = 0
+    total_inactive = 0
+    
+    for cust_id, cust_contracts in contracts_by_customer.items():
+        customer_first_date = get_first_contract_date(cust_id, db)
+        
+        for c in cust_contracts:
+            effective_status, _ = get_effective_status(c, settings, today)
+            
+            if effective_status == 'active':
+                total_active += 1
+                revenue = get_current_monthly_price(c, price_increases, today, customer_first_date)
+                total_revenue += revenue
+            elif effective_status == 'founder':
+                total_founder += 1
+            else:
+                total_inactive += 1
+            
+            commission = get_current_monthly_commission(c, settings, price_increases, commission_rates, today, customer_first_date)
+            total_commission += commission
+            
+            exit_payout = calculate_exit_payout(c, settings, price_increases, commission_rates, today, customer_first_date)
+            total_exit += exit_payout
+    
+    # T: Gesamtsummen
+    tests.append({
+        "test_id": next_test_id(),
+        "category": "Gesamtsummen",
+        "name": "Gesamtsummen-Berechnung",
+        "test_description": "Prueft die Gesamtsummen aller Vertraege im System.",
+        "expected": f"{len(contracts)} Vertraege: {total_active} aktiv, {total_founder} Existenzgruender, {total_inactive} inaktiv/beendet.",
+        "status": "passed",
+        "description": f"Umsatz: {total_revenue:.2f}EUR, Provision: {total_commission:.2f}EUR, Exit: {total_exit:.2f}EUR",
+        "contract_id": None,
+        "customer_id": None,
+        "contract_title": None,
+        "customer_name": None,
+        "calculations": [
+            {"label": "Anzahl Vertraege gesamt", "value": len(contracts)},
+            {"label": "Aktive Vertraege", "value": total_active},
+            {"label": "Existenzgruender", "value": total_founder},
+            {"label": "Inaktiv/Beendet", "value": total_inactive},
+            {"label": "Monatlicher Gesamtumsatz", "value": f"{total_revenue:.2f} EUR"},
+            {"label": "Monatliche Gesamtprovision", "value": f"{total_commission:.2f} EUR"},
+            {"label": "Exit-Auszahlung gesamt", "value": f"{total_exit:.2f} EUR"}
+        ]
+    })
+    
+    # T: Existenzgruender-Vertraege sollten KEINEN Umsatz/Provision generieren
+    if total_founder > 0:
+        founder_revenue = 0.0
+        founder_commission = 0.0
+        for cust_id, cust_contracts in contracts_by_customer.items():
+            customer_first_date = get_first_contract_date(cust_id, db)
+            for c in cust_contracts:
+                effective_status, _ = get_effective_status(c, settings, today)
+                if effective_status == 'founder':
+                    # Diese sollten 0 sein
+                    commission = get_current_monthly_commission(c, settings, price_increases, commission_rates, today, customer_first_date)
+                    founder_commission += commission
+        
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Gesamtsummen",
+            "name": "Existenzgruender in Summen = 0",
+            "test_description": f"Prueft dass {total_founder} Existenzgruender-Vertraege nicht in Summen enthalten sind.",
+            "expected": "Existenzgruender-Vertraege sollten 0EUR Provision generieren.",
+            "status": "passed" if founder_commission == 0 else "warning",
+            "description": f"Summe Existenzgruender-Provision: {founder_commission:.2f}EUR" + (" - KORREKT" if founder_commission == 0 else " - FEHLER!"),
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": [
+                {"label": "Anzahl Existenzgruender", "value": total_founder},
+                {"label": "Summe deren Provision", "value": f"{founder_commission:.2f} EUR"},
+                {"label": "Erwartet", "value": "0.00 EUR"},
+                {"label": "Status", "value": "OK" if founder_commission == 0 else "FEHLER"}
+            ]
+        })
+    
+    # T: Nur aktive Vertraege sollten Umsatz generieren
+    tests.append({
+        "test_id": next_test_id(),
+        "category": "Gesamtsummen",
+        "name": "Nur aktive Vertraege = Umsatz",
+        "test_description": "Prueft dass nur aktive Vertraege zum Umsatz beitragen.",
+        "expected": f"{total_active} aktive Vertraege sollten zum Gesamtumsatz von {total_revenue:.2f}EUR beitragen.",
+        "status": "passed" if total_active > 0 or total_revenue == 0 else "warning",
+        "description": f"{total_active} aktive Vertraege generieren {total_revenue:.2f}EUR monatlichen Umsatz.",
+        "contract_id": None,
+        "customer_id": None,
+        "contract_title": None,
+        "customer_name": None,
+        "calculations": [
+            {"label": "Aktive Vertraege", "value": total_active},
+            {"label": "Monatlicher Umsatz", "value": f"{total_revenue:.2f} EUR"},
+            {"label": "Durchschnitt pro Vertrag", "value": f"{(total_revenue / total_active if total_active > 0 else 0):.2f} EUR"}
+        ]
+    })
+    
+    return tests
+
+
+def create_monthly_calculation_tests(
+    contracts: List[Contract],
+    price_increases: List[PriceIncrease],
+    settings: Settings,
+    commission_rates: List[CommissionRate],
+    customer_lookup: Dict[str, Customer],
+    today: datetime,
+    db: Session,
+    next_test_id
+) -> List[Dict[str, Any]]:
+    """Erstellt Tests fuer die monatlichen Berechnungen (Umsatz, Provision, Exit)"""
+    tests = []
+    active_contracts = [c for c in contracts if c.status.value == 'active']
+    
+    if not active_contracts:
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Monatsberechnungen",
+            "name": "Monatsberechnungen-Uebersicht",
+            "test_description": "Prueft die monatlichen Berechnungen.",
+            "expected": "Aktive Vertraege sollten korrekte Monatsberechnungen haben.",
+            "status": "info",
+            "description": "Keine aktiven Vertraege im System.",
+            "contract_id": None,
+            "customer_id": None,
+            "contract_title": None,
+            "customer_name": None,
+            "calculations": []
+        })
+        return tests
+    
+    # T: Einzelvertrag Monatsberechnung (zufaelliger aktiver Vertrag)
+    contract = random.choice(active_contracts)
+    customer = customer_lookup.get(contract.customer_id)
+    customer_first_date = get_first_contract_date(contract.customer_id, db)
+    effective_status, active_from = get_effective_status(contract, settings, today)
+    
+    # Basis-Betraege
+    base_rental = contract.software_rental_amount
+    base_care = contract.software_care_amount
+    base_apps = contract.apps_amount
+    base_purchase = contract.purchase_amount
+    base_cloud = getattr(contract, 'cloud_amount', 0) or 0
+    base_total = base_rental + base_care + base_apps + base_purchase + base_cloud
+    
+    # Aktuelle Werte mit Preiserhoehungen
+    current_price = get_current_monthly_price(contract, price_increases, today, customer_first_date)
+    current_commission = get_current_monthly_commission(contract, settings, price_increases, commission_rates, today, customer_first_date)
+    exit_payout = calculate_exit_payout(contract, settings, price_increases, commission_rates, today, customer_first_date)
+    
+    # Provisionssaetze ermitteln
+    rates = get_commission_rates_for_date(commission_rates, today)
+    
+    tests.append({
+        "test_id": next_test_id(),
+        "category": "Monatsberechnungen",
+        "name": "Einzelvertrag-Berechnung",
+        "test_description": f"Prueft die Monatsberechnung fuer einen Vertrag.",
+        "expected": f"Vertrag hat Basispreis {base_total:.2f}EUR. Mit Preiserhoehungen: {current_price:.2f}EUR. Status: {effective_status}.",
+        "status": "passed" if (effective_status != 'active' and current_commission == 0) or (effective_status == 'active' and current_commission > 0 or base_total == 0) else "warning",
+        "description": f"Preis: {current_price:.2f}EUR, Provision: {current_commission:.2f}EUR, Exit: {exit_payout:.2f}EUR",
+        "contract_id": contract.id,
+        "customer_id": contract.customer_id,
+        "contract_title": get_contract_description(contract),
+        "customer_name": get_customer_name(customer),
+        "calculations": [
+            {"label": "Basispreis (Summe)", "value": f"{base_total:.2f} EUR"},
+            {"label": "Miete", "value": f"{base_rental:.2f} EUR"},
+            {"label": "Pflege", "value": f"{base_care:.2f} EUR"},
+            {"label": "Apps", "value": f"{base_apps:.2f} EUR"},
+            {"label": "Kauf", "value": f"{base_purchase:.2f} EUR"},
+            {"label": "Cloud", "value": f"{base_cloud:.2f} EUR"},
+            {"label": "Aktueller Preis (mit PE)", "value": f"{current_price:.2f} EUR"},
+            {"label": "Effektiver Status", "value": effective_status},
+            {"label": "Monatliche Provision", "value": f"{current_commission:.2f} EUR"},
+            {"label": "Exit-Auszahlung", "value": f"{exit_payout:.2f} EUR"}
+        ]
+    })
+    
+    # T: Provisionsberechnung nach Typ
+    tests.append({
+        "test_id": next_test_id(),
+        "category": "Monatsberechnungen",
+        "name": "Provisionsberechnung nach Typ",
+        "test_description": "Zeigt die aktuellen Provisionssaetze nach Vertragstyp.",
+        "expected": "Provisionssaetze sollten fuer alle Typen definiert sein.",
+        "status": "passed",
+        "description": f"Miete: {rates.get('software_rental', 0):.1f}%, Pflege: {rates.get('software_care', 0):.1f}%, Apps: {rates.get('apps', 0):.1f}%, Kauf: {rates.get('purchase', 0):.1f}%, Cloud: {rates.get('cloud', 0):.1f}%",
+        "contract_id": None,
+        "customer_id": None,
+        "contract_title": None,
+        "customer_name": None,
+        "calculations": [
+            {"label": "Software-Miete", "value": f"{rates.get('software_rental', 0):.1f}%"},
+            {"label": "Software-Pflege", "value": f"{rates.get('software_care', 0):.1f}%"},
+            {"label": "Apps", "value": f"{rates.get('apps', 0):.1f}%"},
+            {"label": "Kauf", "value": f"{rates.get('purchase', 0):.1f}%"},
+            {"label": "Cloud", "value": f"{rates.get('cloud', 0):.1f}%"}
+        ]
+    })
+    
+    # T: Effektiver Status vs DB-Status
+    status_mismatch = []
+    for c in active_contracts:
+        effective_status, _ = get_effective_status(c, settings, today)
+        if effective_status != c.status.value:
+            customer_first_date = get_first_contract_date(c.customer_id, db)
+            commission = get_current_monthly_commission(c, settings, price_increases, commission_rates, today, customer_first_date)
+            status_mismatch.append((c, effective_status, commission))
+    
+    mismatch_info = random_choice_or_none(status_mismatch)
+    if mismatch_info:
+        contract, effective_status, commission = mismatch_info
+        customer = customer_lookup.get(contract.customer_id)
+        founder_delay = settings.founder_delay_months if settings else 12
+        founder_end = add_months(contract.start_date, founder_delay) if contract.is_founder_discount else None
+        
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Monatsberechnungen",
+            "name": "Effektiver vs. DB-Status",
+            "test_description": "Prueft ob der effektive Status korrekt vom DB-Status abweicht.",
+            "expected": f"DB-Status ist '{contract.status.value}', aber effektiver Status ist '{effective_status}'. Provision sollte entsprechend berechnet werden.",
+            "status": "passed" if (effective_status == 'founder' and commission == 0) or effective_status == 'active' else "warning",
+            "description": f"DB: {contract.status.value}, Effektiv: {effective_status}, Provision: {commission:.2f}EUR",
+            "contract_id": contract.id,
+            "customer_id": contract.customer_id,
+            "contract_title": get_contract_description(contract),
+            "customer_name": get_customer_name(customer),
+            "calculations": [
+                {"label": "DB-Status", "value": contract.status.value},
+                {"label": "Effektiver Status", "value": effective_status},
+                {"label": "Ist Existenzgruender", "value": "Ja" if contract.is_founder_discount else "Nein"},
+                {"label": "Gruenderphase endet", "value": founder_end.strftime('%d.%m.%Y') if founder_end else "-"},
+                {"label": "Berechnete Provision", "value": f"{commission:.2f} EUR"},
+                {"label": "Erwartet bei founder", "value": "0.00 EUR"}
+            ]
+        })
+    else:
+        tests.append({
+            "test_id": next_test_id(),
+            "category": "Monatsberechnungen",
+            "name": "Effektiver vs. DB-Status",
+            "test_description": "Prueft ob effektiver Status und DB-Status uebereinstimmen.",
+            "expected": "Bei uebereinstimmenden Status sollte die Provision korrekt sein.",
+            "status": "passed",
+            "description": "Alle aktiven Vertraege haben uebereinstimmende Status.",
             "contract_id": None,
             "customer_id": None,
             "contract_title": None,

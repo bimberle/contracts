@@ -218,6 +218,12 @@ def get_current_monthly_commission(
     if contract.status.value != 'active':
         return 0.0
     
+    # Prüfe den effektiven Status (berücksichtigt Existenzgründer-Phase)
+    effective_status, _ = get_effective_status(contract, settings, date)
+    if effective_status != 'active':
+        # Vertrag ist in Existenzgründer-Phase, in der Zukunft oder beendet
+        return 0.0
+    
     # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen
     amounts = {
         'software_rental': contract.software_rental_amount,
@@ -235,12 +241,6 @@ def get_current_monthly_commission(
         'purchase': 'purchase',
         'cloud': 'cloud',
     }
-    
-    months_since_rental_start = months_between(contract.start_date, date)
-    
-    # Noch in Gründerphase - keine Provision
-    if months_since_rental_start < 0:
-        return 0.0
     
     # Bestandsschutz für Preiserhöhungen prüfen - basierend auf erstem Kundenvertrag
     reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { BackupConfig, BackupHistoryItem, DatabaseInfo } from '../types';
+import ConfirmModal from './ConfirmModal';
 
 interface BackupSettingsProps {
   onBackupRestored?: () => void;
@@ -21,6 +22,24 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [selectedBackupForRestore, setSelectedBackupForRestore] = useState<string | null>(null);
   const [restoreTargetDbId, setRestoreTargetDbId] = useState<string>('');
+
+  // Delete Confirm Modal State
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    isOpen: boolean;
+    filename: string;
+  }>({ isOpen: false, filename: '' });
+
+  // Backup Created Success Modal State
+  const [backupSuccessModal, setBackupSuccessModal] = useState<{
+    isOpen: boolean;
+    backup: BackupHistoryItem | null;
+  }>({ isOpen: false, backup: null });
+
+  // Restore Confirm Modal State
+  const [restoreConfirmModal, setRestoreConfirmModal] = useState<{
+    isOpen: boolean;
+    targetDb: DatabaseInfo | null;
+  }>({ isOpen: false, targetDb: null });
 
   const weekdays = [
     { key: 'monday', label: 'Mo' },
@@ -86,8 +105,25 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
     try {
       setCreatingBackup(true);
       const result = await api.createBackup();
-      alert(`Backup erstellt: ${result.filename}`);
-      await loadData();
+      // Find the backup in refreshed data to get full details
+      const historyData = await api.getBackupHistory();
+      const createdBackup = historyData.backups?.find((b: BackupHistoryItem) => b.filename === result.filename);
+      setHistory(historyData.backups || []);
+      
+      if (createdBackup) {
+        setBackupSuccessModal({ isOpen: true, backup: createdBackup });
+      } else {
+        // Fallback with basic info from result
+        setBackupSuccessModal({ 
+          isOpen: true, 
+          backup: {
+            filename: result.filename,
+            databaseName: result.databaseName || 'Unbekannt',
+            createdAt: new Date().toISOString(),
+            fileSizeFormatted: 'Unbekannt'
+          } as BackupHistoryItem
+        });
+      }
     } catch (err: any) {
       console.error('Error creating backup:', err);
       alert(err.response?.data?.detail || 'Fehler beim Erstellen des Backups');
@@ -102,10 +138,13 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
   };
 
   const handleDeleteBackup = async (filename: string) => {
-    if (!confirm(`Backup "${filename}" wirklich löschen?`)) {
-      return;
-    }
+    setDeleteConfirmModal({ isOpen: true, filename });
+  };
 
+  const confirmDeleteBackup = async () => {
+    const filename = deleteConfirmModal.filename;
+    setDeleteConfirmModal({ isOpen: false, filename: '' });
+    
     try {
       await api.deleteBackup(filename);
       await loadData();
@@ -130,15 +169,21 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
     const targetDb = databases.find(db => db.id === restoreTargetDbId);
     if (!targetDb) return;
 
-    if (!confirm(`ACHTUNG: Alle Daten in "${targetDb.name}" werden überschrieben!\n\nMöchten Sie wirklich fortfahren?`)) {
-      return;
-    }
+    // Show confirm modal
+    setRestoreConfirmModal({ isOpen: true, targetDb });
+  };
+
+  const confirmRestoreBackup = async () => {
+    const targetDb = restoreConfirmModal.targetDb;
+    setRestoreConfirmModal({ isOpen: false, targetDb: null });
+    
+    if (!targetDb || !selectedBackupForRestore) return;
 
     try {
       setRestoringBackup(selectedBackupForRestore);
       setIsRestoreModalOpen(false);
       
-      await api.restoreBackup(selectedBackupForRestore, restoreTargetDbId);
+      await api.restoreBackup(selectedBackupForRestore, targetDb.id);
       alert(`Backup erfolgreich in "${targetDb.name}" wiederhergestellt`);
       onBackupRestored?.();
     } catch (err: any) {
@@ -432,6 +477,112 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
               >
                 Wiederherstellen
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Backup Confirm Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirmModal.isOpen}
+        onClose={() => setDeleteConfirmModal({ isOpen: false, filename: '' })}
+        onConfirm={confirmDeleteBackup}
+        title="Backup löschen"
+        message={`Möchten Sie das Backup "${deleteConfirmModal.filename}" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`}
+        confirmText="Löschen"
+        confirmStyle="danger"
+        icon="warning"
+      />
+
+      {/* Restore Confirm Modal */}
+      <ConfirmModal
+        isOpen={restoreConfirmModal.isOpen}
+        onClose={() => setRestoreConfirmModal({ isOpen: false, targetDb: null })}
+        onConfirm={confirmRestoreBackup}
+        title="Backup wiederherstellen"
+        message={`ACHTUNG: Alle Daten in "${restoreConfirmModal.targetDb?.name || ''}" werden überschrieben!\n\nMöchten Sie wirklich fortfahren?`}
+        confirmText="Wiederherstellen"
+        confirmStyle="warning"
+        icon="danger"
+      />
+
+      {/* Backup Created Success Modal */}
+      {backupSuccessModal.isOpen && backupSuccessModal.backup && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setBackupSuccessModal({ isOpen: false, backup: null })}
+          />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Success Icon */}
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <div className="mt-4 text-center">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Backup erfolgreich erstellt
+                </h3>
+              </div>
+              
+              {/* Backup Details */}
+              <div className="mt-4 bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Dateiname:</span>
+                  <span className="font-mono text-gray-900 text-xs">{backupSuccessModal.backup.filename}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Datenbank:</span>
+                  <span className="font-medium text-gray-900">{backupSuccessModal.backup.databaseName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Erstellt am:</span>
+                  <span className="text-gray-900">
+                    {backupSuccessModal.backup.createdAt 
+                      ? new Date(backupSuccessModal.backup.createdAt).toLocaleString('de-DE')
+                      : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Größe:</span>
+                  <span className="text-gray-900">{backupSuccessModal.backup.fileSizeFormatted}</span>
+                </div>
+                {backupSuccessModal.backup.customerCount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Kunden:</span>
+                    <span className="text-gray-900">{backupSuccessModal.backup.customerCount}</span>
+                  </div>
+                )}
+                {backupSuccessModal.backup.contractCount != null && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Verträge:</span>
+                    <span className="text-gray-900">{backupSuccessModal.backup.contractCount}</span>
+                  </div>
+                )}
+                {backupSuccessModal.backup.appVersion && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">App-Version:</span>
+                    <span className="font-mono text-gray-900">v{backupSuccessModal.backup.appVersion}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Close Button */}
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setBackupSuccessModal({ isOpen: false, backup: null })}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  OK
+                </button>
+              </div>
             </div>
           </div>
         </div>
