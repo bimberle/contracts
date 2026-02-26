@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { DatabaseInfo } from '../types';
+import ConfirmModal from './ConfirmModal';
 
 interface DatabaseSettingsProps {
   onDatabaseChange?: () => void;
@@ -16,6 +17,25 @@ export default function DatabaseSettings({ onDatabaseChange }: DatabaseSettingsP
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDb, setSelectedDb] = useState<DatabaseInfo | null>(null);
+  
+  // Confirm Modal States
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmStyle: 'danger' | 'warning' | 'primary';
+    icon: 'warning' | 'danger' | 'info' | 'question';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Bestätigen',
+    confirmStyle: 'primary',
+    icon: 'question',
+    onConfirm: () => {}
+  });
   
   // Form States
   const [newDbName, setNewDbName] = useState('');
@@ -45,20 +65,26 @@ export default function DatabaseSettings({ onDatabaseChange }: DatabaseSettingsP
   const handleSwitchDatabase = async (db: DatabaseInfo) => {
     if (db.isActive) return;
     
-    if (!confirm(`Zur Datenbank "${db.name}" wechseln?\n\nDie Anwendung muss danach neu gestartet werden.`)) {
-      return;
-    }
-    
-    try {
-      const result = await api.switchDatabase(db.id);
-      if (result.requiresRestart) {
-        alert('Datenbank gewechselt. Bitte laden Sie die Seite neu (F5) oder starten Sie die Anwendung neu.');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Datenbank wechseln',
+      message: `Zur Datenbank "${db.name}" wechseln?\n\nDie Anwendung muss danach neu gestartet werden.`,
+      confirmText: 'Wechseln',
+      confirmStyle: 'primary',
+      icon: 'question',
+      onConfirm: async () => {
+        try {
+          const result = await api.switchDatabase(db.id);
+          if (result.requiresRestart) {
+            alert('Datenbank gewechselt. Bitte laden Sie die Seite neu (F5) oder starten Sie die Anwendung neu.');
+          }
+          await loadDatabases();
+          onDatabaseChange?.();
+        } catch (err: any) {
+          alert(err.response?.data?.detail || 'Fehler beim Wechseln der Datenbank');
+        }
       }
-      await loadDatabases();
-      onDatabaseChange?.();
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Fehler beim Wechseln der Datenbank');
-    }
+    });
   };
 
   const handleCreateDatabase = async () => {
@@ -104,16 +130,22 @@ export default function DatabaseSettings({ onDatabaseChange }: DatabaseSettingsP
       return;
     }
     
-    if (!confirm(`Datenbank "${db.name}" wirklich löschen?\n\nAlle Daten werden unwiderruflich gelöscht!`)) {
-      return;
-    }
-    
-    try {
-      await api.deleteDatabase(db.id);
-      await loadDatabases();
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Fehler beim Löschen der Datenbank');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Datenbank löschen',
+      message: `Datenbank "${db.name}" wirklich löschen?\n\nAlle Daten werden unwiderruflich gelöscht!`,
+      confirmText: 'Löschen',
+      confirmStyle: 'danger',
+      icon: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.deleteDatabase(db.id);
+          await loadDatabases();
+        } catch (err: any) {
+          alert(err.response?.data?.detail || 'Fehler beim Löschen der Datenbank');
+        }
+      }
+    });
   };
 
   const openEditModal = (db: DatabaseInfo) => {
@@ -124,35 +156,43 @@ export default function DatabaseSettings({ onDatabaseChange }: DatabaseSettingsP
   };
 
   const handleCreateDemoData = async () => {
-    if (!confirm('Demo-Daten in der aktuellen Datenbank erstellen?\n\nDies fügt Testdaten hinzu.')) {
-      return;
-    }
-    
-    try {
-      const result = await api.createDemoData();
-      alert(`${result.message}\n\n${result.customers} Kunden und ${result.contracts} Verträge erstellt.`);
-      onDatabaseChange?.();
-    } catch (err: any) {
-      alert(err.message || 'Fehler beim Erstellen der Demo-Daten');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Demo-Daten erstellen',
+      message: 'Demo-Daten in der aktuellen Datenbank erstellen?\n\nDies fügt Testdaten hinzu.',
+      confirmText: 'Erstellen',
+      confirmStyle: 'primary',
+      icon: 'info',
+      onConfirm: async () => {
+        try {
+          const result = await api.createDemoData();
+          alert(`${result.message}\n\n${result.customers} Kunden und ${result.contracts} Verträge erstellt.`);
+          onDatabaseChange?.();
+        } catch (err: any) {
+          alert(err.message || 'Fehler beim Erstellen der Demo-Daten');
+        }
+      }
+    });
   };
 
   const handleClearData = async () => {
-    if (!confirm('ACHTUNG: ALLE Daten in der aktuellen Datenbank werden gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nFortfahren?')) {
-      return;
-    }
-    
-    if (!confirm('Sind Sie wirklich sicher? Alle Kunden und Verträge werden unwiderruflich gelöscht!')) {
-      return;
-    }
-    
-    try {
-      const result = await api.clearDemoData();
-      alert(`${result.message}\n\n${result.customers_deleted} Kunden und ${result.contracts_deleted} Verträge gelöscht.`);
-      onDatabaseChange?.();
-    } catch (err: any) {
-      alert(err.message || 'Fehler beim Löschen der Daten');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Alle Daten löschen',
+      message: 'ACHTUNG: ALLE Daten in der aktuellen Datenbank werden gelöscht!\n\nAlle Kunden und Verträge werden unwiderruflich gelöscht.\n\nDiese Aktion kann nicht rückgängig gemacht werden!',
+      confirmText: 'Alles löschen',
+      confirmStyle: 'danger',
+      icon: 'danger',
+      onConfirm: async () => {
+        try {
+          const result = await api.clearDemoData();
+          alert(`${result.message}\n\n${result.customers_deleted} Kunden und ${result.contracts_deleted} Verträge gelöscht.`);
+          onDatabaseChange?.();
+        } catch (err: any) {
+          alert(err.message || 'Fehler beim Löschen der Daten');
+        }
+      }
+    });
   };
 
   const predefinedColors = [
@@ -408,6 +448,18 @@ export default function DatabaseSettings({ onDatabaseChange }: DatabaseSettingsP
           </div>
         </div>
       )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        confirmStyle={confirmModal.confirmStyle}
+        icon={confirmModal.icon}
+      />
     </div>
   );
 }
