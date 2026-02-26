@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useCustomerStore } from '../stores/customerStore';
 import { DashboardSummary, CalculatedMetrics } from '../types';
-import { formatCurrency } from '../utils/formatting';
+import { formatCurrency, formatCurrencyRaw } from '../utils/formatting';
 import CustomerModal from '../components/CustomerModal';
 import PullToRefresh from '../components/PullToRefresh';
+import * as XLSX from 'xlsx';
 
 function Dashboard() {
   const customers = useCustomerStore((state) => state.customers);
@@ -18,6 +19,43 @@ function Dashboard() {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'kundennummer' | 'name' | 'ort' | 'revenue' | 'commission' | 'netIncome' | 'exit'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const exportToExcel = () => {
+    const data = filteredCustomers.map((customer) => {
+      const metrics = customerMetrics[customer.id];
+      return {
+        'Kundennummer': customer.kundennummer,
+        'Name': `${customer.name} ${customer.name2 || ''}`.trim(),
+        'PLZ': customer.plz || '',
+        'Ort': customer.ort || '',
+        'Land': customer.land || '',
+        'Mtl. Umsatz': metrics ? formatCurrencyRaw(metrics.totalMonthlyRevenue) : 0,
+        'Monatliche Provision': metrics ? formatCurrencyRaw(metrics.totalMonthlyCommission) : 0,
+        'Netto-Gehalt': metrics ? formatCurrencyRaw(metrics.totalMonthlyNetIncome) : 0,
+        'Exit-Auszahlung': metrics ? formatCurrencyRaw(metrics.exitPayoutIfTodayInMonths) : 0,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kunden');
+    
+    // Spaltenbreiten setzen
+    ws['!cols'] = [
+      { wch: 12 }, // Kundennummer
+      { wch: 30 }, // Name
+      { wch: 8 },  // PLZ
+      { wch: 20 }, // Ort
+      { wch: 10 }, // Land
+      { wch: 15 }, // Mtl. Umsatz
+      { wch: 18 }, // Monatliche Provision
+      { wch: 15 }, // Netto-Gehalt
+      { wch: 15 }, // Exit-Auszahlung
+    ];
+    
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Kunden_Export_${today}.xlsx`);
+  };
 
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
@@ -178,12 +216,24 @@ function Dashboard() {
       {/* Header mit Button rechts - fixed */}
       <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold text-gray-900">Kunden</h1>
-        <button
-          onClick={() => setIsCustomerModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-        >
-          + Neuer Kunde
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center gap-2"
+            title="Nach Excel exportieren"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Excel Export
+          </button>
+          <button
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+          >
+            + Neuer Kunde
+          </button>
+        </div>
       </div>
 
       {/* Customers Table */}

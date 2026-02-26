@@ -29,20 +29,19 @@ export default function DatabaseFooter() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 h-8 flex items-center justify-between px-4 text-sm font-medium text-white z-40"
+      className="fixed bottom-0 left-0 right-0 h-8 flex items-center justify-center px-4 text-sm font-medium text-white z-40"
       style={{ backgroundColor: activeDatabase.color }}
     >
-      <span className="text-white/70 text-xs">v{APP_VERSION}</span>
       <span className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-white/50"></span>
-        Aktive Datenbank: <strong>{activeDatabase.name}</strong>
+        <strong>{activeDatabase.name}</strong>
         {activeDatabase.isDemo && (
-          <span className="ml-2 px-2 py-0.5 bg-white/20 rounded text-xs">
+          <span className="ml-1 px-2 py-0.5 bg-white/20 rounded text-xs">
             DEMO
           </span>
         )}
+        <span className="text-white/60 text-xs ml-2">v{APP_VERSION}</span>
       </span>
-      <span className="w-16"></span>{/* Spacer für Zentrierung */}
     </div>
   );
 }

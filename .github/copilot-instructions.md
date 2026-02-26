@@ -850,6 +850,13 @@ return monthlyCommission * monthsRemaining
 6. **Post-Contract**: Berücksichtige die Monate nach endDate korrekt
 7. **Typ-Abhängig**: Commissionen und Einstellungen sind typ-spezifisch
 8. **Fehlerbehandlung**: Bei Preiserhöhung alle Metriken neu berechnen (expensive!)
+9. **Backup-Kompatibilität** (KRITISCH): Bei JEDER Datenbankänderung sicherstellen, dass alte Backups noch eingespielt werden können:
+   - **Neue Spalten**: IMMER `nullable=True` ODER einen `server_default` setzen
+   - **Spalten entfernen**: NIEMALS - stattdessen deprecated markieren und ignorieren
+   - **Spalten umbenennen**: Alte Spalte behalten, neue hinzufügen, Daten migrieren
+   - **pg_restore Fehler**: Harmlose Fehler (fehlende Spalten, unbekannte Parameter) ignorieren
+   - **Migration-Design**: Immer prüfen ob Tabelle/Spalte existiert bevor Änderungen
+   - **Grund**: Alte Backups haben evtl. weniger Spalten → INSERT muss trotzdem funktionieren
 
 ---
 

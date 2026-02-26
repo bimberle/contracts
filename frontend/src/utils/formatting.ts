@@ -10,6 +10,14 @@ export const formatCurrency = (amount: number): string => {
 };
 
 /**
+ * Gibt den Betrag als Zahl zurück (für Excel-Export)
+ * z.B. 100.5678 → 100.57
+ */
+export const formatCurrencyRaw = (amount: number): number => {
+  return Math.round(amount * 100) / 100;
+};
+
+/**
  * Formatiert ein Datum als TT.MM.YYYY
  * z.B. new Date('2026-01-14') → "14.01.2026"
  */
