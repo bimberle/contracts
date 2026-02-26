@@ -368,3 +368,42 @@ export interface DashboardSummary {
     monthlyCommission: number;
   }>;
 }
+
+// Database Configuration
+export interface DatabaseInfo {
+  id: string;
+  name: string;
+  dbName: string;
+  color: string;
+  isActive: boolean;
+  isDemo: boolean;
+  isSystem: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Backup Configuration
+export interface BackupConfig {
+  id: string;
+  scheduleDays: string[];
+  scheduleTime: string;
+  maxBackups: number;
+  isEnabled: boolean;
+  lastBackupAt: string | null;
+  lastBackupStatus: string | null;
+  backupDirectory: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Backup History Item
+export interface BackupHistoryItem {
+  id: string;
+  filename: string;
+  databaseName: string;
+  fileSize: number | null;
+  fileSizeFormatted: string | null;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+}
