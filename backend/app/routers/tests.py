@@ -444,14 +444,16 @@ def create_founder_protection_tests(
     if contract_info:
         contract, founder_end, months_remaining = contract_info
         customer = customer_lookup.get(contract.customer_id)
+        effective_status, _ = get_effective_status(contract, settings, today)
+        status_correct = effective_status == "founder"
         tests.append({
             "test_id": next_test_id(),
             "category": "Existenzgruender-Schutz",
             "name": "Vertrag in aktiver Gruenderphase",
             "test_description": "Prueft einen Vertrag der sich noch in der Existenzgruender-Phase befindet.",
             "expected": f"Vertrag begann am {contract.start_date.strftime('%d.%m.%Y')}. Bei {founder_delay} Monaten Verzoegerung endet die Gruenderphase am {founder_end.strftime('%d.%m.%Y')}. Status sollte 'founder' sein.",
-            "status": "warning",
-            "description": f"Gruenderphase aktiv bis {founder_end.strftime('%d.%m.%Y')} (noch {max(0, months_remaining)} Monate)",
+            "status": "passed" if status_correct else "failed",
+            "description": f"Gruenderphase aktiv bis {founder_end.strftime('%d.%m.%Y')} (noch {max(0, months_remaining)} Monate) - Status korrekt: {effective_status}",
             "contract_id": contract.id,
             "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
