@@ -7,6 +7,7 @@ import random
 from sqlalchemy.orm import Session
 from app.models.customer import Customer
 from app.models.contract import Contract
+from app.models.price_increase import PriceIncrease
 
 
 def create_demo_data(db: Session) -> dict:
@@ -19,18 +20,67 @@ def create_demo_data(db: Session) -> dict:
     if existing_customers > 0:
         return {"message": "Demo-Daten existieren bereits", "customers": existing_customers}
     
+    today = date.today()
+    
+    # ========================================
+    # PRICE INCREASES (Preiserhoehungen)
+    # ========================================
+    
+    # Alte Preiserhoehung von vor 3 Jahren (fuer manuelles Aktivieren bei neuem Vertrag)
+    old_price_increase = PriceIncrease(
+        id="pi-old-2023",
+        valid_from=datetime.combine(today - timedelta(days=3*365), datetime.min.time()),
+        amount_increases={
+            "software_rental": 5.0,
+            "software_care": 3.0,
+            "apps": 2.0,
+            "purchase": 0,
+            "cloud": 4.0
+        },
+        lock_in_months=24,
+        description="Preiserhoehung 2023 (alt, fuer manuelle Aktivierung)"
+    )
+    db.add(old_price_increase)
+    
+    # Aktuelle Preiserhoehung von vor 6 Monaten
+    current_price_increase = PriceIncrease(
+        id="pi-current-2025",
+        valid_from=datetime.combine(today - timedelta(days=180), datetime.min.time()),
+        amount_increases={
+            "software_rental": 8.0,
+            "software_care": 5.0,
+            "apps": 3.0,
+            "purchase": 2.0,
+            "cloud": 6.0
+        },
+        lock_in_months=24,
+        description="Preiserhoehung 2025 (aktuelle)"
+    )
+    db.add(current_price_increase)
+    
+    db.flush()  # Get IDs for referencing
+    
+    # ========================================
+    # CUSTOMERS (Kunden)
+    # ========================================
+    
     # Demo customer data (numerische Kundennummern)
     demo_customers = [
-        {"kundennummer": "90000001", "name": "Mustermann GmbH", "name2": "Zentrale", "ort": "München", "plz": "80331", "land": "DE"},
+        {"kundennummer": "90000001", "name": "Mustermann GmbH", "name2": "Zentrale", "ort": "Muenchen", "plz": "80331", "land": "DE"},
         {"kundennummer": "90000002", "name": "Beispiel AG", "name2": None, "ort": "Berlin", "plz": "10115", "land": "DE"},
-        {"kundennummer": "90000003", "name": "Test & Partner", "name2": "Niederlassung Süd", "ort": "Stuttgart", "plz": "70173", "land": "DE"},
+        {"kundennummer": "90000003", "name": "Test & Partner", "name2": "Niederlassung Sued", "ort": "Stuttgart", "plz": "70173", "land": "DE"},
         {"kundennummer": "90000004", "name": "Muster Handwerk", "name2": None, "ort": "Hamburg", "plz": "20095", "land": "DE"},
         {"kundennummer": "90000005", "name": "Demo Software GmbH", "name2": "Entwicklung", "ort": "Frankfurt", "plz": "60311", "land": "DE"},
-        {"kundennummer": "90000006", "name": "Testfirma Schweiz", "name2": None, "ort": "Zürich", "plz": "8001", "land": "CH"},
-        {"kundennummer": "90000007", "name": "Beispiel Österreich", "name2": "Filiale Wien", "ort": "Wien", "plz": "1010", "land": "AT"},
-        {"kundennummer": "90000008", "name": "Klein & Fein GmbH", "name2": None, "ort": "Köln", "plz": "50667", "land": "DE"},
-        {"kundennummer": "90000009", "name": "Großkunde International", "name2": "Hauptsitz", "ort": "Düsseldorf", "plz": "40213", "land": "DE"},
-        {"kundennummer": "90000010", "name": "Existenzgründer Start", "name2": None, "ort": "Leipzig", "plz": "04109", "land": "DE"},
+        {"kundennummer": "90000006", "name": "Testfirma Schweiz", "name2": None, "ort": "Zuerich", "plz": "8001", "land": "CH"},
+        {"kundennummer": "90000007", "name": "Beispiel Oesterreich", "name2": "Filiale Wien", "ort": "Wien", "plz": "1010", "land": "AT"},
+        {"kundennummer": "90000008", "name": "Klein & Fein GmbH", "name2": None, "ort": "Koeln", "plz": "50667", "land": "DE"},
+        {"kundennummer": "90000009", "name": "Grosskunde International", "name2": "Hauptsitz", "ort": "Duesseldorf", "plz": "40213", "land": "DE"},
+        {"kundennummer": "90000010", "name": "Existenzgruender Start", "name2": None, "ort": "Leipzig", "plz": "04109", "land": "DE"},
+        # Neue spezielle Demo-Kunden
+        {"kundennummer": "90000011", "name": "Langzeit Kunde GmbH", "name2": "Ueber 5 Jahre", "ort": "Dresden", "plz": "01067", "land": "DE"},
+        {"kundennummer": "90000012", "name": "Ausschluss Test AG", "name2": "Preiserhoehung ausgeschlossen", "ort": "Nuernberg", "plz": "90402", "land": "DE"},
+        {"kundennummer": "90000013", "name": "Manuell Aktiviert KG", "name2": "Alte PE aktiviert", "ort": "Bremen", "plz": "28195", "land": "DE"},
+        {"kundennummer": "90000014", "name": "Ex-Gruender GmbH", "name2": "Gruenderphase abgelaufen", "ort": "Hannover", "plz": "30159", "land": "DE"},
     ]
     
     created_customers = []
@@ -52,13 +102,125 @@ def create_demo_data(db: Session) -> dict:
         db.flush()  # Get the ID
         created_customers.append(customer)
         
+        # ========================================
+        # SPEZIELLE DEMO-VERTRAEGE
+        # ========================================
+        
+        # Kunde 11: Langzeit-Vertrag (ueber Mindestlaufzeit von 60 Monaten)
+        if cust_data["kundennummer"] == "90000011":
+            # Vertrag der seit 7 Jahren laeuft (ueber 60 Monate Mindestlaufzeit)
+            long_running_contract = Contract(
+                customer_id=customer.id,
+                software_rental_amount=500.0,
+                software_care_amount=200.0,
+                apps_amount=50.0,
+                purchase_amount=100.0,
+                cloud_amount=150.0,
+                currency="EUR",
+                start_date=datetime.combine(today - timedelta(days=7*365), datetime.min.time()),
+                end_date=None,
+                is_founder_discount=False,
+                number_of_seats=10,
+                notes="DEMO: Langzeit-Vertrag seit 7 Jahren - ueber Mindestlaufzeit (60 Monate)"
+            )
+            db.add(long_running_contract)
+            created_contracts.append(long_running_contract)
+            continue
+        
+        # Kunde 12: Vertrag mit explizit AUSGESCHLOSSENER Preiserhoehung
+        if cust_data["kundennummer"] == "90000012":
+            # Vertrag der die aktuelle Preiserhoehung 2025 NICHT bekommt
+            excluded_contract = Contract(
+                customer_id=customer.id,
+                software_rental_amount=400.0,
+                software_care_amount=150.0,
+                apps_amount=30.0,
+                purchase_amount=0,
+                cloud_amount=100.0,
+                currency="EUR",
+                start_date=datetime.combine(today - timedelta(days=3*365), datetime.min.time()),
+                end_date=None,
+                is_founder_discount=False,
+                number_of_seats=5,
+                excluded_price_increase_ids=["pi-current-2025"],  # Aktuelle PE ausgeschlossen
+                notes="DEMO: Preiserhoehung 2025 ist AUSGESCHLOSSEN (Sondervereinbarung)"
+            )
+            db.add(excluded_contract)
+            created_contracts.append(excluded_contract)
+            continue
+        
+        # Kunde 13: Vertrag mit manuell AKTIVIERTER alter Preiserhoehung
+        if cust_data["kundennummer"] == "90000013":
+            # Erst einen alten Vertrag erstellen (vor der alten PE 2023)
+            old_contract = Contract(
+                customer_id=customer.id,
+                software_rental_amount=300.0,
+                software_care_amount=100.0,
+                apps_amount=20.0,
+                purchase_amount=50.0,
+                cloud_amount=80.0,
+                currency="EUR",
+                start_date=datetime.combine(today - timedelta(days=5*365), datetime.min.time()),
+                end_date=None,
+                is_founder_discount=False,
+                number_of_seats=3,
+                notes="DEMO: Alter Vertrag (vor PE 2023) - PE wird automatisch angewendet"
+            )
+            db.add(old_contract)
+            created_contracts.append(old_contract)
+            
+            # Dann einen neuen Vertrag (nach der alten PE) mit manueller Aktivierung der alten PE
+            manually_activated_contract = Contract(
+                customer_id=customer.id,
+                software_rental_amount=350.0,
+                software_care_amount=120.0,
+                apps_amount=25.0,
+                purchase_amount=0,
+                cloud_amount=90.0,
+                currency="EUR",
+                start_date=datetime.combine(today - timedelta(days=180), datetime.min.time()),  # 6 Monate alt
+                end_date=None,
+                is_founder_discount=False,
+                number_of_seats=4,
+                included_early_price_increase_ids=["pi-old-2023"],  # Alte PE manuell aktiviert
+                notes="DEMO: Neue Vertrag - alte PE 2023 MANUELL AKTIVIERT (obwohl Vertrag neuer ist)"
+            )
+            db.add(manually_activated_contract)
+            created_contracts.append(manually_activated_contract)
+            continue
+        
+        # Kunde 14: Existenzgruender mit abgelaufener Gruenderphase
+        if cust_data["kundennummer"] == "90000014":
+            # Vertrag ist 2 Jahre alt, hat Existenzgruender-Flag, aber Gruenderphase (12 Monate) ist vorbei
+            expired_founder_contract = Contract(
+                customer_id=customer.id,
+                software_rental_amount=280.0,
+                software_care_amount=90.0,
+                apps_amount=15.0,
+                purchase_amount=0,
+                cloud_amount=60.0,
+                currency="EUR",
+                start_date=datetime.combine(today - timedelta(days=2*365), datetime.min.time()),  # 2 Jahre alt
+                end_date=None,
+                is_founder_discount=True,  # War Existenzgruender
+                number_of_seats=2,
+                notes="DEMO: Existenzgruender dessen Gruenderphase (12 Monate) bereits abgelaufen ist - zahlt jetzt normal"
+            )
+            db.add(expired_founder_contract)
+            created_contracts.append(expired_founder_contract)
+            continue
+        
+        # ========================================
+        # STANDARD DEMO-VERTRAEGE (wie bisher)
+        # ========================================
+        
         # Create contracts for this customer
-        # First customer gets most contracts, last one is Existenzgründer
+        # First customer gets most contracts, Existenzgruender gets one
         if i == 0:
-            # Großkunde - many contracts with high amounts
+            # Grosskunde - many contracts with high amounts
             num_contracts = 3
-        elif i == len(demo_customers) - 1:
-            # Existenzgründer - one contract with founder status
+        elif cust_data["kundennummer"] == "90000010":
+            # Existenzgruender - one contract with founder status
             num_contracts = 1
         else:
             # Normal customers - 1-2 contracts
@@ -69,8 +231,8 @@ def create_demo_data(db: Session) -> dict:
             months_ago = random.randint(6, 60)
             start_date = datetime.combine(today - timedelta(days=months_ago * 30), datetime.min.time())
             
-            # Existenzgründer: recent start with founder status
-            if i == len(demo_customers) - 1:
+            # Existenzgruender: recent start with founder status
+            if cust_data["kundennummer"] == "90000010":
                 start_date = datetime.combine(today - timedelta(days=90), datetime.min.time())
                 is_founder = True
             else:
@@ -125,10 +287,13 @@ def clear_demo_data(db: Session) -> dict:
     # Delete contracts first (foreign key)
     contracts_deleted = db.query(Contract).delete()
     customers_deleted = db.query(Customer).delete()
+    # Delete price increases
+    price_increases_deleted = db.query(PriceIncrease).delete()
     db.commit()
     
     return {
-        "message": "Alle Daten gelöscht",
+        "message": "Alle Daten geloescht",
         "contracts_deleted": contracts_deleted,
-        "customers_deleted": customers_deleted
+        "customers_deleted": customers_deleted,
+        "price_increases_deleted": price_increases_deleted
     }
