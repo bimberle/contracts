@@ -194,22 +194,81 @@ def list_contracts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 
 @router.get("/customer/{customer_id}", response_model=List[ContractSchema])
 def get_contracts_by_customer(customer_id: str, db: Session = Depends(get_db)):
-    """Ruft alle Verträge eines Kunden auf"""
+    """Ruft alle Verträge eines Kunden auf mit effektivem Status"""
+    from app.services.calculations import get_effective_status
+    
     # Prüfe ob Kunde existiert
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
     
+    settings = db.query(Settings).filter(Settings.id == "default").first()
+    today = datetime.utcnow()
+    
     contracts = db.query(Contract).filter(Contract.customer_id == customer_id).all()
-    return contracts
+    
+    # Konvertiere zu Dict mit effektivem Status
+    result = []
+    for contract in contracts:
+        effective_status, _ = get_effective_status(contract, settings, today)
+        contract_dict = {
+            "id": contract.id,
+            "customer_id": contract.customer_id,
+            "software_rental_amount": contract.software_rental_amount,
+            "software_care_amount": contract.software_care_amount,
+            "apps_amount": contract.apps_amount,
+            "purchase_amount": contract.purchase_amount,
+            "cloud_amount": contract.cloud_amount or 0,
+            "currency": contract.currency,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "is_founder_discount": contract.is_founder_discount,
+            "number_of_seats": contract.number_of_seats or 1,
+            "excluded_price_increase_ids": contract.excluded_price_increase_ids or [],
+            "included_early_price_increase_ids": contract.included_early_price_increase_ids or [],
+            "notes": contract.notes or "",
+            "status": effective_status,
+            "created_at": contract.created_at,
+            "updated_at": contract.updated_at
+        }
+        result.append(contract_dict)
+    
+    return result
 
 @router.get("/{contract_id}", response_model=ContractSchema)
 def get_contract(contract_id: str, db: Session = Depends(get_db)):
-    """Ruft einen einzelnen Vertrag auf"""
+    """Ruft einen einzelnen Vertrag auf mit effektivem Status"""
+    from app.services.calculations import get_effective_status
+    
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Vertrag nicht gefunden")
-    return contract
+    
+    settings = db.query(Settings).filter(Settings.id == "default").first()
+    today = datetime.utcnow()
+    effective_status, _ = get_effective_status(contract, settings, today)
+    
+    # Konvertiere zu Dict mit effektivem Status
+    return {
+        "id": contract.id,
+        "customer_id": contract.customer_id,
+        "software_rental_amount": contract.software_rental_amount,
+        "software_care_amount": contract.software_care_amount,
+        "apps_amount": contract.apps_amount,
+        "purchase_amount": contract.purchase_amount,
+        "cloud_amount": contract.cloud_amount or 0,
+        "currency": contract.currency,
+        "start_date": contract.start_date,
+        "end_date": contract.end_date,
+        "is_founder_discount": contract.is_founder_discount,
+        "number_of_seats": contract.number_of_seats or 1,
+        "excluded_price_increase_ids": contract.excluded_price_increase_ids or [],
+        "included_early_price_increase_ids": contract.included_early_price_increase_ids or [],
+        "notes": contract.notes or "",
+        "status": effective_status,
+        "created_at": contract.created_at,
+        "updated_at": contract.updated_at
+    }
 
 @router.post("", response_model=ContractSchema, status_code=status.HTTP_201_CREATED)
 def create_contract(contract: ContractCreate, db: Session = Depends(get_db)):
