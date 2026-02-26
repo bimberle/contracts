@@ -17,6 +17,7 @@ interface TestResult {
   status: 'passed' | 'warning' | 'info';
   description: string;
   contract_id: string | null;
+  customer_id: string | null;
   contract_title: string | null;
   customer_name: string | null;
   calculations: TestCalculation[];
@@ -228,13 +229,13 @@ export default function CalculationTests() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {test.contract_id && (
+                      {test.customer_id && (
                         <Link
-                          to={`/customers/${test.contract_id}`}
+                          to={`/customers/${test.customer_id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs px-2 py-1 bg-white bg-opacity-50 rounded hover:bg-opacity-100 transition"
                         >
-                          Zum Vertrag →
+                          Zum Kunden →
                         </Link>
                       )}
                       <span className="text-lg">{isExpanded ? '▼' : '▶'}</span>

@@ -311,7 +311,6 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Dateiname</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Datenbank</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Datum</th>
                   <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700">Kunden</th>
@@ -326,7 +325,6 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
                   .filter(backup => databaseFilter === 'all' || backup.databaseName === databaseFilter)
                   .map((backup) => (
                   <tr key={backup.filename} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 font-mono text-sm">{backup.filename}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{backup.databaseName}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {backup.createdAt ? new Date(backup.createdAt).toLocaleString('de-DE') : '-'}

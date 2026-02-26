@@ -163,6 +163,7 @@ def create_price_increase_tests(
         "status": "passed" if price_increases else "info",
         "description": f"{len(price_increases)} Preiserhoehung(en) im System definiert." if price_increases else "Keine Preiserhoehungen definiert.",
         "contract_id": None,
+            "customer_id": None,
         "contract_title": None,
         "customer_name": None,
         "calculations": [
@@ -199,6 +200,7 @@ def create_price_increase_tests(
             "status": "passed",
             "description": f"Bestandsschutz korrekt aktiv: {months_at_pi} < {pi.lock_in_months} Monate",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -218,6 +220,7 @@ def create_price_increase_tests(
             "status": "info",
             "description": "Kein Vertrag mit aktivem Bestandsschutz gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -253,6 +256,7 @@ def create_price_increase_tests(
             "status": "passed" if current_price > base_price else "warning",
             "description": f"Basispreis: {base_price:.2f}EUR -> Aktuell: {current_price:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -274,6 +278,7 @@ def create_price_increase_tests(
             "status": "info",
             "description": "Kein Vertrag mit erfuelltem Bestandsschutz und anwendbarer PE gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -301,6 +306,7 @@ def create_price_increase_tests(
             "status": "passed",
             "description": f"Preiserhoehung '{pi.description}' ist fuer diesen Vertrag ausgeschlossen.",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -318,6 +324,7 @@ def create_price_increase_tests(
             "status": "info",
             "description": "Kein Vertrag mit explizit ausgeschlossenen Preiserhoehungen gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -345,6 +352,7 @@ def create_price_increase_tests(
             "status": "passed",
             "description": f"Preiserhoehung '{pi.description}' wurde manuell aktiviert.",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -362,6 +370,7 @@ def create_price_increase_tests(
             "status": "info",
             "description": "Kein Vertrag mit manuell aktivierter Preiserhoehung gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -392,6 +401,7 @@ def create_founder_protection_tests(
         "status": "passed" if founder_contracts else "info",
         "description": f"{len(founder_contracts)} Vertrag/Vertraege mit Existenzgruender-Rabatt.",
         "contract_id": None,
+            "customer_id": None,
         "contract_title": None,
         "customer_name": None,
         "calculations": [
@@ -425,6 +435,7 @@ def create_founder_protection_tests(
             "status": "warning",
             "description": f"Gruenderphase aktiv bis {founder_end.strftime('%d.%m.%Y')} (noch {max(0, months_remaining)} Monate)",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -445,6 +456,7 @@ def create_founder_protection_tests(
             "status": "info",
             "description": "Kein Vertrag mehr in aktiver Gruenderphase.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -472,6 +484,7 @@ def create_founder_protection_tests(
             "status": "passed",
             "description": f"Gruenderphase beendet seit {months_since_end} Monaten - Vertrag generiert Provision",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -491,6 +504,7 @@ def create_founder_protection_tests(
             "status": "info",
             "description": "Alle Existenzgruender-Vertraege sind noch in der Gruenderphase.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -525,6 +539,7 @@ def create_commission_tests(
         "status": "passed" if rates else "warning",
         "description": f"Aktive Provisionssaetze: {rate_str}" if rates else "Keine Provisionssaetze definiert!",
         "contract_id": None,
+            "customer_id": None,
         "contract_title": None,
         "customer_name": None,
         "calculations": [{"label": typ, "value": f"{rate}%"} for typ, rate in rates.items()]
@@ -540,6 +555,7 @@ def create_commission_tests(
             "status": "info",
             "description": "Keine aktiven Vertraege im System.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -565,6 +581,7 @@ def create_commission_tests(
             "status": "passed",
             "description": f"Monatliche Provision: {commission:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -584,6 +601,7 @@ def create_commission_tests(
             "status": "info",
             "description": "Kein Vertrag mit Software-Miete gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -608,6 +626,7 @@ def create_commission_tests(
             "status": "passed",
             "description": f"Monatliche Provision: {commission:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -627,6 +646,7 @@ def create_commission_tests(
             "status": "info",
             "description": "Kein Vertrag mit Software-Pflege gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -680,6 +700,7 @@ def create_commission_tests(
             "status": "passed",
             "description": f"Kombinierte monatliche Provision: {commission:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": details
@@ -694,6 +715,7 @@ def create_commission_tests(
             "status": "info",
             "description": "Kein Vertrag mit mehreren Betragsarten gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -729,6 +751,7 @@ def create_exit_payout_tests(
         "status": "passed" if exit_tiers else "info",
         "description": f"Mindestlaufzeit: {min_months} Monate, {len(exit_tiers)} Tier(s) definiert",
         "contract_id": None,
+            "customer_id": None,
         "contract_title": None,
         "customer_name": None,
         "calculations": [
@@ -775,6 +798,7 @@ def create_exit_payout_tests(
             "status": "warning",
             "description": f"Exit-Auszahlung wenn heute: {exit_payout:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -796,6 +820,7 @@ def create_exit_payout_tests(
             "status": "info",
             "description": "Kein Vertrag unter Mindestlaufzeit mit Exit-Anspruch gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -824,6 +849,7 @@ def create_exit_payout_tests(
             "status": "passed" if exit_payout == 0 else "warning",
             "description": "Mindestlaufzeit erreicht - kein Exit-Anspruch" if exit_payout == 0 else f"Unerwartete Exit-Auszahlung: {exit_payout:.2f}EUR",
             "contract_id": contract.id,
+            "customer_id": contract.customer_id,
             "contract_title": get_contract_description(contract),
             "customer_name": get_customer_name(customer),
             "calculations": [
@@ -843,6 +869,7 @@ def create_exit_payout_tests(
             "status": "info",
             "description": "Kein Vertrag ueber Mindestlaufzeit gefunden.",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
@@ -879,6 +906,7 @@ def create_exit_payout_tests(
                 "status": "passed",
                 "description": f"Tier {tier_pct}% (ab Monat {tier_from}) angewendet -> Exit: {exit_payout:.2f}EUR",
                 "contract_id": contract.id,
+            "customer_id": contract.customer_id,
                 "contract_title": get_contract_description(contract),
                 "customer_name": get_customer_name(customer),
                 "calculations": [
@@ -898,6 +926,7 @@ def create_exit_payout_tests(
                 "status": "info",
                 "description": "Kein passender Vertrag fuer Tier-Test gefunden.",
                 "contract_id": None,
+            "customer_id": None,
                 "contract_title": None,
                 "customer_name": None,
                 "calculations": []
@@ -912,6 +941,7 @@ def create_exit_payout_tests(
             "status": "info",
             "description": "Nicht genuegend Exit-Tiers definiert (min. 2 fuer sinnvolle Staffelung).",
             "contract_id": None,
+            "customer_id": None,
             "contract_title": None,
             "customer_name": None,
             "calculations": []
