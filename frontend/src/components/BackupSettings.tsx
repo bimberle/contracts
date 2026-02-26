@@ -271,7 +271,7 @@ export default function BackupSettings({ onBackupRestored }: BackupSettingsProps
                 Erstelle...
               </>
             ) : (
-              <>💾 Backup jetzt erstellen</>
+              <>Backup jetzt erstellen</>
             )}
           </button>
         </div>

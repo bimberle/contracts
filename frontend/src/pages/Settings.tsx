@@ -201,7 +201,7 @@ function Settings() {
                 : 'text-gray-700 hover:text-gray-900'
             }`}
           >
-            🗄️ Datenbanken
+            Datenbanken
           </button>
           <button
             onClick={() => setActiveTab('backup')}
@@ -211,7 +211,7 @@ function Settings() {
                 : 'text-gray-700 hover:text-gray-900'
             }`}
           >
-            💾 Backup
+            Backup
           </button>
         </div>
       </div>

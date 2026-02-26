@@ -1,0 +1,23 @@
+{
+  "databases": [
+    {
+      "id": "prod",
+      "name": "PROD",
+      "db_name": "contracts",
+      "color": "#10B981",
+      "is_active": false,
+      "is_demo": false,
+      "is_system": false
+    },
+    {
+      "id": "demo",
+      "name": "DEMO",
+      "db_name": "contracts_demo",
+      "color": "#F59E0B",
+      "is_active": true,
+      "is_demo": true,
+      "is_system": false
+    }
+  ],
+  "active_database_id": "demo"
+}

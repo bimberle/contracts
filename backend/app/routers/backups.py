@@ -132,6 +132,13 @@ def create_backup(request: CreateBackupRequest = None):
             raise HTTPException(status_code=400, detail="Keine aktive Datenbank")
         db_name = active_db["db_name"]
     
+    # Prüfe ob die Datenbank physisch existiert
+    if not backup_service.database_exists(db_name):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Datenbank '{db_name}' existiert nicht in PostgreSQL. Bitte zuerst zur PROD-Datenbank wechseln oder die Demo-Datenbank initialisieren."
+        )
+    
     success, result, filepath = backup_service.create_backup(db_name)
     
     if success:

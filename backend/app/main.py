@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.0.89"
+BACKEND_VERSION = "1.0.90"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
@@ -61,8 +61,26 @@ def initialize_database():
         logger.error(f"Error initializing database: {e}")
         raise
 
+
+def initialize_databases_config():
+    """
+    Initialize database configurations.
+    Creates the Demo database if it doesn't exist.
+    """
+    try:
+        from app.services.database_service import initialize_demo_database
+        logger.info("Initializing database configurations...")
+        initialize_demo_database()
+        logger.info("✅ Database configurations initialized")
+    except Exception as e:
+        logger.warning(f"Could not initialize database configurations: {e}")
+
+
 # Initialize database on module load
 initialize_database()
+
+# Initialize database configurations (Demo DB etc.)
+initialize_databases_config()
 
 app = FastAPI(
     title="Contract Management API",

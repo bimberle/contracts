@@ -87,52 +87,7 @@ def create_database(request: DatabaseConfigCreate):
     }
 
 
-@router.put("/{database_id}", response_model=dict)
-def update_database(database_id: str, request: DatabaseConfigUpdate):
-    """Aktualisiert eine Datenbank-Konfiguration"""
-    success, message = database_service.update_database_config(
-        db_id=database_id,
-        name=request.name,
-        color=request.color
-    )
-    
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-    
-    return {
-        "status": "success",
-        "message": message
-    }
-
-
-@router.delete("/{database_id}", response_model=dict)
-def delete_database(database_id: str):
-    """Löscht eine Datenbank"""
-    success, message = database_service.delete_database_config(database_id)
-    
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-    
-    return {
-        "status": "success",
-        "message": message
-    }
-
-
-@router.post("/switch", response_model=dict)
-def switch_database(request: SwitchDatabaseRequest):
-    """Wechselt zur angegebenen Datenbank"""
-    success, message = database_service.switch_database(request.database_id)
-    
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-    
-    return {
-        "status": "success",
-        "message": message,
-        "requiresRestart": True
-    }
-
+# ==================== Statische Routen HIER (vor /{database_id}) ====================
 
 @router.get("/active", response_model=dict)
 def get_active_database():
@@ -153,6 +108,21 @@ def get_active_database():
             "isDemo": active_db.get("is_demo", False),
             "isSystem": active_db.get("is_system", False)
         }
+    }
+
+
+@router.post("/switch", response_model=dict)
+def switch_database(request: SwitchDatabaseRequest):
+    """Wechselt zur angegebenen Datenbank"""
+    success, message = database_service.switch_database(request.database_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    
+    return {
+        "status": "success",
+        "message": message,
+        "requiresRestart": True
     }
 
 
@@ -192,3 +162,37 @@ def clear_demo_data_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
+
+
+# ==================== Dynamische Routen mit Parameter ====================
+
+@router.put("/{database_id}", response_model=dict)
+def update_database(database_id: str, request: DatabaseConfigUpdate):
+    """Aktualisiert eine Datenbank-Konfiguration"""
+    success, message = database_service.update_database_config(
+        db_id=database_id,
+        name=request.name,
+        color=request.color
+    )
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    
+    return {
+        "status": "success",
+        "message": message
+    }
+
+
+@router.delete("/{database_id}", response_model=dict)
+def delete_database(database_id: str):
+    """Löscht eine Datenbank"""
+    success, message = database_service.delete_database_config(database_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    
+    return {
+        "status": "success",
+        "message": message
+    }
