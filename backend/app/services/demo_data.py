@@ -1,7 +1,7 @@
 """
 Service to create demo data in the demo database.
 """
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from decimal import Decimal
 import random
 from sqlalchemy.orm import Session
@@ -33,17 +33,6 @@ def create_demo_data(db: Session) -> dict:
         {"kundennummer": "DEMO-010", "name": "Existenzgründer Start", "name2": None, "ort": "Leipzig", "plz": "04109", "land": "DE"},
     ]
     
-    # Contract types and templates
-    contract_templates = [
-        {"title": "Office-Miete Premium", "type": "rental", "workstations": 10},
-        {"title": "Office-Miete Standard", "type": "rental", "workstations": 5},
-        {"title": "Office-Miete Basic", "type": "rental", "workstations": 2},
-        {"title": "Software-Pflege Enterprise", "type": "software-care", "workstations": None},
-        {"title": "Software-Pflege Standard", "type": "software-care", "workstations": None},
-        {"title": "Mobile App Lizenz", "type": "apps", "workstations": None},
-        {"title": "Kauf Bestandsvertrag", "type": "purchase", "workstations": None},
-    ]
-    
     created_customers = []
     created_contracts = []
     
@@ -66,63 +55,56 @@ def create_demo_data(db: Session) -> dict:
         # Create contracts for this customer
         # First customer gets most contracts, last one is Existenzgründer
         if i == 0:
-            # Großkunde - many contracts
-            num_contracts = 5
+            # Großkunde - many contracts with high amounts
+            num_contracts = 3
         elif i == len(demo_customers) - 1:
             # Existenzgründer - one contract with founder status
             num_contracts = 1
         else:
-            # Normal customers - 1-3 contracts
-            num_contracts = random.randint(1, 3)
+            # Normal customers - 1-2 contracts
+            num_contracts = random.randint(1, 2)
         
         for j in range(num_contracts):
-            template = random.choice(contract_templates)
-            
             # Calculate dates
             months_ago = random.randint(6, 60)
-            start_date = today - timedelta(days=months_ago * 30)
+            start_date = datetime.combine(today - timedelta(days=months_ago * 30), datetime.min.time())
             
             # Existenzgründer: recent start with founder status
             if i == len(demo_customers) - 1:
-                start_date = today - timedelta(days=90)  # 3 months ago
+                start_date = datetime.combine(today - timedelta(days=90), datetime.min.time())
                 is_founder = True
             else:
                 is_founder = False
             
             # End date: 80% active, 20% completed
-            if random.random() > 0.8:
-                end_date = today - timedelta(days=random.randint(30, 365))
-                status = "completed"
+            if random.random() > 0.8 and not is_founder:
+                end_date = datetime.combine(today - timedelta(days=random.randint(30, 365)), datetime.min.time())
             else:
                 end_date = None
-                status = "active"
             
-            # Calculate price based on type
-            if template["type"] == "rental":
-                base_price = Decimal("50.00") * (template["workstations"] or 1)
-            elif template["type"] == "software-care":
-                base_price = Decimal(str(random.randint(100, 500)))
-            elif template["type"] == "apps":
-                base_price = Decimal(str(random.randint(20, 100)))
-            else:
-                base_price = Decimal(str(random.randint(50, 200)))
+            # Random amounts for each category
+            software_rental = float(random.randint(100, 800)) if random.random() > 0.3 else 0
+            software_care = float(random.randint(50, 300)) if random.random() > 0.4 else 0
+            apps = float(random.randint(10, 100)) if random.random() > 0.6 else 0
+            purchase = float(random.randint(20, 150)) if random.random() > 0.7 else 0
+            cloud = float(random.randint(30, 200)) if random.random() > 0.5 else 0
             
-            # Add some variance
-            price = base_price * Decimal(str(random.uniform(0.8, 1.2)))
-            price = price.quantize(Decimal("0.01"))
+            # Number of seats
+            seats = random.choice([1, 2, 3, 5, 10, 15, 20])
             
             contract = Contract(
                 customer_id=customer.id,
-                title=f"{template['title']} #{j+1}",
-                type=template["type"],
-                price=price,
+                software_rental_amount=software_rental,
+                software_care_amount=software_care,
+                apps_amount=apps,
+                purchase_amount=purchase,
+                cloud_amount=cloud,
                 currency="EUR" if cust_data["land"] != "CH" else "CHF",
                 start_date=start_date,
                 end_date=end_date,
                 is_founder_discount=is_founder,
-                status=status,
-                workstations=template["workstations"],
-                notes=f"Demo-Vertrag für {cust_data['name']}"
+                number_of_seats=seats,
+                notes=f"Demo-Vertrag #{j+1} für {cust_data['name']}"
             )
             db.add(contract)
             created_contracts.append(contract)
