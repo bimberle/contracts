@@ -19,18 +19,18 @@ def create_demo_data(db: Session) -> dict:
     if existing_customers > 0:
         return {"message": "Demo-Daten existieren bereits", "customers": existing_customers}
     
-    # Demo customer data
+    # Demo customer data (numerische Kundennummern)
     demo_customers = [
-        {"kundennummer": "DEMO-001", "name": "Mustermann GmbH", "name2": "Zentrale", "ort": "München", "plz": "80331", "land": "DE"},
-        {"kundennummer": "DEMO-002", "name": "Beispiel AG", "name2": None, "ort": "Berlin", "plz": "10115", "land": "DE"},
-        {"kundennummer": "DEMO-003", "name": "Test & Partner", "name2": "Niederlassung Süd", "ort": "Stuttgart", "plz": "70173", "land": "DE"},
-        {"kundennummer": "DEMO-004", "name": "Muster Handwerk", "name2": None, "ort": "Hamburg", "plz": "20095", "land": "DE"},
-        {"kundennummer": "DEMO-005", "name": "Demo Software GmbH", "name2": "Entwicklung", "ort": "Frankfurt", "plz": "60311", "land": "DE"},
-        {"kundennummer": "DEMO-006", "name": "Testfirma Schweiz", "name2": None, "ort": "Zürich", "plz": "8001", "land": "CH"},
-        {"kundennummer": "DEMO-007", "name": "Beispiel Österreich", "name2": "Filiale Wien", "ort": "Wien", "plz": "1010", "land": "AT"},
-        {"kundennummer": "DEMO-008", "name": "Klein & Fein GmbH", "name2": None, "ort": "Köln", "plz": "50667", "land": "DE"},
-        {"kundennummer": "DEMO-009", "name": "Großkunde International", "name2": "Hauptsitz", "ort": "Düsseldorf", "plz": "40213", "land": "DE"},
-        {"kundennummer": "DEMO-010", "name": "Existenzgründer Start", "name2": None, "ort": "Leipzig", "plz": "04109", "land": "DE"},
+        {"kundennummer": "90000001", "name": "Mustermann GmbH", "name2": "Zentrale", "ort": "München", "plz": "80331", "land": "DE"},
+        {"kundennummer": "90000002", "name": "Beispiel AG", "name2": None, "ort": "Berlin", "plz": "10115", "land": "DE"},
+        {"kundennummer": "90000003", "name": "Test & Partner", "name2": "Niederlassung Süd", "ort": "Stuttgart", "plz": "70173", "land": "DE"},
+        {"kundennummer": "90000004", "name": "Muster Handwerk", "name2": None, "ort": "Hamburg", "plz": "20095", "land": "DE"},
+        {"kundennummer": "90000005", "name": "Demo Software GmbH", "name2": "Entwicklung", "ort": "Frankfurt", "plz": "60311", "land": "DE"},
+        {"kundennummer": "90000006", "name": "Testfirma Schweiz", "name2": None, "ort": "Zürich", "plz": "8001", "land": "CH"},
+        {"kundennummer": "90000007", "name": "Beispiel Österreich", "name2": "Filiale Wien", "ort": "Wien", "plz": "1010", "land": "AT"},
+        {"kundennummer": "90000008", "name": "Klein & Fein GmbH", "name2": None, "ort": "Köln", "plz": "50667", "land": "DE"},
+        {"kundennummer": "90000009", "name": "Großkunde International", "name2": "Hauptsitz", "ort": "Düsseldorf", "plz": "40213", "land": "DE"},
+        {"kundennummer": "90000010", "name": "Existenzgründer Start", "name2": None, "ort": "Leipzig", "plz": "04109", "land": "DE"},
     ]
     
     created_customers = []
