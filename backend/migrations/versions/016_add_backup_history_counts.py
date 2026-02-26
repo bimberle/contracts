@@ -1,15 +1,15 @@
 """Add customer_count and contract_count to backup_history
 
-Revision ID: 016
-Revises: 015
+Revision ID: 016_add_backup_counts
+Revises: 015_exit_payout_settings
 Create Date: 2026-02-26
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = '016'
-down_revision = '015'
+revision = '016_add_backup_counts'
+down_revision = '015_exit_payout_settings'
 branch_labels = None
 depends_on = None
 
