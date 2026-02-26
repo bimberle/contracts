@@ -260,7 +260,7 @@ def create_database(db_name: str) -> Tuple[bool, str]:
             "-p", params["port"],
             "-U", params["user"],
             "-d", "postgres",
-            "-c", f"CREATE DATABASE {db_name};"
+            "-c", f'CREATE DATABASE "{db_name}";'
         ]
         
         logger.info(f"Creating database: {db_name}")
@@ -310,7 +310,7 @@ def drop_database(db_name: str) -> Tuple[bool, str]:
             "-p", params["port"],
             "-U", params["user"],
             "-d", "postgres",
-            "-c", f"DROP DATABASE IF EXISTS {db_name};"
+            "-c", f'DROP DATABASE IF EXISTS "{db_name}";'
         ]
         
         logger.info(f"Dropping database: {db_name}")

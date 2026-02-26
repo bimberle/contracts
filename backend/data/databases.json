@@ -17,6 +17,15 @@
       "is_active": true,
       "is_demo": true,
       "is_system": false
+    },
+    {
+      "id": "e9a72327-3029-475c-bdaa-ba879c101fe6",
+      "name": "backuptest",
+      "db_name": "contracts_backuptest",
+      "color": "#EC4899",
+      "is_active": false,
+      "is_demo": false,
+      "is_system": false
     }
   ],
   "active_database_id": "demo"
