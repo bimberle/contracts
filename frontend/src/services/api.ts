@@ -137,6 +137,12 @@ class ApiClient {
     return response.data.data || [];
   }
 
+  async searchCustomers(query: string, limit: number = 50): Promise<{data: Array<{customer: Customer; metrics: CalculatedMetrics}>; count: number}> {
+    const url = this.buildUrl('/customers/search', { q: query, limit });
+    const response = await this.axiosInstance.get<ApiResponse<Array<{customer: Customer; metrics: CalculatedMetrics}>> & {count: number}>(url);
+    return { data: response.data.data || [], count: response.data.count || 0 };
+  }
+
   async getCustomer(customerId: string): Promise<Customer> {
     const url = this.buildUrl(`/customers/${customerId}`);
     const response = await this.axiosInstance.get<Customer>(url);

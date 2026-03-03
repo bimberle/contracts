@@ -231,6 +231,20 @@ function CustomerDetail() {
     }
   };
 
+  // Prüfe ob eine Suche im Dashboard gespeichert ist
+  const hasSearchState = (): boolean => {
+    try {
+      const savedState = sessionStorage.getItem('dashboard_search_state');
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        return state.searchTerm && state.searchTerm.length >= 3;
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return false;
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -247,7 +261,7 @@ function CustomerDetail() {
           onClick={() => navigate('/')}
           className="text-blue-600 hover:text-blue-800"
         >
-          ← Zurück zum Dashboard
+          ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück zum Dashboard'}
         </button>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
           <p className="font-semibold">Fehler</p>
@@ -266,7 +280,7 @@ function CustomerDetail() {
           onClick={() => navigate('/')}
           className="text-blue-600 hover:text-blue-800 mb-2 text-sm"
         >
-          ← Zurück
+          ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück'}
         </button>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
