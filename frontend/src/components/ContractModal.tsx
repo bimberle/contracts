@@ -166,11 +166,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
         excludedPriceIncreaseIds: [],
         includedEarlyPriceIncreaseIds: [],
       });
-      // Fokus auf erstes Betragsfeld setzen (nach kurzem Delay für Modal-Animation)
-      setTimeout(() => {
-        firstAmountInputRef.current?.focus();
-        firstAmountInputRef.current?.select();
-      }, 100);
     }
     setShowAllPriceIncreases(false);
     setError(null);

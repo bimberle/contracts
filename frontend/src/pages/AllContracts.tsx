@@ -365,7 +365,6 @@ export default function AllContracts() {
                   <SortHeader column="total" align="right">Gesamt</SortHeader>
                   <SortHeader column="commission" align="right">Provision</SortHeader>
                   <SortHeader column="exit" align="right">Exit-Zahlung</SortHeader>
-                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Aktionen</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -397,9 +396,9 @@ export default function AllContracts() {
                       </div>
                       {contract.customerName2 && <div className={`${inactive ? 'text-gray-400' : 'text-gray-500'} text-xs`}>{contract.customerName2}</div>}
                     </td>
-                    <td className={`px-6 py-4 text-sm ${inactive ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <td className={`px-3 py-4 text-sm ${inactive ? 'text-gray-400' : 'text-gray-600'}`} style={{ maxWidth: '100px' }}>
                       <div>{contract.plz}</div>
-                      <div className={`text-xs ${inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contract.ort}</div>
+                      <div className={`text-xs truncate ${inactive ? 'text-gray-400' : 'text-gray-500'}`} title={contract.ort}>{contract.ort}</div>
                     </td>
                     <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.softwareRentalAmount || 0)}
@@ -424,31 +423,6 @@ export default function AllContracts() {
                     </td>
                     <td className={`px-6 py-4 text-sm text-right font-semibold ${inactive ? 'text-gray-400' : 'text-orange-600'}`}>
                       {formatCurrency(contract.exitPayout)}
-                    </td>
-                    <td className="px-3 py-4 text-sm text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1">
-                        <Link
-                          to={`/customers/${contract.customerId}`}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-blue-100 text-blue-600 hover:text-blue-800 transition"
-                          title="Zum Kunden"
-                        >
-                          👤
-                        </Link>
-                        <button
-                          onClick={() => handleEditContract(contract)}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-gray-300 text-gray-600 hover:text-gray-800 transition"
-                          title="Vertrag anschauen"
-                        >
-                          🔍
-                        </button>
-                        <button
-                          onClick={() => handleDeleteContract(contract)}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-red-100 text-red-600 hover:text-red-800 transition"
-                          title="Vertrag löschen"
-                        >
-                          🗑️
-                        </button>
-                      </div>
                     </td>
                   </tr>
                   );
