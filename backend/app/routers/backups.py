@@ -1,6 +1,6 @@
 """
 Backup Router
-API-Endpunkte für Backup-Verwaltung
+API-Endpunkte für Backup-Verwaltung (Single Database)
 """
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
@@ -16,7 +16,8 @@ from app.schemas.backup import (
     CreateBackupRequest,
     RestoreBackupRequest
 )
-from app.services import backup_service, database_service
+from app.services import backup_service
+from app.config import settings
 
 router = APIRouter(tags=["backups"])
 
@@ -32,6 +33,13 @@ _backup_config = {
     "created_at": datetime.now(),
     "updated_at": datetime.now()
 }
+
+
+def _get_db_name() -> str:
+    """Extrahiert den Datenbanknamen aus der DATABASE_URL"""
+    url = settings.DATABASE_URL
+    # Parse: postgresql://user:password@host:port/dbname
+    return url.rsplit("/", 1)[-1]
 
 
 @router.get("/config", response_model=dict)
@@ -81,24 +89,23 @@ def update_backup_config(request: BackupConfigUpdate):
 @router.get("/history", response_model=dict)
 def get_backup_history():
     """Listet alle vorhandenen Backups auf"""
-    from app.database import get_session_local_for_database
+    from app.database import SessionLocal
     from app.models.backup import BackupHistory
     
     backups = backup_service.list_backups()
     
-    # Lade gespeicherte Metadaten aus der PROD-DB
+    # Lade gespeicherte Metadaten aus der DB
     history_map = {}
     try:
-        prod_session_local = get_session_local_for_database("contracts")
-        prod_db = prod_session_local()
-        history_entries = prod_db.query(BackupHistory).all()
+        db = SessionLocal()
+        history_entries = db.query(BackupHistory).all()
         for entry in history_entries:
             history_map[entry.filename] = {
                 "customer_count": entry.customer_count,
                 "contract_count": entry.contract_count,
                 "app_version": getattr(entry, 'app_version', None)
             }
-        prod_db.close()
+        db.close()
     except Exception as e:
         # Falls DB-Abfrage fehlschlägt, weiter ohne Metadaten
         pass
@@ -145,36 +152,25 @@ def get_backup_history():
 def create_backup(request: CreateBackupRequest = None):
     """Erstellt ein manuelles Backup"""
     global _backup_config
-    from app.database import get_session_local_for_database
+    from app.database import SessionLocal
     from app.models.customer import Customer
     from app.models.contract import Contract
     from app.models.backup import BackupHistory
     
-    # Hole die aktive oder angegebene Datenbank
-    if request and request.database_id:
-        db = database_service.get_database_by_id(request.database_id)
-        if not db:
-            raise HTTPException(status_code=404, detail="Datenbank nicht gefunden")
-        db_name = db["db_name"]
-    else:
-        active_db = database_service.get_active_database()
-        if not active_db:
-            raise HTTPException(status_code=400, detail="Keine aktive Datenbank")
-        db_name = active_db["db_name"]
+    db_name = _get_db_name()
     
     # Prüfe ob die Datenbank physisch existiert
     if not backup_service.database_exists(db_name):
         raise HTTPException(
             status_code=400, 
-            detail=f"Datenbank '{db_name}' existiert nicht in PostgreSQL. Bitte zuerst zur PROD-Datenbank wechseln oder die Demo-Datenbank initialisieren."
+            detail=f"Datenbank '{db_name}' existiert nicht in PostgreSQL."
         )
     
     # Zähle Kunden und Verträge vor dem Backup
     customer_count = 0
     contract_count = 0
     try:
-        session_local = get_session_local_for_database(db_name)
-        db_session = session_local()
+        db_session = SessionLocal()
         customer_count = db_session.query(Customer).count()
         contract_count = db_session.query(Contract).count()
         db_session.close()
@@ -188,13 +184,11 @@ def create_backup(request: CreateBackupRequest = None):
         _backup_config["last_backup_at"] = datetime.now()
         _backup_config["last_backup_status"] = "success"
         
-        # Speichere Backup-Historie in der PROD-Datenbank
+        # Speichere Backup-Historie
         try:
             from app.main import BACKEND_VERSION
             
-            # Verwende die PROD-DB für die Historie (nicht die aktive)
-            prod_session_local = get_session_local_for_database("contracts")
-            prod_db = prod_session_local()
+            db = SessionLocal()
             
             # Hole Dateigröße
             file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else 0
@@ -208,9 +202,9 @@ def create_backup(request: CreateBackupRequest = None):
                 app_version=BACKEND_VERSION,
                 status="success"
             )
-            prod_db.add(history_entry)
-            prod_db.commit()
-            prod_db.close()
+            db.add(history_entry)
+            db.commit()
+            db.close()
         except Exception as e:
             # Historie-Speicherung sollte Backup nicht fehlschlagen lassen
             pass
@@ -235,11 +229,8 @@ def create_backup(request: CreateBackupRequest = None):
 
 @router.post("/restore", response_model=dict)
 def restore_backup(request: RestoreBackupRequest):
-    """Stellt ein Backup in einer Datenbank wieder her"""
-    # Hole Ziel-Datenbank
-    target_db = database_service.get_database_by_id(request.target_database_id)
-    if not target_db:
-        raise HTTPException(status_code=404, detail="Ziel-Datenbank nicht gefunden")
+    """Stellt ein Backup wieder her"""
+    db_name = _get_db_name()
     
     # Prüfe ob Backup existiert
     backup_dir = backup_service.get_backup_directory()
@@ -248,14 +239,14 @@ def restore_backup(request: RestoreBackupRequest):
     if not os.path.exists(backup_path):
         raise HTTPException(status_code=404, detail="Backup nicht gefunden")
     
-    success, message = backup_service.restore_backup(request.backup_id, target_db["db_name"])
+    success, message = backup_service.restore_backup(request.backup_id, db_name)
     
     if not success:
         raise HTTPException(status_code=500, detail=f"Restore fehlgeschlagen: {message}")
     
     return {
         "status": "success",
-        "message": f"Backup wiederhergestellt in {target_db['name']}"
+        "message": f"Backup wiederhergestellt"
     }
 
 

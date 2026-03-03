@@ -77,7 +77,6 @@ class CreateBackupRequest(BaseModel):
 class RestoreBackupRequest(BaseModel):
     """Backup wiederherstellen"""
     backup_id: str = Field(..., alias="backupId")
-    target_database_id: str = Field(..., alias="targetDatabaseId")
 
     class Config:
         populate_by_name = True

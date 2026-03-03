@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.1.10"
+BACKEND_VERSION = "1.2.0"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
@@ -62,25 +62,8 @@ def initialize_database():
         raise
 
 
-def initialize_databases_config():
-    """
-    Initialize database configurations.
-    Creates the Demo database if it doesn't exist.
-    """
-    try:
-        from app.services.database_service import initialize_demo_database
-        logger.info("Initializing database configurations...")
-        initialize_demo_database()
-        logger.info("✅ Database configurations initialized")
-    except Exception as e:
-        logger.warning(f"Could not initialize database configurations: {e}")
-
-
 # Initialize database on module load
 initialize_database()
-
-# Initialize database configurations (Demo DB etc.)
-initialize_databases_config()
 
 app = FastAPI(
     title="Contract Management API",
@@ -122,7 +105,7 @@ def get_version():
         "version": BACKEND_VERSION
     }
 
-from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth, system, databases, backups, tests
+from app.routers import customers, contracts, settings, price_increases, commission_rates, analytics, auth, system, backups, tests
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -132,7 +115,6 @@ app.include_router(settings.router, prefix="/api/settings")
 app.include_router(price_increases.router, prefix="/api/price-increases")
 app.include_router(commission_rates.router)
 app.include_router(analytics.router, prefix="/api/analytics")
-app.include_router(databases.router, prefix="/api/databases")
 app.include_router(backups.router, prefix="/api/backups")
 app.include_router(tests.router, prefix="/api/tests")
 app.include_router(system.router)

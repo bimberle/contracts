@@ -20,7 +20,6 @@ import {
   CommissionRateUpdateRequest,
   ContractSearchParams,
   ContractSearchResponse,
-  DatabaseInfo,
   BackupConfig,
   BackupHistoryItem,
 } from '../types';
@@ -362,54 +361,6 @@ class ApiClient {
     }
   }
 
-  // ==================== Databases ====================
-
-  async getDatabases(): Promise<{ databases: DatabaseInfo[]; activeDatabase: DatabaseInfo | null }> {
-    const url = this.buildUrl('/databases');
-    const response = await this.axiosInstance.get<ApiResponse<{ databases: DatabaseInfo[]; activeDatabase: DatabaseInfo | null }>>(url);
-    return response.data.data!;
-  }
-
-  async getActiveDatabase(): Promise<DatabaseInfo> {
-    const url = this.buildUrl('/databases/active');
-    const response = await this.axiosInstance.get<ApiResponse<DatabaseInfo>>(url);
-    return response.data.data!;
-  }
-
-  async createDatabase(name: string, color: string): Promise<DatabaseInfo> {
-    const url = this.buildUrl('/databases');
-    const response = await this.axiosInstance.post<ApiResponse<DatabaseInfo>>(url, { name, color });
-    return response.data.data!;
-  }
-
-  async updateDatabase(id: string, data: { name?: string; color?: string }): Promise<void> {
-    const url = this.buildUrl(`/databases/${id}`);
-    await this.axiosInstance.put(url, data);
-  }
-
-  async deleteDatabase(id: string): Promise<void> {
-    const url = this.buildUrl(`/databases/${id}`);
-    await this.axiosInstance.delete(url);
-  }
-
-  async switchDatabase(databaseId: string): Promise<{ requiresRestart: boolean }> {
-    const url = this.buildUrl('/databases/switch');
-    const response = await this.axiosInstance.post(url, { databaseId });
-    return response.data;
-  }
-
-  async createDemoData(): Promise<{ message: string; customers: number; contracts: number }> {
-    const url = this.buildUrl('/databases/demo-data');
-    const response = await this.axiosInstance.post(url);
-    return response.data.data;
-  }
-
-  async clearDemoData(): Promise<{ message: string; customers_deleted: number; contracts_deleted: number }> {
-    const url = this.buildUrl('/databases/demo-data');
-    const response = await this.axiosInstance.delete(url);
-    return response.data.data;
-  }
-
   // ==================== Backups ====================
 
   async getBackupConfig(): Promise<BackupConfig> {
@@ -429,15 +380,15 @@ class ApiClient {
     return response.data.data!;
   }
 
-  async createBackup(databaseId?: string): Promise<{ filename: string; databaseName: string }> {
+  async createBackup(): Promise<{ filename: string; databaseName: string }> {
     const url = this.buildUrl('/backups/create');
-    const response = await this.axiosInstance.post<ApiResponse<{ filename: string; databaseName: string }>>(url, { databaseId });
+    const response = await this.axiosInstance.post<ApiResponse<{ filename: string; databaseName: string }>>(url, {});
     return response.data.data!;
   }
 
-  async restoreBackup(backupId: string, targetDatabaseId: string): Promise<void> {
+  async restoreBackup(backupId: string): Promise<void> {
     const url = this.buildUrl('/backups/restore');
-    await this.axiosInstance.post(url, { backupId, targetDatabaseId });
+    await this.axiosInstance.post(url, { backupId });
   }
 
   async deleteBackup(filename: string): Promise<void> {

@@ -10,7 +10,6 @@ import Settings from './pages/Settings';
 import Statistics from './pages/Statistics';
 import AllContracts from './pages/AllContracts';
 import LoginPage from './pages/LoginPage';
-import DatabaseFooter from './components/DatabaseFooter';
 import './App.css';
 
 function App() {
@@ -216,9 +215,6 @@ function App() {
             </div>
           </div>
         </footer>
-
-        {/* Database Footer - zeigt aktive Datenbank */}
-        <DatabaseFooter />
       </div>
     </Router>
   );

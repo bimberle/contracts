@@ -369,19 +369,6 @@ export interface DashboardSummary {
   }>;
 }
 
-// Database Configuration
-export interface DatabaseInfo {
-  id: string;
-  name: string;
-  dbName: string;
-  color: string;
-  isActive: boolean;
-  isDemo: boolean;
-  isSystem: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 // Backup Configuration
 export interface BackupConfig {
   id: string;

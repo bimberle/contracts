@@ -4,7 +4,6 @@ import { Settings as SettingsType, SettingsUpdateRequest, PriceIncrease, Commiss
 import { formatDate } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
 import CommissionRateModal from '../components/CommissionRateModal';
-import DatabaseSettings from '../components/DatabaseSettings';
 import BackupSettings from '../components/BackupSettings';
 import CalculationTests from '../components/CalculationTests';
 
@@ -14,7 +13,7 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'databases' | 'backup' | 'tests'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'backup' | 'tests'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
@@ -193,16 +192,6 @@ function Settings() {
             }`}
           >
             Exit-Zahlungen
-          </button>
-          <button
-            onClick={() => setActiveTab('databases')}
-            className={`px-6 py-4 font-medium text-sm transition ${
-              activeTab === 'databases'
-                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
-                : 'text-gray-700 hover:text-gray-900'
-            }`}
-          >
-            Datenbanken
           </button>
           <button
             onClick={() => setActiveTab('backup')}
@@ -666,12 +655,7 @@ function Settings() {
           </div>
         )}
 
-        {/* Tab 5: Datenbanken */}
-        {activeTab === 'databases' && (
-          <DatabaseSettings onDatabaseChange={() => window.location.reload()} />
-        )}
-
-        {/* Tab 6: Backup */}
+        {/* Tab 5: Backup */}
         {activeTab === 'backup' && (
           <BackupSettings onBackupRestored={() => window.location.reload()} />
         )}
