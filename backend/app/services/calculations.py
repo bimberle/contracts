@@ -375,9 +375,11 @@ def calculate_exit_payout(
     Gibt immer 0 zurück wenn das Ergebnis negativ wäre.
     
     Berücksichtigt:
-    - Arbeitsplätze-Staffel (exit_payout_tiers)
-    - Exit-Zahlungen pro Vertragstyp (exit_payout_by_type)
+    - Arbeitsplätze-Staffel (exit_payout_tiers) = Basis-Monate
+    - Exit-Zahlungen pro Vertragstyp (exit_payout_by_type) = zusätzliche Monate pro Typ
     - Cloud und Software-Pflege können ausgeschlossen sein
+    
+    Formel pro Typ: (Basis-Monate + zusätzliche Monate - bereits gelaufene Monate) * monatliche Provision
     
     Args:
         customer_first_contract_date: Das Startdatum des ersten Vertrags des Kunden.
@@ -388,46 +390,9 @@ def calculate_exit_payout(
     if contract.status.value == 'completed' or (contract.end_date and contract.end_date < today):
         return 0.0
     
-    # Ermittle die Exit-Payout-Monate basierend auf Arbeitsplätzen
+    # Ermittle die Basis-Exit-Payout-Monate basierend auf Arbeitsplätzen
     number_of_seats = getattr(contract, 'number_of_seats', 1) or 1
-    min_months = get_exit_payout_months(settings, number_of_seats)
-    
-    # Mindestdauer erfüllt, kein Ausgleich
-    if months_running >= min_months:
-        return 0.0
-    
-    months_remaining = min_months - months_running
-    
-    # Negative Restmonate bedeuten, dass bereits überzahlt wurde -> 0
-    if months_remaining <= 0:
-        return 0.0
-    
-    # Exit-Provision berechnen mit Berücksichtigung der Typ-Konfiguration
-    monthly_commission = _get_exit_monthly_commission(
-        contract, settings, price_increases, commission_rates_list, today,
-        customer_first_contract_date
-    )
-    
-    result = monthly_commission * months_remaining
-    
-    # Niemals negative Auszahlungen
-    return max(0.0, result)
-
-
-def _get_exit_monthly_commission(
-    contract: Contract,
-    settings: Settings,
-    price_increases: List[PriceIncrease],
-    commission_rates_list: List[CommissionRate],
-    date: datetime,
-    customer_first_contract_date: datetime = None
-) -> float:
-    """
-    Berechnet die monatliche Provision für Exit-Zahlung.
-    Berücksichtigt exit_payout_by_type - nur Typen mit enabled=True werden einbezogen.
-    """
-    if contract.status.value != 'active':
-        return 0.0
+    base_months = get_exit_payout_months(settings, number_of_seats)
     
     # Get exit payout configuration per type
     exit_config = settings.exit_payout_by_type if settings.exit_payout_by_type else {
@@ -438,10 +403,7 @@ def _get_exit_monthly_commission(
         "cloud": {"enabled": False, "additional_months": 0}
     }
     
-    # Berechne die aktuellen Preise pro Betrag-Typ mit Erhöhungen
-    # Nur Typen einbeziehen, die für Exit-Zahlungen aktiviert sind
-    amounts = {}
-    
+    # Berechne die Exit-Zahlung pro Vertragstyp
     type_mapping = {
         'software_rental': contract.software_rental_amount,
         'software_care': contract.software_care_amount,
@@ -450,16 +412,71 @@ def _get_exit_monthly_commission(
         'cloud': getattr(contract, 'cloud_amount', 0) or 0,
     }
     
+    # Get commission rates for today
+    commission_rates = get_commission_rates_for_date(commission_rates_list, today)
+    
+    total_exit_payout = 0.0
+    
     for amount_type, amount in type_mapping.items():
+        if not amount or amount <= 0:
+            continue
+            
         type_config = exit_config.get(amount_type, {"enabled": False, "additional_months": 0})
+        
         # Handle both dict and object formats
         if isinstance(type_config, dict):
             is_enabled = type_config.get('enabled', False)
+            additional_months = type_config.get('additional_months', 0) or 0
         else:
             is_enabled = getattr(type_config, 'enabled', False)
+            additional_months = getattr(type_config, 'additional_months', 0) or 0
         
-        if is_enabled:
-            amounts[amount_type] = amount
+        if not is_enabled:
+            continue
+        
+        # Gesamtmonate für diesen Typ = Basis + zusätzliche
+        total_months_for_type = base_months + additional_months
+        
+        # Restmonate für diesen Typ
+        months_remaining = total_months_for_type - months_running
+        
+        if months_remaining <= 0:
+            continue
+        
+        # Berechne die monatliche Provision für diesen Typ
+        # Berücksichtige Preiserhöhungen
+        adjusted_amount = _get_adjusted_amount_for_type(
+            contract, settings, price_increases, today, 
+            customer_first_contract_date, amount_type, amount
+        )
+        
+        commission_rate = commission_rates.get(amount_type, 0)
+        monthly_commission_for_type = adjusted_amount * (commission_rate / 100)
+        
+        # Exit-Zahlung für diesen Typ
+        type_exit_payout = monthly_commission_for_type * months_remaining
+        total_exit_payout += type_exit_payout
+    
+    # Niemals negative Auszahlungen
+    return max(0.0, total_exit_payout)
+
+
+def _get_adjusted_amount_for_type(
+    contract: Contract,
+    settings: Settings,
+    price_increases: List[PriceIncrease],
+    date: datetime,
+    customer_first_contract_date: datetime,
+    amount_type: str,
+    base_amount: float
+) -> float:
+    """
+    Berechnet den angepassten Betrag für einen bestimmten Typ unter Berücksichtigung von Preiserhöhungen.
+    """
+    if not base_amount or base_amount <= 0:
+        return 0.0
+    
+    adjusted_amount = base_amount
     
     # Mapping von camelCase zu snake_case
     camel_to_snake = {
@@ -469,12 +486,6 @@ def _get_exit_monthly_commission(
         'purchase': 'purchase',
         'cloud': 'cloud',
     }
-    
-    months_since_rental_start = months_between(contract.start_date, date)
-    
-    # Noch in Gründerphase - keine Provision
-    if months_since_rental_start < 0:
-        return 0.0
     
     # Bestandsschutz für Preiserhöhungen prüfen - basierend auf erstem Kundenvertrag
     reference_date = customer_first_contract_date if customer_first_contract_date else contract.start_date
@@ -505,32 +516,10 @@ def _get_exit_monthly_commission(
             months_at_price_increase = months_between(reference_date, price_increase.valid_from)
             if months_at_price_increase >= price_increase.lock_in_months or is_manually_included:
                 if price_increase.amount_increases:
-                    for amount_type, increase_percent in price_increase.amount_increases.items():
+                    for inc_type, increase_percent in price_increase.amount_increases.items():
                         # Normalisiere den Schlüssel (camelCase → snake_case)
-                        normalized_key = camel_to_snake.get(amount_type, amount_type)
-                        if normalized_key in amounts:
-                            amounts[normalized_key] *= (1 + increase_percent / 100)
+                        normalized_key = camel_to_snake.get(inc_type, inc_type)
+                        if normalized_key == amount_type:
+                            adjusted_amount *= (1 + increase_percent / 100)
     
-    # Berechne Provisionen pro Betrag-Typ mit aktuellen Sätzen
-    total_commission = 0.0
-    commission_rates = get_commission_rates_for_date(commission_rates_list, date)
-    
-    for amount_type, amount in amounts.items():
-        # Get the commission rate for this amount type
-        commission_rate = commission_rates.get(amount_type, 0)
-        
-        # Nach Vertragsende - prüfe additional_months aus exit_payout_by_type
-        if contract.end_date and date > contract.end_date:
-            months_after_end = months_between(contract.end_date, date)
-            # Get additional_months from exit_payout_by_type (same config used above)
-            type_config = exit_config.get(amount_type, {})
-            if isinstance(type_config, dict):
-                post_contract_limit = type_config.get('additional_months', 0)
-            else:
-                post_contract_limit = getattr(type_config, 'additional_months', 0)
-            if months_after_end > post_contract_limit:
-                continue
-        
-        total_commission += amount * (commission_rate / 100)
-    
-    return total_commission
+    return adjusted_amount

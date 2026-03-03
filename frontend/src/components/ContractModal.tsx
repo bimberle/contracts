@@ -611,6 +611,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
                   min="1"
                   value={formData.numberOfSeats}
                   onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 1 })}
+                  onFocus={(e) => e.target.select()}
                   autoFocus
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
@@ -625,6 +626,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
+                  tabIndex={-1}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>

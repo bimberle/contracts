@@ -280,19 +280,20 @@ function CustomerDetail() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-4 mb-2">
-          <button
-            onClick={() => navigate('/')}
-            className="text-blue-600 hover:text-blue-800 text-sm"
-          >
-            ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück'}
-          </button>
-          {cameFromContracts && (
+          {cameFromContracts ? (
             <Link
               to="/contracts"
-              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+              className="text-blue-600 hover:text-blue-800 text-sm"
             >
               ← Zurück zu Alle Verträge
             </Link>
+          ) : (
+            <button
+              onClick={() => navigate('/')}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück'}
+            </button>
           )}
         </div>
         <div className="bg-white rounded-lg shadow p-4">
