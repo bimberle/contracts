@@ -48,7 +48,14 @@ const ContractModal: React.FC<ContractModalProps> = ({
       targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
     }
     
-    return targetDate.toISOString().split('T')[0];
+    // Format als YYYY-MM-DD
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    const result = `${year}-${month}-${day}`;
+    
+    console.log('getDefaultStartDate:', { today: today.toISOString(), dayOfMonth, result });
+    return result;
   };
 
   // Ref für erstes Betragsfeld (Auto-Fokus)
@@ -118,6 +125,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
   };
 
   useEffect(() => {
+    // Nur ausführen wenn Modal offen ist
+    if (!isOpen) return;
+    
     // Hilfsfunktion um Zahl zu Komma-String zu konvertieren
     const numToComma = (n: number): string => n.toString().replace('.', ',');
     
@@ -138,6 +148,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
         includedEarlyPriceIncreaseIds: contract.includedEarlyPriceIncreaseIds || [],
       });
     } else {
+      // Neuer Vertrag: Berechne das Default-Datum frisch
+      const defaultDate = getDefaultStartDate();
+      console.log('ContractModal: Neuer Vertrag, Default-Datum:', defaultDate);
       setFormData({
         softwareRentalAmount: '0',
         softwareCareAmount: '0',
@@ -145,7 +158,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         purchaseAmount: '0',
         cloudAmount: '0',
         currency: 'EUR',
-        startDate: getDefaultStartDate(),
+        startDate: defaultDate,
         endDate: '',
         isFounderDiscount: false,
         numberOfSeats: 1,
