@@ -36,6 +36,7 @@ function Dashboard() {
   const [sortBy, setSortBy] = useState<'kundennummer' | 'name' | 'ort' | 'revenue' | 'commission' | 'netIncome' | 'exit'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [hasSearched, setHasSearched] = useState(false);
+  const [showingAll, setShowingAll] = useState(false);
   
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,15 +109,16 @@ function Dashboard() {
           setLoading(false);
         }
       }, 300);
-    } else if (searchTerm.length === 0) {
-      // Bei leerem Suchfeld: Ergebnisse leeren
+    } else if (searchTerm.length === 0 && !showingAll) {
+      // Bei leerem Suchfeld: Ergebnisse leeren (außer "Alle anzeigen" ist aktiv)
       setSearchResults([]);
       setHasSearched(false);
       setLoading(false);
-    } else {
+    } else if (searchTerm.length > 0 && searchTerm.length < 3) {
       // 1-2 Zeichen: Ergebnisse leeren, aber warten
       setSearchResults([]);
       setHasSearched(false);
+      setShowingAll(false);
       setLoading(false);
     }
 
@@ -178,11 +180,31 @@ function Dashboard() {
 
   const handleRefresh = useCallback(async () => {
     await loadDashboardSummary();
-    if (searchTerm.length >= 3) {
+    if (showingAll) {
+      const result = await api.getAllCustomersWithMetrics();
+      setSearchResults(result.data);
+    } else if (searchTerm.length >= 3) {
       const result = await api.searchCustomers(searchTerm);
       setSearchResults(result.data);
     }
-  }, [loadDashboardSummary, searchTerm]);
+  }, [loadDashboardSummary, searchTerm, showingAll]);
+
+  const handleShowAll = async () => {
+    setLoading(true);
+    setSearchTerm('');
+    try {
+      const result = await api.getAllCustomersWithMetrics();
+      setSearchResults(result.data);
+      setHasSearched(true);
+      setShowingAll(true);
+      setError(null);
+    } catch (err) {
+      console.error('Fehler beim Laden aller Kunden:', err);
+      setError('Fehler beim Laden aller Kunden');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCustomerSuccess = async () => {
     await loadDashboardSummary();
@@ -279,13 +301,33 @@ function Dashboard() {
               type="text"
               placeholder="Kundensuche (mind. 3 Zeichen)..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (e.target.value.length > 0) setShowingAll(false);
+              }}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               autoFocus
             />
-            {searchTerm.length > 0 && (
+            <button
+              onClick={handleShowAll}
+              disabled={loading || showingAll}
+              className={`px-4 py-2 text-sm rounded-lg transition whitespace-nowrap ${
+                showingAll
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+              title="Alle Kunden anzeigen"
+            >
+              Alle
+            </button>
+            {(searchTerm.length > 0 || showingAll) && (
               <button
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchTerm('');
+                  setSearchResults([]);
+                  setHasSearched(false);
+                  setShowingAll(false);
+                }}
                 className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
               >
                 ✕
@@ -296,7 +338,9 @@ function Dashboard() {
             <p className="text-xs text-gray-500 mt-2">Noch {3 - searchTerm.length} Zeichen...</p>
           )}
           {hasSearched && searchResults.length > 0 && (
-            <p className="text-xs text-gray-500 mt-2">{searchResults.length} Kunden gefunden</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {showingAll ? `Alle ${searchResults.length} Kunden` : `${searchResults.length} Kunden gefunden`}
+            </p>
           )}
         </div>
 
