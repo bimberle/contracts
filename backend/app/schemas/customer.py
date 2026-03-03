@@ -95,3 +95,4 @@ class CalculatedMetrics(BaseModel):
     total_earned: float
     exit_payout_if_today_in_months: float
     active_contracts: int
+    total_seats: int  # Summe aller Arbeitsplätze

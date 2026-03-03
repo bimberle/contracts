@@ -49,6 +49,7 @@ def calculate_customer_metrics(
     total_earned = 0.0
     exit_payout = 0.0
     active_contracts = 0
+    total_seats = 0
     
     # Ermittle das erste Vertragsdatum des Kunden für Bestandsschutz
     customer_first_contract_date = get_customer_first_contract_date(contracts)
@@ -60,6 +61,7 @@ def calculate_customer_metrics(
         # Nur effektiv aktive Verträge zählen für Umsatz
         if effective_status == 'active':
             active_contracts += 1
+            total_seats += getattr(contract, 'number_of_seats', 1) or 1
             # Berechne Gesamtpreis = Summe aller 4 Beträge (ohne Erhöhungen)
             total_monthly_rental += (
                 contract.software_rental_amount +
@@ -105,7 +107,8 @@ def calculate_customer_metrics(
         "total_monthly_net_income": round(total_monthly_commission * (1 - settings.personal_tax_rate / 100), 2),
         "total_earned": round(total_earned, 2),
         "exit_payout_if_today_in_months": round(exit_payout, 2),
-        "active_contracts": active_contracts
+        "active_contracts": active_contracts,
+        "total_seats": total_seats
     }
 
 

@@ -233,6 +233,7 @@ export interface CalculatedMetrics {
   totalEarned: number; // Bereits verdiente Provision (kumulativ)
   exitPayoutIfTodayInMonths: number; // Provision wenn heute gekündigt
   activeContracts: number; // Anzahl aktiver Verträge
+  totalSeats: number; // Summe aller Arbeitsplätze
 }
 
 // Contract with Metrics (für Anzeige)

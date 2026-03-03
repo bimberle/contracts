@@ -193,6 +193,12 @@ class ApiClient {
     return response.data;
   }
 
+  async getContractsLastModified(): Promise<string | null> {
+    const url = this.buildUrl('/contracts/last-modified');
+    const response = await this.axiosInstance.get<{ lastModified: string | null }>(url);
+    return response.data.lastModified;
+  }
+
   async getContract(contractId: string): Promise<Contract> {
     const url = this.buildUrl(`/contracts/${contractId}`);
     const response = await this.axiosInstance.get<Contract>(url);

@@ -1,11 +1,184 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Settings as SettingsType, SettingsUpdateRequest, PriceIncrease, CommissionRate } from '../types';
-import { formatDate } from '../utils/formatting';
+import { formatDate, formatCurrencyRaw } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
 import CommissionRateModal from '../components/CommissionRateModal';
 import BackupSettings from '../components/BackupSettings';
 import CalculationTests from '../components/CalculationTests';
+import api from '../services/api';
+import * as XLSX from 'xlsx';
+
+// Export Tab Component
+function ExportTab() {
+  const [exportingCustomers, setExportingCustomers] = useState(false);
+  const [exportingContracts, setExportingContracts] = useState(false);
+
+  const handleExportCustomers = async () => {
+    setExportingCustomers(true);
+    try {
+      const result = await api.getAllCustomersWithMetrics();
+      const data = result.data.map(({ customer, metrics }) => ({
+        'Kundennummer': customer.kundennummer,
+        'Name': `${customer.name} ${customer.name2 || ''}`.trim(),
+        'PLZ': customer.plz || '',
+        'Ort': customer.ort || '',
+        'Land': customer.land || '',
+        'Mtl. Umsatz': formatCurrencyRaw(metrics.totalMonthlyRevenue),
+        'Monatliche Provision': formatCurrencyRaw(metrics.totalMonthlyCommission),
+        'Netto-Gehalt': formatCurrencyRaw(metrics.totalMonthlyNetIncome),
+        'Exit-Auszahlung': formatCurrencyRaw(metrics.exitPayoutIfTodayInMonths),
+        'Arbeitsplätze': metrics.totalSeats || 0,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Kunden');
+      
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 30 }, { wch: 8 }, { wch: 20 }, { wch: 10 },
+        { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 12 },
+      ];
+      
+      const today = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Kunden_Export_${today}.xlsx`);
+    } catch (err) {
+      console.error('Export fehlgeschlagen:', err);
+      alert('Export fehlgeschlagen');
+    } finally {
+      setExportingCustomers(false);
+    }
+  };
+
+  const handleExportContracts = async () => {
+    setExportingContracts(true);
+    try {
+      const result = await api.searchContracts({
+        softwareRental: true,
+        softwareCare: true,
+        apps: true,
+        purchase: true,
+        cloud: true,
+      });
+      
+      const exportData = result.contracts.map((contract) => ({
+        'Kundenname': contract.customerName,
+        'Name 2': contract.customerName2 || '',
+        'PLZ': contract.plz,
+        'Ort': contract.ort,
+        'Status': contract.status,
+        'Software Miete': contract.softwareRentalAmount || 0,
+        'Software Pflege': contract.softwareCareAmount || 0,
+        'Apps': contract.appsAmount || 0,
+        'Bestand': contract.purchaseAmount || 0,
+        'Cloud': contract.cloudAmount || 0,
+        'Gesamtbetrag': contract.currentMonthlyPrice,
+        'Provision': contract.currentMonthlyCommission,
+        'Exit-Zahlung': contract.exitPayout,
+        'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
+      }));
+
+      // Add summary row
+      exportData.push({
+        'Kundenname': 'GESAMT',
+        'Name 2': '',
+        'PLZ': '',
+        'Ort': '',
+        'Status': '',
+        'Software Miete': 0,
+        'Software Pflege': 0,
+        'Apps': 0,
+        'Bestand': 0,
+        'Cloud': 0,
+        'Gesamtbetrag': result.totalRevenue,
+        'Provision': result.totalCommission,
+        'Exit-Zahlung': result.totalExitPayout,
+        'Startdatum': '',
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Verträge');
+
+      ws['!cols'] = [
+        { wch: 20 }, { wch: 20 }, { wch: 8 }, { wch: 15 }, { wch: 12 },
+        { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+        { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      ];
+
+      const today = new Date().toISOString().split('T')[0];
+      XLSX.writeFile(wb, `Verträge_${today}.xlsx`);
+    } catch (err) {
+      console.error('Export fehlgeschlagen:', err);
+      alert('Export fehlgeschlagen');
+    } finally {
+      setExportingContracts(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold text-gray-900">Daten exportieren</h3>
+      <p className="text-gray-600 text-sm">
+        Exportieren Sie alle Kunden oder Verträge als Excel-Datei.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+          <h4 className="font-medium text-gray-900 mb-2">Alle Kunden</h4>
+          <p className="text-sm text-gray-600 mb-4">
+            Exportiert alle Kunden mit Metriken (Umsatz, Provision, Exit-Auszahlung).
+          </p>
+          <button
+            onClick={handleExportCustomers}
+            disabled={exportingCustomers}
+            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {exportingCustomers ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Exportiere...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Kunden exportieren
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+          <h4 className="font-medium text-gray-900 mb-2">Alle Verträge</h4>
+          <p className="text-sm text-gray-600 mb-4">
+            Exportiert alle Verträge mit Beträgen, Provision und Exit-Zahlung.
+          </p>
+          <button
+            onClick={handleExportContracts}
+            disabled={exportingContracts}
+            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {exportingContracts ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Exportiere...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Verträge exportieren
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Settings() {
   const { settings, loading, error, fetchSettings, updateSettings, fetchPriceIncreases, priceIncreases, deletePriceIncrease } = useSettingsStore();
@@ -13,7 +186,7 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'backup' | 'tests'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'export' | 'backup' | 'tests'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
@@ -192,6 +365,16 @@ function Settings() {
             }`}
           >
             Exit-Zahlungen
+          </button>
+          <button
+            onClick={() => setActiveTab('export')}
+            className={`px-6 py-4 font-medium text-sm transition ${
+              activeTab === 'export'
+                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Export
           </button>
           <button
             onClick={() => setActiveTab('backup')}
@@ -590,12 +773,17 @@ function Settings() {
           </div>
         )}
 
-        {/* Tab 5: Backup */}
+        {/* Tab 6: Export */}
+        {activeTab === 'export' && (
+          <ExportTab />
+        )}
+
+        {/* Tab 7: Backup */}
         {activeTab === 'backup' && (
           <BackupSettings onBackupRestored={() => window.location.reload()} />
         )}
 
-        {/* Tab 7: Tests */}
+        {/* Tab 8: Tests */}
         {activeTab === 'tests' && (
           <CalculationTests />
         )}

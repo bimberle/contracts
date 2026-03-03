@@ -10,6 +10,8 @@ import PullToRefresh from '../components/PullToRefresh';
 const SCROLL_KEY = 'allContracts_scrollPosition';
 const CACHE_KEY = 'allContracts_cache';
 const CACHE_FILTERS_KEY = 'allContracts_filters';
+const SHOW_NOTES_KEY = 'allContracts_showNotes';
+const HIGHLIGHT_CONTRACT_KEY = 'allContracts_highlightContract';
 
 interface CachedData {
   contracts: ContractWithDetails[];
@@ -18,6 +20,7 @@ interface CachedData {
   totalCommission: number;
   totalExitPayout: number;
   timestamp: number;
+  lastModified: string | null; // Server timestamp for validation
 }
 
 export default function AllContracts() {
@@ -42,7 +45,33 @@ export default function AllContracts() {
     purchase: true,
     cloud: true,
   });
-  const [showNotes, setShowNotes] = useState(false);
+  const [showNotes, setShowNotes] = useState(() => {
+    const saved = sessionStorage.getItem(SHOW_NOTES_KEY);
+    return saved === 'true';
+  });
+  const [highlightedContractId, setHighlightedContractId] = useState<string | null>(() => {
+    const saved = sessionStorage.getItem(HIGHLIGHT_CONTRACT_KEY);
+    if (saved) {
+      sessionStorage.removeItem(HIGHLIGHT_CONTRACT_KEY);
+      return saved;
+    }
+    return null;
+  });
+  
+  // Persist showNotes
+  useEffect(() => {
+    sessionStorage.setItem(SHOW_NOTES_KEY, showNotes ? 'true' : 'false');
+  }, [showNotes]);
+
+  // Clear highlight after 3 seconds
+  useEffect(() => {
+    if (highlightedContractId) {
+      const timer = setTimeout(() => {
+        setHighlightedContractId(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedContractId]);
   
   // Debounce search term
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,13 +113,32 @@ export default function AllContracts() {
           const cachedData: CachedData = JSON.parse(cachedDataStr);
           // Cache valid for 5 minutes
           if (Date.now() - cachedData.timestamp < 5 * 60 * 1000) {
-            setContracts(cachedData.contracts);
-            setTotalCount(cachedData.totalCount);
-            setTotalRevenue(cachedData.totalRevenue);
-            setTotalCommission(cachedData.totalCommission);
-            setTotalExitPayout(cachedData.totalExitPayout);
-            setIsLoading(false);
-            return;
+            // Validate against server's last modified timestamp
+            try {
+              const serverLastModified = await api.getContractsLastModified();
+              if (serverLastModified && cachedData.lastModified && 
+                  serverLastModified === cachedData.lastModified) {
+                // Cache is still valid - use it
+                setContracts(cachedData.contracts);
+                setTotalCount(cachedData.totalCount);
+                setTotalRevenue(cachedData.totalRevenue);
+                setTotalCommission(cachedData.totalCommission);
+                setTotalExitPayout(cachedData.totalExitPayout);
+                setIsLoading(false);
+                return;
+              }
+              // Server data has changed - continue to fetch
+            } catch (e) {
+              // On error validating, still use cache if time-valid
+              console.warn('Cache validation failed, using cached data:', e);
+              setContracts(cachedData.contracts);
+              setTotalCount(cachedData.totalCount);
+              setTotalRevenue(cachedData.totalRevenue);
+              setTotalCommission(cachedData.totalCommission);
+              setTotalExitPayout(cachedData.totalExitPayout);
+              setIsLoading(false);
+              return;
+            }
           }
         } catch (e) {
           console.warn('Failed to parse cache:', e);
@@ -119,6 +167,14 @@ export default function AllContracts() {
       setTotalCommission(result.totalCommission);
       setTotalExitPayout(result.totalExitPayout);
       
+      // Get last modified timestamp for cache validation
+      let lastModified: string | null = null;
+      try {
+        lastModified = await api.getContractsLastModified();
+      } catch (e) {
+        console.warn('Failed to get lastModified:', e);
+      }
+      
       // Save to cache
       const cacheData: CachedData = {
         contracts: result.contracts,
@@ -127,6 +183,7 @@ export default function AllContracts() {
         totalCommission: result.totalCommission,
         totalExitPayout: result.totalExitPayout,
         timestamp: Date.now(),
+        lastModified,
       };
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
       sessionStorage.setItem(CACHE_FILTERS_KEY, getCurrentFilterKey());
@@ -462,6 +519,7 @@ export default function AllContracts() {
               <tbody className="divide-y divide-gray-200">
                 {contracts.map((contract) => {
                   const inactive = isContractInactive(contract);
+                  const isHighlighted = contract.id === highlightedContractId;
                   const rowTextClass = inactive ? 'text-gray-400' : 'text-gray-900';
                   const activeDate = contract.activeFromDate 
                     ? new Date(contract.activeFromDate).toLocaleDateString('de-DE')
@@ -469,7 +527,7 @@ export default function AllContracts() {
                   
                   return (
                   <>
-                  <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''}`}>
+                  <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''} ${isHighlighted ? 'bg-yellow-100 ring-2 ring-yellow-400 ring-inset' : ''}`}>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
                         <Link

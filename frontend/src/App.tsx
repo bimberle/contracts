@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { IconSettings, IconRefresh, IconDownload } from '@tabler/icons-react';
+import { IconSettings } from '@tabler/icons-react';
 import { useCustomerStore } from './stores/customerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import api from './services/api';
@@ -15,9 +15,6 @@ import './App.css';
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [frontendVersion, setFrontendVersion] = useState('1.0.0');
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const fetchCustomers = useCustomerStore((state) => state.fetchCustomers);
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
   const fetchPriceIncreases = useSettingsStore((state) => state.fetchPriceIncreases);
@@ -26,18 +23,6 @@ function App() {
     // Initialize app: check health, auth, and load data
     const init = async () => {
       try {
-        // 0. Log versions (only in dev)
-        const version = import.meta.env.VITE_APP_VERSION || '1.0.0';
-        setFrontendVersion(version);
-        console.log('📦 Frontend version:', version);
-        
-        try {
-          const backendVersion = await api.getBackendVersion();
-          console.log('📦 Backend version:', backendVersion.version);
-        } catch (err) {
-          console.warn('Could not fetch backend version:', err);
-        }
-
         // 1. Check API health
         const isHealthy = await api.healthCheck();
         if (!isHealthy) {
@@ -68,9 +53,6 @@ function App() {
             fetchSettings(),
             fetchPriceIncreases(),
           ]);
-          
-          // 5. Check for updates (non-blocking)
-          checkForUpdates();
         }
 
         setIsLoading(false);
@@ -82,18 +64,6 @@ function App() {
 
     init();
   }, [fetchCustomers, fetchSettings, fetchPriceIncreases]);
-
-  const checkForUpdates = async () => {
-    setIsCheckingUpdate(true);
-    try {
-      const result = await api.checkForUpdates();
-      setUpdateAvailable(result.update_available);
-    } catch (err) {
-      // Silently ignore update check errors
-    } finally {
-      setIsCheckingUpdate(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -183,38 +153,6 @@ function App() {
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
-
-        {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 mt-8">
-          <div className="max-w-7xl mx-auto px-1 sm:px-2 lg:px-3 py-4">
-            <div className="flex items-center justify-center gap-4">
-              <p className="text-gray-500 text-sm">
-                © 2025 Contract Management System - Version {frontendVersion}
-              </p>
-              
-              {/* Update Check Button */}
-              <button
-                onClick={checkForUpdates}
-                disabled={isCheckingUpdate}
-                className="text-gray-400 hover:text-blue-600 transition"
-                title="Nach Updates suchen"
-              >
-                <IconRefresh size={16} className={isCheckingUpdate ? 'animate-spin' : ''} />
-              </button>
-              
-              {/* Update Available Badge - nur Anzeige, kein automatisches Update möglich */}
-              {updateAvailable && (
-                <div
-                  className="flex items-center gap-1 px-3 py-1 bg-amber-500 text-white text-sm rounded-full cursor-help"
-                  title="Update verfügbar! Bitte manuell aktualisieren: docker-compose pull && docker-compose up -d"
-                >
-                  <IconDownload size={14} />
-                  <span>Update verfügbar</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </footer>
       </div>
     </Router>
   );

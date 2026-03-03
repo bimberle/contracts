@@ -2,10 +2,9 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { Customer, CalculatedMetrics, DashboardSummary } from '../types';
-import { formatCurrency, formatCurrencyRaw } from '../utils/formatting';
+import { formatCurrency } from '../utils/formatting';
 import CustomerModal from '../components/CustomerModal';
 import PullToRefresh from '../components/PullToRefresh';
-import * as XLSX from 'xlsx';
 
 // SessionStorage Key für Suchergebnisse
 const SEARCH_STATE_KEY = 'dashboard_search_state';
@@ -33,7 +32,7 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<'kundennummer' | 'name' | 'ort' | 'revenue' | 'commission' | 'netIncome' | 'exit'>('name');
+  const [sortBy, setSortBy] = useState<'kundennummer' | 'name' | 'ort' | 'seats' | 'revenue' | 'commission' | 'netIncome' | 'exit'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [hasSearched, setHasSearched] = useState(false);
   const [showingAll, setShowingAll] = useState(false);
@@ -129,32 +128,6 @@ function Dashboard() {
     };
   }, [searchTerm]);
 
-  const exportToExcel = () => {
-    const data = sortedResults.map(({ customer, metrics }) => ({
-      'Kundennummer': customer.kundennummer,
-      'Name': `${customer.name} ${customer.name2 || ''}`.trim(),
-      'PLZ': customer.plz || '',
-      'Ort': customer.ort || '',
-      'Land': customer.land || '',
-      'Mtl. Umsatz': formatCurrencyRaw(metrics.totalMonthlyRevenue),
-      'Monatliche Provision': formatCurrencyRaw(metrics.totalMonthlyCommission),
-      'Netto-Gehalt': formatCurrencyRaw(metrics.totalMonthlyNetIncome),
-      'Exit-Auszahlung': formatCurrencyRaw(metrics.exitPayoutIfTodayInMonths),
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Kunden');
-    
-    ws['!cols'] = [
-      { wch: 12 }, { wch: 30 }, { wch: 8 }, { wch: 20 }, { wch: 10 },
-      { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 },
-    ];
-    
-    const today = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `Kunden_Export_${today}.xlsx`);
-  };
-
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -166,7 +139,7 @@ function Dashboard() {
 
   const SortHeader = ({ column, children, align = 'left' }: { column: typeof sortBy; children: React.ReactNode; align?: 'left' | 'right' }) => (
     <th
-      className={`px-6 py-3 text-${align} text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none`}
+      className={`px-3 py-3 text-${align} text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none`}
       onClick={() => handleSort(column)}
     >
       <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
@@ -230,6 +203,9 @@ function Dashboard() {
       case 'ort':
         comparison = `${a.customer.plz} ${a.customer.ort}`.localeCompare(`${b.customer.plz} ${b.customer.ort}`);
         break;
+      case 'seats':
+        comparison = (a.metrics.totalSeats || 0) - (b.metrics.totalSeats || 0);
+        break;
       case 'revenue':
         comparison = (a.metrics.totalMonthlyRevenue || 0) - (b.metrics.totalMonthlyRevenue || 0);
         break;
@@ -267,47 +243,38 @@ function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="flex flex-col h-[calc(100vh-120px)]">
-      {/* Header mit Button rechts */}
-      <div className="flex justify-between items-center mb-4 flex-shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900">Kunden</h1>
-        <div className="flex gap-2">
-          {searchResults.length > 0 && (
-            <button
-              onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center gap-2"
-              title="Nach Excel exportieren"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Excel Export
-            </button>
-          )}
-          <button
-            onClick={() => setIsCustomerModalOpen(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-          >
-            + Neuer Kunde
-          </button>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-[calc(100vh-100px)]">
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Kundensuche (mind. 3 Zeichen)..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                if (e.target.value.length > 0) setShowingAll(false);
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              autoFocus
-            />
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Kundensuche (mind. 3 Zeichen)..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (e.target.value.length > 0) setShowingAll(false);
+                }}
+                className="w-full px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                autoFocus
+              />
+              {searchTerm.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSearchResults([]);
+                    setHasSearched(false);
+                    setShowingAll(false);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  title="Suche löschen"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button
               onClick={handleShowAll}
               disabled={loading || showingAll}
@@ -320,19 +287,12 @@ function Dashboard() {
             >
               Alle
             </button>
-            {(searchTerm.length > 0 || showingAll) && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setSearchResults([]);
-                  setHasSearched(false);
-                  setShowingAll(false);
-                }}
-                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
-              >
-                ✕
-              </button>
-            )}
+            <button
+              onClick={() => setIsCustomerModalOpen(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm whitespace-nowrap"
+            >
+              + Neuer Kunde
+            </button>
           </div>
           {searchTerm.length > 0 && searchTerm.length < 3 && (
             <p className="text-xs text-gray-500 mt-2">Noch {3 - searchTerm.length} Zeichen...</p>
@@ -372,6 +332,7 @@ function Dashboard() {
                   <SortHeader column="kundennummer">KundenNr</SortHeader>
                   <SortHeader column="name">Name</SortHeader>
                   <SortHeader column="ort">PLZ / Ort</SortHeader>
+                  <SortHeader column="seats" align="right">AP</SortHeader>
                   <SortHeader column="revenue" align="right">Mtl. Umsatz</SortHeader>
                   <SortHeader column="commission" align="right">Monatliche Provision</SortHeader>
                   <SortHeader column="netIncome" align="right">Netto-Gehalt</SortHeader>
@@ -381,17 +342,17 @@ function Dashboard() {
               <tbody className="divide-y divide-gray-200">
                 {sortedResults.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                       Keine Kunden gefunden für "{searchTerm}"
                     </td>
                   </tr>
                 ) : (
                   sortedResults.map(({ customer, metrics }) => (
                     <tr key={customer.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {customer.kundennummer}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                         <Link
                           to={`/customers/${customer.id}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
@@ -399,19 +360,22 @@ function Dashboard() {
                           {customer.name} {customer.name2}
                         </Link>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-600">
                         {customer.plz} {customer.ort}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-blue-600 font-semibold">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-gray-700 font-medium">
+                        {metrics.totalSeats || 0}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-blue-600 font-semibold">
                         {formatCurrency(metrics.totalMonthlyRevenue)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-purple-600 font-semibold">
                         {formatCurrency(metrics.totalMonthlyCommission)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {formatCurrency(metrics.totalMonthlyNetIncome)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-right text-green-600 font-semibold">
                         {formatCurrency(metrics.exitPayoutIfTodayInMonths)}
                       </td>
                     </tr>

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sql_func
 from typing import List
 from app.database import get_db
 from app.models.contract import Contract
@@ -12,6 +13,18 @@ from app.services.metrics import calculate_contract_metrics
 from datetime import datetime
 
 router = APIRouter(tags=["contracts"])
+
+
+@router.get("/last-modified")
+def get_last_modified(db: Session = Depends(get_db)):
+    """
+    Gibt den Timestamp der letzten Vertragsänderung zurück.
+    Wird verwendet um clientseitig gecachte Daten zu validieren.
+    """
+    result = db.query(sql_func.max(Contract.updated_at)).scalar()
+    if result:
+        return {"lastModified": result.isoformat()}
+    return {"lastModified": None}
 
 
 @router.get("/search", response_model=ContractSearchResponse)

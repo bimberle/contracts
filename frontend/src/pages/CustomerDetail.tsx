@@ -283,6 +283,12 @@ function CustomerDetail() {
           {cameFromContracts ? (
             <Link
               to="/contracts"
+              onClick={() => {
+                // Store contract ID for highlighting after navigation
+                if (highlightContractId) {
+                  sessionStorage.setItem('allContracts_highlightContract', highlightContractId);
+                }
+              }}
               className="text-blue-600 hover:text-blue-800 text-sm"
             >
               ← Zurück zu Alle Verträge
