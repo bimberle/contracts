@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Customer, Contract, CalculatedMetrics, PriceIncrease, ContractMetrics } from '../types';
 import api from '../services/api';
 import { formatCurrency, formatDate } from '../utils/formatting';
@@ -9,6 +9,9 @@ import PullToRefresh from '../components/PullToRefresh';
 
 function CustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
+  const [searchParams] = useSearchParams();
+  const cameFromContracts = searchParams.get('from') === 'contracts';
+  const highlightContractId = searchParams.get('contractId');
   const navigate = useNavigate();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -276,12 +279,22 @@ function CustomerDetail() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <button
-          onClick={() => navigate('/')}
-          className="text-blue-600 hover:text-blue-800 mb-2 text-sm"
-        >
-          ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück'}
-        </button>
+        <div className="flex items-center gap-4 mb-2">
+          <button
+            onClick={() => navigate('/')}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            ← {hasSearchState() ? 'Zurück zur Suche' : 'Zurück'}
+          </button>
+          {cameFromContracts && (
+            <Link
+              to="/contracts"
+              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+            >
+              ← Zurück zu Alle Verträge
+            </Link>
+          )}
+        </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

@@ -1,12 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
 import { ContractWithDetails } from '../types';
 import ContractModal from '../components/ContractModal';
 import PullToRefresh from '../components/PullToRefresh';
 
+// Key for scroll position storage
+const SCROLL_KEY = 'allContracts_scrollPosition';
+
 export default function AllContracts() {
+  const location = useLocation();
   const [contracts, setContracts] = useState<ContractWithDetails[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -27,6 +31,7 @@ export default function AllContracts() {
     purchase: true,
     cloud: true,
   });
+  const [showNotes, setShowNotes] = useState(false);
   
   // Debounce search term
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,6 +84,22 @@ export default function AllContracts() {
   useEffect(() => {
     loadContracts();
   }, [loadContracts]);
+
+  // Restore scroll position when coming back from customer detail
+  useEffect(() => {
+    const savedPosition = sessionStorage.getItem(SCROLL_KEY);
+    if (savedPosition && !isLoading && contracts.length > 0) {
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedPosition, 10));
+        sessionStorage.removeItem(SCROLL_KEY);
+      }, 100);
+    }
+  }, [isLoading, contracts.length]);
+
+  // Save scroll position before navigating away
+  const handleCustomerClick = () => {
+    sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+  };
 
   // Pull-to-Refresh Handler
   const handleRefresh = useCallback(async () => {
@@ -341,6 +362,19 @@ export default function AllContracts() {
             </label>
           </div>
         </div>
+        
+        {/* Notes Toggle */}
+        <div className="border-t border-gray-200 pt-3">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={showNotes}
+              onChange={(e) => setShowNotes(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm text-gray-700 font-medium">📝 Notizen anzeigen</span>
+          </label>
+        </div>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">{error}</div>}
@@ -376,11 +410,13 @@ export default function AllContracts() {
                     : null;
                   
                   return (
+                  <>
                   <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''}`}>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
                         <Link
-                          to={`/customers/${contract.customerId}`}
+                          to={`/customers/${contract.customerId}?from=contracts&contractId=${contract.id}`}
+                          onClick={handleCustomerClick}
                           className={`font-medium ${inactive ? 'text-gray-400' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
                         >
                           {contract.customerName}
@@ -425,6 +461,16 @@ export default function AllContracts() {
                       {formatCurrency(contract.exitPayout)}
                     </td>
                   </tr>
+                  {/* Notes row - only shown when showNotes is enabled and contract has notes */}
+                  {showNotes && contract.notes && (
+                    <tr key={`${contract.id}-notes`} className={`${inactive ? 'bg-gray-50' : 'bg-yellow-50'} border-b border-gray-200`}>
+                      <td colSpan={10} className="px-6 py-2 text-sm">
+                        <span className="text-gray-500 mr-2">📝</span>
+                        <span className={inactive ? 'text-gray-400 italic' : 'text-gray-700'}>{contract.notes}</span>
+                      </td>
+                    </tr>
+                  )}
+                  </>
                   );
                 })}
               </tbody>

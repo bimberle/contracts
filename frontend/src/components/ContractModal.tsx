@@ -599,8 +599,23 @@ const ContractModal: React.FC<ContractModalProps> = ({
               </div>
             )}
 
-            {/* Start Date - FIRST FIELD */}
+            {/* First Row: Seats and Start Date */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Anzahl Arbeitsplätze
+                </label>
+                <input
+                  type="number"
+                  name="numberOfSeats"
+                  min="1"
+                  value={formData.numberOfSeats}
+                  onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 1 })}
+                  autoFocus
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Beeinflusst die Staffel der Exit-Zahlungen</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Startdatum *
@@ -610,7 +625,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
-                  autoFocus
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
@@ -701,21 +715,6 @@ const ContractModal: React.FC<ContractModalProps> = ({
                 />
                 <span className="text-sm font-medium text-gray-700">Existenzgründer-Rabatt</span>
               </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Anzahl Arbeitsplätze
-              </label>
-              <input
-                type="number"
-                name="numberOfSeats"
-                min="1"
-                value={formData.numberOfSeats}
-                onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 1 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">Beeinflusst die Staffel der Exit-Zahlungen</p>
             </div>
 
             <div>
