@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Contract, CommissionRate } from '../types';
 import { useContractStore } from '../stores/contractStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -34,6 +34,26 @@ const ContractModal: React.FC<ContractModalProps> = ({
     return '';
   };
 
+  // Berechne Standard-Startdatum: vor 15. des Monats = 1. aktueller Monat, sonst 1. nächster Monat
+  const getDefaultStartDate = (): string => {
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    let targetDate: Date;
+    
+    if (dayOfMonth <= 15) {
+      // Vor oder am 15.: 1. des aktuellen Monats
+      targetDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else {
+      // Nach dem 15.: 1. des nächsten Monats
+      targetDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    }
+    
+    return targetDate.toISOString().split('T')[0];
+  };
+
+  // Ref für erstes Betragsfeld (Auto-Fokus)
+  const firstAmountInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState<{
     softwareRentalAmount: number | string;
     softwareCareAmount: number | string;
@@ -55,7 +75,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
     purchaseAmount: 0,
     cloudAmount: 0,
     currency: 'EUR',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: '',  // wird in useEffect gesetzt
     endDate: '',
     isFounderDiscount: false,
     numberOfSeats: 1,
@@ -125,7 +145,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         purchaseAmount: '0',
         cloudAmount: '0',
         currency: 'EUR',
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: getDefaultStartDate(),
         endDate: '',
         isFounderDiscount: false,
         numberOfSeats: 1,
@@ -133,6 +153,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
         excludedPriceIncreaseIds: [],
         includedEarlyPriceIncreaseIds: [],
       });
+      // Fokus auf erstes Betragsfeld setzen (nach kurzem Delay für Modal-Animation)
+      setTimeout(() => {
+        firstAmountInputRef.current?.focus();
+        firstAmountInputRef.current?.select();
+      }, 100);
     }
     setShowAllPriceIncreases(false);
     setError(null);
@@ -593,6 +618,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
                     Software Miete
                   </label>
                   <input
+                    ref={firstAmountInputRef}
                     type="text"
                     inputMode="decimal"
                     name="softwareRentalAmount"
