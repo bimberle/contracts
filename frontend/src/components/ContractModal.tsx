@@ -419,6 +419,11 @@ const ContractModal: React.FC<ContractModalProps> = ({
         payload.customerId = customerId;
         await createContract(payload);
       }
+      
+      // Invalidate AllContracts cache so it reloads fresh data
+      sessionStorage.removeItem('allContracts_cache');
+      sessionStorage.removeItem('allContracts_filters');
+      
       onSuccess?.();
       onClose();
     } catch (err) {

@@ -454,6 +454,9 @@ function CustomerDetail() {
                             if (confirm('Vertrag wirklich löschen?')) {
                               try {
                                 await api.deleteContract(contract.id);
+                                // Invalidate AllContracts cache
+                                sessionStorage.removeItem('allContracts_cache');
+                                sessionStorage.removeItem('allContracts_filters');
                                 loadData();
                               } catch (err) {
                                 alert('Fehler beim Löschen des Vertrags');

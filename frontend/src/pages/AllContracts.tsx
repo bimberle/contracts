@@ -6,8 +6,19 @@ import { ContractWithDetails } from '../types';
 import ContractModal from '../components/ContractModal';
 import PullToRefresh from '../components/PullToRefresh';
 
-// Key for scroll position storage
+// Keys for storage
 const SCROLL_KEY = 'allContracts_scrollPosition';
+const CACHE_KEY = 'allContracts_cache';
+const CACHE_FILTERS_KEY = 'allContracts_filters';
+
+interface CachedData {
+  contracts: ContractWithDetails[];
+  totalCount: number;
+  totalRevenue: number;
+  totalCommission: number;
+  totalExitPayout: number;
+  timestamp: number;
+}
 
 export default function AllContracts() {
   const location = useLocation();
@@ -51,7 +62,42 @@ export default function AllContracts() {
     };
   }, [searchTerm]);
 
-  const loadContracts = useCallback(async () => {
+  // Build current filter key for cache comparison
+  const getCurrentFilterKey = useCallback(() => {
+    return JSON.stringify({
+      search: debouncedSearchTerm,
+      sortBy,
+      sortDirection,
+      filters: amountTypeFilters,
+    });
+  }, [debouncedSearchTerm, sortBy, sortDirection, amountTypeFilters]);
+
+  const loadContracts = useCallback(async (forceReload = false) => {
+    // Try to restore from cache if coming back and filters haven't changed
+    if (!forceReload) {
+      const cachedDataStr = sessionStorage.getItem(CACHE_KEY);
+      const cachedFiltersStr = sessionStorage.getItem(CACHE_FILTERS_KEY);
+      const currentFilterKey = getCurrentFilterKey();
+      
+      if (cachedDataStr && cachedFiltersStr === currentFilterKey) {
+        try {
+          const cachedData: CachedData = JSON.parse(cachedDataStr);
+          // Cache valid for 5 minutes
+          if (Date.now() - cachedData.timestamp < 5 * 60 * 1000) {
+            setContracts(cachedData.contracts);
+            setTotalCount(cachedData.totalCount);
+            setTotalRevenue(cachedData.totalRevenue);
+            setTotalCommission(cachedData.totalCommission);
+            setTotalExitPayout(cachedData.totalExitPayout);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to parse cache:', e);
+        }
+      }
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -72,13 +118,25 @@ export default function AllContracts() {
       setTotalRevenue(result.totalRevenue);
       setTotalCommission(result.totalCommission);
       setTotalExitPayout(result.totalExitPayout);
+      
+      // Save to cache
+      const cacheData: CachedData = {
+        contracts: result.contracts,
+        totalCount: result.total,
+        totalRevenue: result.totalRevenue,
+        totalCommission: result.totalCommission,
+        totalExitPayout: result.totalExitPayout,
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      sessionStorage.setItem(CACHE_FILTERS_KEY, getCurrentFilterKey());
     } catch (err) {
       console.error('Failed to load contracts:', err);
       setError('Fehler beim Laden der Verträge');
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearchTerm, sortBy, sortDirection, amountTypeFilters]);
+  }, [debouncedSearchTerm, sortBy, sortDirection, amountTypeFilters, getCurrentFilterKey]);
 
   // Initial load and reload on filter changes
   useEffect(() => {
@@ -103,7 +161,7 @@ export default function AllContracts() {
 
   // Pull-to-Refresh Handler
   const handleRefresh = useCallback(async () => {
-    await loadContracts();
+    await loadContracts(true); // Force reload
   }, [loadContracts]);
 
   // Vertrag löschen
@@ -113,7 +171,7 @@ export default function AllContracts() {
     }
     try {
       await api.deleteContract(contract.id);
-      loadContracts();
+      loadContracts(true); // Force reload
     } catch (err) {
       console.error('Fehler beim Löschen des Vertrags:', err);
       alert('Fehler beim Löschen des Vertrags');
@@ -482,7 +540,7 @@ export default function AllContracts() {
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-between items-center">
         <p className="text-sm text-gray-600">{contracts.length} von {totalCount} Verträgen</p>
         <button
-          onClick={loadContracts}
+          onClick={() => loadContracts(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
         >
           Aktualisieren
@@ -501,7 +559,7 @@ export default function AllContracts() {
         customerId={selectedContract?.customerId || ''}
         onSuccess={() => {
           handleCloseModal();
-          loadContracts();
+          loadContracts(true);
         }}
       />
     </div>
