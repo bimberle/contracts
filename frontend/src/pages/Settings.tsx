@@ -5,7 +5,7 @@ import { formatDate, formatCurrencyRaw } from '../utils/formatting';
 import PriceIncreaseModal from '../components/PriceIncreaseModal';
 import CommissionRateModal from '../components/CommissionRateModal';
 import BackupSettings from '../components/BackupSettings';
-import CalculationTests from '../components/CalculationTests';
+// Tests removed
 import api from '../services/api';
 import * as XLSX from 'xlsx';
 
@@ -186,7 +186,7 @@ function Settings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isPriceIncreaseModalOpen, setIsPriceIncreaseModalOpen] = useState(false);
   const [selectedPriceIncreaseForEdit, setSelectedPriceIncreaseForEdit] = useState<PriceIncrease | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'export' | 'backup' | 'tests'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'price-increases' | 'commission-rates' | 'exit-payouts' | 'export' | 'backup'>('general');
   const [commissionRates, setCommissionRates] = useState<CommissionRate[]>([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [isCommissionRateModalOpen, setIsCommissionRateModalOpen] = useState(false);
@@ -206,7 +206,7 @@ function Settings() {
   const loadCommissionRates = async () => {
     try {
       setCommissionLoading(true);
-      const response = await fetch('/api/commission-rates/');
+      const response = await fetch('/api/commission-rates');
       const data = await response.json();
       setCommissionRates(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -299,9 +299,9 @@ function Settings() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col h-full overflow-auto gap-8">
       {/* Header */}
-      <div>
+      <div className="flex-shrink-0">
         <h1 className="text-3xl font-bold text-gray-900">Einstellungen</h1>
         <p className="text-gray-600 mt-2">Verwalten Sie die Anwendungseinstellungen</p>
       </div>
@@ -386,16 +386,7 @@ function Settings() {
           >
             Backup
           </button>
-          <button
-            onClick={() => setActiveTab('tests')}
-            className={`px-6 py-4 font-medium text-sm transition ${
-              activeTab === 'tests'
-                ? 'text-blue-600 border-b-2 border-blue-600 -mb-[2px]'
-                : 'text-gray-700 hover:text-gray-900'
-            }`}
-          >
-            Tests
-          </button>
+
         </div>
       </div>
 
@@ -783,10 +774,7 @@ function Settings() {
           <BackupSettings onBackupRestored={() => window.location.reload()} />
         )}
 
-        {/* Tab 8: Tests */}
-        {activeTab === 'tests' && (
-          <CalculationTests />
-        )}
+
       </div>
 
       <PriceIncreaseModal

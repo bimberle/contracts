@@ -243,7 +243,7 @@ function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="flex flex-col h-[calc(100vh-100px)]">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
         <div className="p-4 border-b border-gray-200 flex-shrink-0">

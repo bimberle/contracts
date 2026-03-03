@@ -35,7 +35,7 @@ function Statistics() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="space-y-4">
+    <div className="flex flex-col h-full overflow-auto gap-4">
       {/* Header */}
       <h1 className="text-2xl font-bold text-gray-900">Statistik</h1>
 

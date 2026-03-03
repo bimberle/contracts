@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { IconSettings } from '@tabler/icons-react';
+import { IconSettings, IconLogout } from '@tabler/icons-react';
 import { useCustomerStore } from './stores/customerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import api from './services/api';
@@ -98,21 +98,21 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
         {/* Navigation */}
-        <nav className="bg-white shadow-sm border-b border-gray-200">
+        <nav className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-8">
-                <Link to="/" className="text-xl font-bold text-blue-600">
-                  📋 Kunden
+                <Link to="/" className="text-gray-700 hover:text-blue-600 transition">
+                  Kunden
                 </Link>
                 <div className="hidden md:flex space-x-6">
                   <Link
                     to="/contracts"
                     className="text-gray-700 hover:text-blue-600 transition"
                   >
-                    Alle Verträge
+                    Verträge
                   </Link>
                   <Link
                     to="/statistik"
@@ -133,10 +133,10 @@ function App() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-700 rounded-lg transition text-sm font-medium"
+                  className="p-1.5 text-gray-700 hover:text-red-600 transition"
                   title="Abmelden"
                 >
-                  Abmelden
+                  <IconLogout size={24} stroke={2} />
                 </button>
               </div>
             </div>
@@ -144,7 +144,7 @@ function App() {
         </nav>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-4 px-1 sm:px-2 lg:px-3">
+        <main className="flex-1 overflow-hidden max-w-7xl w-full mx-auto py-4 px-1 sm:px-2 lg:px-3">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />

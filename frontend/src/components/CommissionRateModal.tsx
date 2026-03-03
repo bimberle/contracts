@@ -129,7 +129,7 @@ export default function CommissionRateModal({
 
       const url = commissionRate
         ? `/api/commission-rates/${commissionRate.id}`
-        : '/api/commission-rates/';
+        : '/api/commission-rates';
 
       const method = commissionRate ? 'PUT' : 'POST';
 

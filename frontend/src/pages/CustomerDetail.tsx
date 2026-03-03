@@ -276,7 +276,7 @@ function CustomerDetail() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="space-y-4">
+    <div className="flex flex-col h-full overflow-auto gap-4">
       {/* Header */}
       <div>
         <div className="flex items-center gap-4 mb-2">

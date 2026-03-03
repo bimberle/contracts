@@ -388,7 +388,7 @@ export default function AllContracts() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-    <div className="space-y-4">
+    <div className="flex flex-col h-full overflow-hidden gap-4">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
         <h1 className="text-2xl font-bold text-gray-900">Verträge</h1>
         <button

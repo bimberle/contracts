@@ -8,6 +8,28 @@ interface PullToRefreshProps {
   disabled?: boolean;
 }
 
+// Hilfsfunktion: Finde den nächsten scrollbaren Parent
+const getScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+  if (!element) return null;
+  
+  let parent = element.parentElement;
+  while (parent) {
+    const style = getComputedStyle(parent);
+    const overflowY = style.overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+};
+
+// Hilfsfunktion: Prüfe ob wir am Anfang sind (scroll = 0)
+const isAtTop = (element: HTMLElement | null): boolean => {
+  if (!element) return window.scrollY <= 0;
+  return element.scrollTop <= 0;
+};
+
 const PullToRefresh: React.FC<PullToRefreshProps> = ({
   onRefresh,
   children,
@@ -18,14 +40,22 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollableParentRef = useRef<HTMLElement | null>(null);
   const startY = useRef<number>(0);
   const currentY = useRef<number>(0);
+
+  // Finde den scrollbaren Parent beim Mount
+  useEffect(() => {
+    if (containerRef.current) {
+      scrollableParentRef.current = getScrollableParent(containerRef.current);
+    }
+  }, []);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     if (disabled || isRefreshing) return;
     
-    // Nur wenn am Anfang der Seite
-    if (window.scrollY > 0) return;
+    // Nur wenn am Anfang der Scroll-Position
+    if (!isAtTop(scrollableParentRef.current)) return;
     
     startY.current = e.touches[0].clientY;
     setIsPulling(true);
@@ -33,7 +63,7 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isPulling || disabled || isRefreshing) return;
-    if (window.scrollY > 0) {
+    if (!isAtTop(scrollableParentRef.current)) {
       setPullDistance(0);
       return;
     }
