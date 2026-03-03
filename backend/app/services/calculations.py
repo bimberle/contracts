@@ -286,10 +286,16 @@ def get_current_monthly_commission(
         # All keys are now normalized to snake_case
         commission_rate = commission_rates.get(amount_type, 0)
         
-        # Nach Vertragsende - prüfe postContractMonths
+        # Nach Vertragsende - prüfe additional_months aus exit_payout_by_type
         if contract.end_date and date > contract.end_date:
             months_after_end = months_between(contract.end_date, date)
-            post_contract_limit = settings.post_contract_months.get(amount_type, 0)
+            # Get additional_months from exit_payout_by_type
+            exit_config = settings.exit_payout_by_type if settings.exit_payout_by_type else {}
+            type_config = exit_config.get(amount_type, {})
+            if isinstance(type_config, dict):
+                post_contract_limit = type_config.get('additional_months', 0)
+            else:
+                post_contract_limit = getattr(type_config, 'additional_months', 0)
             if months_after_end > post_contract_limit:
                 # Vertragsende + post-contract periode vorbei
                 continue
@@ -513,10 +519,15 @@ def _get_exit_monthly_commission(
         # Get the commission rate for this amount type
         commission_rate = commission_rates.get(amount_type, 0)
         
-        # Nach Vertragsende - prüfe postContractMonths
+        # Nach Vertragsende - prüfe additional_months aus exit_payout_by_type
         if contract.end_date and date > contract.end_date:
             months_after_end = months_between(contract.end_date, date)
-            post_contract_limit = settings.post_contract_months.get(amount_type, 0)
+            # Get additional_months from exit_payout_by_type (same config used above)
+            type_config = exit_config.get(amount_type, {})
+            if isinstance(type_config, dict):
+                post_contract_limit = type_config.get('additional_months', 0)
+            else:
+                post_contract_limit = getattr(type_config, 'additional_months', 0)
             if months_after_end > post_contract_limit:
                 continue
         
