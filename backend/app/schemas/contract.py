@@ -21,7 +21,7 @@ class ContractBase(BaseModel):
     start_date: datetime  # Mietbeginn
     end_date: Optional[datetime] = None
     is_founder_discount: bool = False
-    number_of_seats: int = 1  # Anzahl Arbeitsplätze für Exit-Zahlungen Staffel
+    number_of_seats: int = 0  # Anzahl Arbeitsplätze für Exit-Zahlungen Staffel
     excluded_price_increase_ids: List[str] = []  # Price increase IDs that don't apply to this contract
     included_early_price_increase_ids: List[str] = []  # Early price increase IDs manually enabled for this contract
     notes: str = ""

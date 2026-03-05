@@ -33,7 +33,7 @@ class Contract(Base):
     is_founder_discount = Column(Boolean, default=False)
     
     # Anzahl Arbeitsplätze (für Exit-Zahlungen Staffel)
-    number_of_seats = Column(Integer, default=1)
+    number_of_seats = Column(Integer, default=0)
     
     # Preiserhöhungen die für diesen Vertrag nicht gelten (list of price_increase IDs)
     excluded_price_increase_ids = Column(JSON, default=[])
