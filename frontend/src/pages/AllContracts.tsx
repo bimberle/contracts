@@ -4,7 +4,6 @@ import * as XLSX from 'xlsx';
 import api from '../services/api';
 import { ContractWithDetails } from '../types';
 import ContractModal from '../components/ContractModal';
-import PullToRefresh from '../components/PullToRefresh';
 
 // Keys for storage
 const SCROLL_KEY = 'allContracts_scrollPosition';
@@ -25,6 +24,7 @@ interface CachedData {
 
 export default function AllContracts() {
   const location = useLocation();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [contracts, setContracts] = useState<ContractWithDetails[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -203,9 +203,9 @@ export default function AllContracts() {
   // Restore scroll position when coming back from customer detail
   useEffect(() => {
     const savedPosition = sessionStorage.getItem(SCROLL_KEY);
-    if (savedPosition && !isLoading && contracts.length > 0) {
+    if (savedPosition && !isLoading && contracts.length > 0 && scrollContainerRef.current) {
       setTimeout(() => {
-        window.scrollTo(0, parseInt(savedPosition, 10));
+        scrollContainerRef.current?.scrollTo(0, parseInt(savedPosition, 10));
         sessionStorage.removeItem(SCROLL_KEY);
       }, 100);
     }
@@ -213,7 +213,9 @@ export default function AllContracts() {
 
   // Save scroll position before navigating away
   const handleCustomerClick = () => {
-    sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    if (scrollContainerRef.current) {
+      sessionStorage.setItem(SCROLL_KEY, String(scrollContainerRef.current.scrollTop));
+    }
   };
 
   // Pull-to-Refresh Handler
@@ -315,6 +317,7 @@ export default function AllContracts() {
     // Prepare data for export - alle Daten kommen vom Backend
     const exportData: Array<Record<string, unknown>> = contracts.map((contract) => {
       return {
+        'Vertrags-ID': contract.id,
         'Kundenname': contract.customerName,
         'Name 2': contract.customerName2 || '',
         'PLZ': contract.plz,
@@ -328,11 +331,13 @@ export default function AllContracts() {
         'Provision': contract.currentMonthlyCommission,
         'Exit-Zahlung': contract.exitPayout,
         'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
+        'Notizen': contract.notes || '',
       };
     });
 
     // Add summary row
     exportData.push({
+      'Vertrags-ID': '',
       'Kundenname': 'GESAMT',
       'Name 2': '',
       'PLZ': '',
@@ -346,6 +351,7 @@ export default function AllContracts() {
       'Provision': totalCommission,
       'Exit-Zahlung': totalExitPayout,
       'Startdatum': '',
+      'Notizen': '',
     });
 
     // Create workbook and worksheet
@@ -355,6 +361,7 @@ export default function AllContracts() {
 
     // Set column widths
     worksheet['!cols'] = [
+      { wch: 36 },  // Vertrags-ID (UUID)
       { wch: 20 },
       { wch: 20 },
       { wch: 8 },
@@ -367,6 +374,8 @@ export default function AllContracts() {
       { wch: 15 },
       { wch: 12 },
       { wch: 12 },
+      { wch: 12 },
+      { wch: 40 },  // Notizen
     ];
 
     // Generate filename with current date
@@ -387,19 +396,8 @@ export default function AllContracts() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
     <div className="flex flex-col h-full overflow-hidden gap-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">Verträge</h1>
-        <button
-          onClick={handleExportToExcel}
-          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 whitespace-nowrap"
-          title="Als Excel exportieren"
-        >
-          📊 Excel
-        </button>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-gray-600 text-xs font-medium mb-1">Verträge</p>
           <p className="text-xl font-bold text-gray-900">{contracts.length}<span className="text-sm text-gray-500 font-normal">/{totalCount}</span></p>
@@ -419,13 +417,25 @@ export default function AllContracts() {
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
-        <input
-          type="text"
-          placeholder="Kunde, Ort..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Kunde, Ort..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={() => setShowNotes(!showNotes)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+              showNotes 
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {showNotes ? 'Notizen ausblenden' : 'Notizen anzeigen'}
+          </button>
+        </div>
 
         {/* Amount Type Filters */}
         <div className="border-t border-gray-200 pt-3">
@@ -477,19 +487,6 @@ export default function AllContracts() {
             </label>
           </div>
         </div>
-        
-        {/* Notes Toggle */}
-        <div className="border-t border-gray-200 pt-3">
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={showNotes}
-              onChange={(e) => setShowNotes(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm text-gray-700 font-medium">📝 Notizen anzeigen</span>
-          </label>
-        </div>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg">{error}</div>}
@@ -499,6 +496,7 @@ export default function AllContracts() {
           <p className="text-gray-500">Keine Verträge gefunden</p>
         </div>
       ) : (
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -506,6 +504,7 @@ export default function AllContracts() {
                 <tr>
                   <SortHeader column="customer">Kundenname</SortHeader>
                   <SortHeader column="plz">PLZ / Ort</SortHeader>
+                  <SortHeader column="seats" align="right">AP</SortHeader>
                   <SortHeader column="softwareRental" align="right">Software Miete</SortHeader>
                   <SortHeader column="softwareCare" align="right">Software Pflege</SortHeader>
                   <SortHeader column="apps" align="right">Apps</SortHeader>
@@ -527,7 +526,7 @@ export default function AllContracts() {
                   
                   return (
                   <>
-                  <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''} ${isHighlighted ? 'bg-yellow-100 ring-2 ring-yellow-400 ring-inset' : ''}`}>
+                  <tr key={contract.id} className={`hover:bg-gray-50 transition ${inactive ? 'bg-gray-50' : ''} ${isHighlighted ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''}`}>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
                         <Link
@@ -551,6 +550,9 @@ export default function AllContracts() {
                     <td className={`px-3 py-4 text-sm ${inactive ? 'text-gray-400' : 'text-gray-600'}`} style={{ maxWidth: '100px' }}>
                       <div>{contract.plz}</div>
                       <div className={`text-xs truncate ${inactive ? 'text-gray-400' : 'text-gray-500'}`} title={contract.ort}>{contract.ort}</div>
+                    </td>
+                    <td className={`px-3 py-4 text-sm text-right ${rowTextClass}`}>
+                      {contract.numberOfSeats || 0}
                     </td>
                     <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.softwareRentalAmount || 0)}
@@ -580,7 +582,7 @@ export default function AllContracts() {
                   {/* Notes row - only shown when showNotes is enabled and contract has notes */}
                   {showNotes && contract.notes && (
                     <tr key={`${contract.id}-notes`} className={`${inactive ? 'bg-gray-50' : 'bg-yellow-50'} border-b border-gray-200`}>
-                      <td colSpan={10} className="px-6 py-2 text-sm">
+                      <td colSpan={11} className="px-6 py-2 text-sm">
                         <span className="text-gray-500 mr-2">📝</span>
                         <span className={inactive ? 'text-gray-400 italic' : 'text-gray-700'}>{contract.notes}</span>
                       </td>
@@ -592,6 +594,7 @@ export default function AllContracts() {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 
@@ -621,6 +624,5 @@ export default function AllContracts() {
         }}
       />
     </div>
-    </PullToRefresh>
   );
 }

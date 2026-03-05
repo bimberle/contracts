@@ -5,8 +5,6 @@ import { formatCurrency } from '../utils/formatting';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -19,7 +17,6 @@ function ContractStatistics() {
   const [forecast, setForecast] = useState<ForecastType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [chartMode, setChartMode] = useState<'revenue' | 'commission'>('revenue');
 
   // Get last 12 months of data
   useEffect(() => {
@@ -50,18 +47,7 @@ function ContractStatistics() {
       activeContracts: month.activeContracts,
       endingContracts: month.endingContracts,
       newContracts: month.newContracts,
-    }));
-  }, [forecast]);
-
-  // Chart data for revenue/commission
-  const revenueCommissionData = useMemo(() => {
-    if (!forecast) return [];
-    
-    return forecast.months.map(month => ({
-      name: month.monthName,
-      date: month.date,
-      Umsatz: month.totalRevenue,
-      Provision: month.totalCommission,
+      newCustomers: month.newCustomers || 0,
     }));
   }, [forecast]);
 
@@ -72,6 +58,7 @@ function ContractStatistics() {
         avgActiveContracts: 0,
         totalEndingContracts: 0,
         totalNewContracts: 0,
+        totalNewCustomers: 0,
         totalRevenue: 0,
         avgRevenue: 0,
         totalCommission: 0,
@@ -84,11 +71,13 @@ function ContractStatistics() {
     const totalActiveContracts = forecast.months.reduce((sum, m) => sum + m.activeContracts, 0);
     const totalEndingContracts = forecast.months.reduce((sum, m) => sum + m.endingContracts, 0);
     const totalNewContracts = forecast.months.reduce((sum, m) => sum + m.newContracts, 0);
+    const totalNewCustomers = forecast.months.reduce((sum, m) => sum + (m.newCustomers || 0), 0);
 
     return {
       avgActiveContracts: totalActiveContracts / forecast.months.length,
       totalEndingContracts,
       totalNewContracts,
+      totalNewCustomers,
       totalRevenue,
       avgRevenue: totalRevenue / forecast.months.length,
       totalCommission,
@@ -162,61 +151,9 @@ function ContractStatistics() {
             <Tooltip />
             <Legend />
             <Bar dataKey="newContracts" fill="#10b981" name="Neue Verträge" />
-            <Bar dataKey="endingContracts" fill="#ef4444" name="Endende Verträge" />
+            <Bar dataKey="newCustomers" fill="#3b82f6" name="Neue Kunden" />
           </BarChart>
         </ResponsiveContainer>
-      </div>
-
-      {/* Chart 2: Revenue/Commission with Dropdown */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Umsatz & Provisionen (12M)</h2>
-          <select
-            value={chartMode}
-            onChange={(e) => setChartMode(e.target.value as 'revenue' | 'commission')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          >
-            <option value="revenue">Umsatz</option>
-            <option value="commission">Provision</option>
-          </select>
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={revenueCommissionData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip formatter={(value) => formatCurrency(value as number)} />
-            <Legend />
-            {chartMode === 'revenue' && <Line type="monotone" dataKey="Umsatz" stroke="#3b82f6" name="Umsatz" />}
-            {chartMode === 'commission' && <Line type="monotone" dataKey="Provision" stroke="#10b981" name="Provision" />}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Detailed Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-600">Monat</th>
-              <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Neue Verträge</th>
-              <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Aktive Verträge</th>
-              <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Umsatz</th>
-              <th className="px-6 py-3 text-right text-sm font-medium text-gray-600">Provision</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {forecast.months.map((month, idx) => (
-              <tr key={idx} className="hover:bg-gray-50">
-                <td className="px-6 py-3 text-sm font-medium text-gray-900">{month.monthName}</td>
-                <td className="px-6 py-3 text-sm text-right text-purple-600 font-medium">{month.newContracts}</td>
-                <td className="px-6 py-3 text-sm text-right text-purple-600">{month.activeContracts}</td>
-                <td className="px-6 py-3 text-sm text-right text-purple-600 font-medium">{formatCurrency(month.totalRevenue)}</td>
-                <td className="px-6 py-3 text-sm text-right text-green-600 font-medium">{formatCurrency(month.totalCommission)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

@@ -62,6 +62,7 @@ function ExportTab() {
       });
       
       const exportData = result.contracts.map((contract) => ({
+        'Vertrags-ID': contract.id,
         'Kundenname': contract.customerName,
         'Name 2': contract.customerName2 || '',
         'PLZ': contract.plz,
@@ -76,10 +77,12 @@ function ExportTab() {
         'Provision': contract.currentMonthlyCommission,
         'Exit-Zahlung': contract.exitPayout,
         'Startdatum': contract.startDate ? contract.startDate.split('T')[0] : '',
+        'Notizen': contract.notes || '',
       }));
 
       // Add summary row
       exportData.push({
+        'Vertrags-ID': '',
         'Kundenname': 'GESAMT',
         'Name 2': '',
         'PLZ': '',
@@ -94,6 +97,7 @@ function ExportTab() {
         'Provision': result.totalCommission,
         'Exit-Zahlung': result.totalExitPayout,
         'Startdatum': '',
+        'Notizen': '',
       });
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -101,9 +105,11 @@ function ExportTab() {
       XLSX.utils.book_append_sheet(wb, ws, 'Verträge');
 
       ws['!cols'] = [
+        { wch: 36 }, // Vertrags-ID
         { wch: 20 }, { wch: 20 }, { wch: 8 }, { wch: 15 }, { wch: 12 },
         { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
         { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+        { wch: 40 }, // Notizen
       ];
 
       const today = new Date().toISOString().split('T')[0];

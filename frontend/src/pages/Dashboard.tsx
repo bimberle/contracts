@@ -4,7 +4,6 @@ import api from '../services/api';
 import { Customer, CalculatedMetrics, DashboardSummary } from '../types';
 import { formatCurrency } from '../utils/formatting';
 import CustomerModal from '../components/CustomerModal';
-import PullToRefresh from '../components/PullToRefresh';
 
 // SessionStorage Key für Suchergebnisse
 const SEARCH_STATE_KEY = 'dashboard_search_state';
@@ -242,7 +241,6 @@ function Dashboard() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
     <div className="flex flex-col h-full overflow-hidden">
       {/* Customers Table */}
       <div className="bg-white rounded-lg shadow flex-1 flex flex-col min-h-0">
@@ -393,7 +391,6 @@ function Dashboard() {
         onSuccess={handleCustomerSuccess}
       />
     </div>
-    </PullToRefresh>
   );
 }
 

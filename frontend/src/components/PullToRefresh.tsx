@@ -126,7 +126,7 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
   const scale = 0.5 + progress * 0.5;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative h-full flex flex-col">
       {/* Pull-to-Refresh Indikator */}
       {(pullDistance > 0 || isRefreshing) && (
         <div 
@@ -148,6 +148,7 @@ const PullToRefresh: React.FC<PullToRefreshProps> = ({
       
       {/* Content mit Transform beim Ziehen */}
       <div
+        className="flex-1 min-h-0 flex flex-col"
         style={{
           transform: pullDistance > 0 ? `translateY(${pullDistance * 0.3}px)` : undefined,
           transition: isPulling ? 'none' : 'transform 0.3s ease',

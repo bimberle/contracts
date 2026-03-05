@@ -345,6 +345,7 @@ export interface ForecastMonth {
   activeContracts: number;
   endingContracts: number;
   newContracts: number;
+  newCustomers: number;
   cumulative: number;
   cumulativeNetIncome: number;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { IconSettings, IconLogout } from '@tabler/icons-react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { IconSettings, IconLogout, IconUsers, IconFileText, IconChartBar } from '@tabler/icons-react';
 import { useCustomerStore } from './stores/customerStore';
 import { useSettingsStore } from './stores/settingsStore';
 import api from './services/api';
@@ -98,45 +98,61 @@ function App() {
 
   return (
     <Router>
+      <AppContent 
+        isAuthenticated={isAuthenticated}
+        handleLogout={handleLogout}
+      />
+    </Router>
+  );
+}
+
+function AppContent({ isAuthenticated, handleLogout }: { isAuthenticated: boolean; handleLogout: () => void }) {
+  const location = useLocation();
+  
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
+
+  const navLinkClass = (path: string) => 
+    `flex items-center gap-2 py-5 border-b-2 transition ${
+      isActive(path) 
+        ? 'text-blue-600 border-blue-600' 
+        : 'text-gray-700 hover:text-blue-600 border-transparent'
+    }`;
+
+  return (
       <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
         {/* Navigation */}
         <nav className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="max-w-7xl mx-auto px-2 sm:px-3 lg:px-4">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-8">
-                <Link to="/" className="text-gray-700 hover:text-blue-600 transition">
-                  Kunden
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-6">
+                <Link to="/" className={navLinkClass('/')}>
+                  <IconUsers size={20} stroke={1.5} />
+                  <span>Kunden</span>
                 </Link>
-                <div className="hidden md:flex space-x-6">
-                  <Link
-                    to="/contracts"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                  >
-                    Verträge
-                  </Link>
-                  <Link
-                    to="/statistik"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                  >
-                    Statistik
-                  </Link>
-                </div>
+                <Link to="/contracts" className={`hidden md:flex ${navLinkClass('/contracts')}`}>
+                  <IconFileText size={20} stroke={1.5} />
+                  <span>Verträge</span>
+                </Link>
+                <Link to="/statistik" className={`hidden md:flex ${navLinkClass('/statistik')}`}>
+                  <IconChartBar size={20} stroke={1.5} />
+                  <span>Statistik</span>
+                </Link>
               </div>
-              {/* Settings Icon & Logout - Right Side */}
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/settings"
-                  className="text-gray-700 hover:text-blue-600 transition"
-                  title="Einstellungen"
-                >
-                  <IconSettings size={24} stroke={2} />
+              {/* Settings & Logout - Right Side */}
+              <div className="flex items-center space-x-6">
+                <Link to="/settings" className={navLinkClass('/settings')}>
+                  <IconSettings size={20} stroke={1.5} />
+                  <span className="hidden md:inline">Einstellungen</span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 text-gray-700 hover:text-red-600 transition"
-                  title="Abmelden"
+                  className="flex items-center gap-2 py-5 text-red-600 hover:text-red-700 transition"
                 >
-                  <IconLogout size={24} stroke={2} />
+                  <IconLogout size={20} stroke={1.5} />
+                  <span className="hidden md:inline">Abmelden</span>
                 </button>
               </div>
             </div>
@@ -154,7 +170,6 @@ function App() {
           </Routes>
         </main>
       </div>
-    </Router>
   );
 }
 

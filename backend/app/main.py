@@ -11,7 +11,7 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Log version on startup
-BACKEND_VERSION = "1.2.12"
+BACKEND_VERSION = "1.2.14"
 logger.info("=" * 50)
 logger.info(f"=== Contracts Backend v{BACKEND_VERSION} starting ===")
 logger.info("=" * 50)
@@ -65,6 +65,16 @@ def initialize_database():
 # Initialize database on module load
 initialize_database()
 
+# Initialize backup scheduler
+from app.services.scheduler_service import initialize_scheduler_from_db, shutdown_scheduler
+
+def initialize_scheduler():
+    """Initialize the backup scheduler after database is ready"""
+    try:
+        initialize_scheduler_from_db()
+    except Exception as e:
+        logger.error(f"Error initializing scheduler: {e}")
+
 app = FastAPI(
     title="Contract Management API",
     description="API für die Verwaltung von Verträgen und Provisionsberechnungen",
@@ -88,6 +98,16 @@ def read_root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize scheduler on startup"""
+    initialize_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Shutdown scheduler gracefully"""
+    shutdown_scheduler()
 
 @app.get("/health")
 def health_check():

@@ -44,6 +44,7 @@ def generate_forecast(
         active_count = 0
         ending_count = 0
         new_count = 0
+        new_customers_count = 0
         
         for contract in contracts:
             # Hole das erste Vertragsdatum des Kunden für Karenzzeit
@@ -56,6 +57,11 @@ def generate_forecast(
                 current_month_start = month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
                 if start_month_start == current_month_start:
                     new_count += 1
+                    # Prüfe ob dies der Erstvertrag des Kunden ist (= neuer Kunde)
+                    if customer_first_contract_date and contract.start_date:
+                        first_month_start = customer_first_contract_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                        if first_month_start == current_month_start:
+                            new_customers_count += 1
             
             # Berechne Umsatz mit Preiserhöhungen
             monthly_price = get_current_monthly_price(contract, price_increases, month_date, customer_first_contract_date)
@@ -91,7 +97,8 @@ def generate_forecast(
             "total_net_income": total_net_income,
             "active_contracts": active_count,
             "ending_contracts": ending_count,
-            "new_contracts": new_count
+            "new_contracts": new_count,
+            "new_customers": new_customers_count
         })
     
     return forecast

@@ -17,22 +17,12 @@ from app.schemas.backup import (
     RestoreBackupRequest
 )
 from app.services import backup_service
+from app.services.scheduler_service import update_backup_schedule, get_next_backup_time
 from app.config import settings
+from app.database import SessionLocal
+from app.models.backup import BackupConfig as BackupConfigModel, BackupHistory
 
 router = APIRouter(tags=["backups"])
-
-# In-Memory Backup-Konfiguration (wird später in DB gespeichert)
-_backup_config = {
-    "id": "default",
-    "schedule_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],  # Mo-Fr
-    "schedule_time": "03:00",
-    "max_backups": 7,
-    "is_enabled": True,
-    "last_backup_at": None,
-    "last_backup_status": None,
-    "created_at": datetime.now(),
-    "updated_at": datetime.now()
-}
 
 
 def _get_db_name() -> str:
@@ -42,62 +32,101 @@ def _get_db_name() -> str:
     return url.rsplit("/", 1)[-1]
 
 
+def _get_or_create_config(db) -> BackupConfigModel:
+    """Get or create the backup config from database"""
+    config = db.query(BackupConfigModel).filter(BackupConfigModel.id == "default").first()
+    if not config:
+        config = BackupConfigModel(
+            id="default",
+            schedule_days=["monday", "tuesday", "wednesday", "thursday", "friday"],
+            schedule_time="03:00",
+            max_backups=7,
+            is_enabled=True
+        )
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    return config
+
+
 @router.get("/config", response_model=dict)
 def get_backup_config():
     """Gibt die aktuelle Backup-Konfiguration zurück"""
     backup_dir = backup_service.get_backup_directory()
     
-    return {
-        "status": "success",
-        "data": {
-            "id": _backup_config["id"],
-            "scheduleDays": _backup_config["schedule_days"],
-            "scheduleTime": _backup_config["schedule_time"],
-            "maxBackups": _backup_config["max_backups"],
-            "isEnabled": _backup_config["is_enabled"],
-            "lastBackupAt": _backup_config["last_backup_at"].isoformat() if _backup_config["last_backup_at"] else None,
-            "lastBackupStatus": _backup_config["last_backup_status"],
-            "backupDirectory": backup_dir,
-            "createdAt": _backup_config["created_at"].isoformat(),
-            "updatedAt": _backup_config["updated_at"].isoformat()
+    db = SessionLocal()
+    try:
+        config = _get_or_create_config(db)
+        next_backup = get_next_backup_time()
+        
+        return {
+            "status": "success",
+            "data": {
+                "id": config.id,
+                "scheduleDays": config.schedule_days or [],
+                "scheduleTime": config.schedule_time or "03:00",
+                "maxBackups": config.max_backups or 7,
+                "isEnabled": config.is_enabled if config.is_enabled is not None else True,
+                "lastBackupAt": config.last_backup_at.isoformat() if config.last_backup_at else None,
+                "lastBackupStatus": config.last_backup_status,
+                "nextBackupAt": next_backup.isoformat() if next_backup else None,
+                "backupDirectory": backup_dir,
+                "createdAt": config.created_at.isoformat() if config.created_at else None,
+                "updatedAt": config.updated_at.isoformat() if config.updated_at else None
+            }
         }
-    }
+    finally:
+        db.close()
 
 
 @router.put("/config", response_model=dict)
-def update_backup_config(request: BackupConfigUpdate):
+def update_backup_config_endpoint(request: BackupConfigUpdate):
     """Aktualisiert die Backup-Konfiguration"""
-    global _backup_config
-    
-    if request.schedule_days is not None:
-        _backup_config["schedule_days"] = request.schedule_days
-    if request.schedule_time is not None:
-        _backup_config["schedule_time"] = request.schedule_time
-    if request.max_backups is not None:
-        _backup_config["max_backups"] = request.max_backups
-    if request.is_enabled is not None:
-        _backup_config["is_enabled"] = request.is_enabled
-    
-    _backup_config["updated_at"] = datetime.now()
-    
-    return {
-        "status": "success",
-        "message": "Backup-Konfiguration aktualisiert"
-    }
+    db = SessionLocal()
+    try:
+        config = _get_or_create_config(db)
+        
+        if request.schedule_days is not None:
+            config.schedule_days = request.schedule_days
+        if request.schedule_time is not None:
+            config.schedule_time = request.schedule_time
+        if request.max_backups is not None:
+            config.max_backups = request.max_backups
+        if request.is_enabled is not None:
+            config.is_enabled = request.is_enabled
+        
+        config.updated_at = datetime.now()
+        db.commit()
+        
+        # Update the scheduler with new configuration
+        update_backup_schedule(
+            schedule_days=config.schedule_days or [],
+            schedule_time=config.schedule_time or "03:00",
+            is_enabled=config.is_enabled if config.is_enabled is not None else True
+        )
+        
+        next_backup = get_next_backup_time()
+        
+        return {
+            "status": "success",
+            "message": "Backup-Konfiguration aktualisiert",
+            "data": {
+                "nextBackupAt": next_backup.isoformat() if next_backup else None
+            }
+        }
+    finally:
+        db.close()
 
 
 @router.get("/history", response_model=dict)
 def get_backup_history():
     """Listet alle vorhandenen Backups auf"""
-    from app.database import SessionLocal
-    from app.models.backup import BackupHistory
-    
     backups = backup_service.list_backups()
     
     # Lade gespeicherte Metadaten aus der DB
     history_map = {}
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         history_entries = db.query(BackupHistory).all()
         for entry in history_entries:
             history_map[entry.filename] = {
@@ -105,10 +134,11 @@ def get_backup_history():
                 "contract_count": entry.contract_count,
                 "app_version": getattr(entry, 'app_version', None)
             }
-        db.close()
     except Exception as e:
         # Falls DB-Abfrage fehlschlägt, weiter ohne Metadaten
         pass
+    finally:
+        db.close()
     
     result = []
     total_size = 0
@@ -149,13 +179,10 @@ def get_backup_history():
 
 
 @router.post("/create", response_model=dict, status_code=status.HTTP_201_CREATED)
-def create_backup(request: CreateBackupRequest = None):
+def create_backup_endpoint(request: CreateBackupRequest = None):
     """Erstellt ein manuelles Backup"""
-    global _backup_config
-    from app.database import SessionLocal
     from app.models.customer import Customer
     from app.models.contract import Contract
-    from app.models.backup import BackupHistory
     
     db_name = _get_db_name()
     
@@ -166,29 +193,23 @@ def create_backup(request: CreateBackupRequest = None):
             detail=f"Datenbank '{db_name}' existiert nicht in PostgreSQL."
         )
     
-    # Zähle Kunden und Verträge vor dem Backup
-    customer_count = 0
-    contract_count = 0
+    db = SessionLocal()
     try:
-        db_session = SessionLocal()
-        customer_count = db_session.query(Customer).count()
-        contract_count = db_session.query(Contract).count()
-        db_session.close()
-    except Exception as e:
-        # Falls Zählung fehlschlägt, weiter mit 0
-        pass
-    
-    success, result, filepath = backup_service.create_backup(db_name)
-    
-    if success:
-        _backup_config["last_backup_at"] = datetime.now()
-        _backup_config["last_backup_status"] = "success"
+        # Zähle Kunden und Verträge vor dem Backup
+        customer_count = db.query(Customer).count()
+        contract_count = db.query(Contract).count()
         
-        # Speichere Backup-Historie
-        try:
-            from app.main import BACKEND_VERSION
+        success, result, filepath = backup_service.create_backup(db_name)
+        
+        # Get config from DB
+        config = _get_or_create_config(db)
+        
+        if success:
+            config.last_backup_at = datetime.now()
+            config.last_backup_status = "success"
             
-            db = SessionLocal()
+            # Speichere Backup-Historie
+            from app.main import BACKEND_VERSION
             
             # Hole Dateigröße
             file_size = os.path.getsize(filepath) if filepath and os.path.exists(filepath) else 0
@@ -204,27 +225,27 @@ def create_backup(request: CreateBackupRequest = None):
             )
             db.add(history_entry)
             db.commit()
-            db.close()
-        except Exception as e:
-            # Historie-Speicherung sollte Backup nicht fehlschlagen lassen
-            pass
-        
-        # Cleanup alte Backups
-        backup_service.cleanup_old_backups(_backup_config["max_backups"], db_name)
-        
-        return {
-            "status": "success",
-            "message": "Backup erstellt",
-            "data": {
-                "filename": result,
-                "databaseName": db_name,
-                "customerCount": customer_count,
-                "contractCount": contract_count
+            
+            # Cleanup alte Backups
+            max_backups = config.max_backups or 7
+            backup_service.cleanup_old_backups(max_backups, db_name)
+            
+            return {
+                "status": "success",
+                "message": "Backup erstellt",
+                "data": {
+                    "filename": result,
+                    "databaseName": db_name,
+                    "customerCount": customer_count,
+                    "contractCount": contract_count
+                }
             }
-        }
-    else:
-        _backup_config["last_backup_status"] = "failed"
-        raise HTTPException(status_code=500, detail=f"Backup fehlgeschlagen: {result}")
+        else:
+            config.last_backup_status = "failed"
+            db.commit()
+            raise HTTPException(status_code=500, detail=f"Backup fehlgeschlagen: {result}")
+    finally:
+        db.close()
 
 
 @router.post("/restore", response_model=dict)

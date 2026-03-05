@@ -275,7 +275,6 @@ function CustomerDetail() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
     <div className="flex flex-col h-full overflow-auto gap-4">
       {/* Header */}
       <div>
@@ -633,7 +632,6 @@ function CustomerDetail() {
         />
       )}
     </div>
-    </PullToRefresh>
   );
 }
 

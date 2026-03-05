@@ -161,6 +161,8 @@ def search_contracts(
             return item["plz"]
         elif sort_by == "status":
             return item["status"]
+        elif sort_by == "seats":
+            return item.get("number_of_seats", 0)
         elif sort_by == "softwareRental":
             return item["software_rental_amount"]
         elif sort_by == "softwareCare":
