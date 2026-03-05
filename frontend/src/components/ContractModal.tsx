@@ -142,7 +142,7 @@ const ContractModal: React.FC<ContractModalProps> = ({
         startDate: contract.startDate.split('T')[0],
         endDate: contract.endDate ? contract.endDate.split('T')[0] : '',
         isFounderDiscount: contract.isFounderDiscount,
-        numberOfSeats: contract.numberOfSeats ?? 0,
+        numberOfSeats: contract.numberOfSeats,
         notes: contract.notes,
         excludedPriceIncreaseIds: contract.excludedPriceIncreaseIds || [],
         includedEarlyPriceIncreaseIds: contract.includedEarlyPriceIncreaseIds || [],
@@ -613,9 +613,9 @@ const ContractModal: React.FC<ContractModalProps> = ({
                 <input
                   type="number"
                   name="numberOfSeats"
-                  min="1"
+                  min="0"
                   value={formData.numberOfSeats}
-                  onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setFormData({ ...formData, numberOfSeats: parseInt(e.target.value) || 0 })}
                   onFocus={(e) => e.target.select()}
                   autoFocus
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"

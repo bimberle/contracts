@@ -552,7 +552,7 @@ export default function AllContracts() {
                       <div className={`text-xs truncate ${inactive ? 'text-gray-400' : 'text-gray-500'}`} title={contract.ort}>{contract.ort}</div>
                     </td>
                     <td className={`px-3 py-4 text-sm text-right ${rowTextClass}`}>
-                      {contract.numberOfSeats || 0}
+                      {contract.numberOfSeats}
                     </td>
                     <td className={`px-6 py-4 text-sm text-right ${rowTextClass}`}>
                       {formatCurrency(contract.softwareRentalAmount || 0)}
